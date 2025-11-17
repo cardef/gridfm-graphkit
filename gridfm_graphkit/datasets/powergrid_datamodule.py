@@ -142,7 +142,7 @@ class LitGridDataModule(L.LightningDataModule):
                 if dataset.transform is None:
                     dataset.transform = pe_transform
                 else:
-                    dataset.transform = T.compose([pe_transform, dataset.transform])
+                    dataset.transform = T.Compose([pe_transform, dataset.transform])
 
             self.datasets.append(dataset)
 
