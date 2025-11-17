@@ -166,10 +166,10 @@ class GritTransformerLayer(nn.Module):
         self.batch_norm = batch_norm
 
         # -------
-        self.update_e = getattr(cfg, "update_e", True)
-        self.bn_momentum = cfg.bn_momentum
-        self.bn_no_runner = cfg.bn_no_runner
-        self.rezero = getattr(cfg, "rezero", False) 
+        self.update_e = getattr(cfg.attn, "update_e", True)
+        self.bn_momentum = cfg.attn.bn_momentum
+        self.bn_no_runner = cfg.attn.bn_no_runner
+        self.rezero = getattr(cfg.attn, "rezero", False) 
 
         self.act = act_dict[act]() if act is not None else nn.Identity()
         if cfg.get("attn", None) is None:
