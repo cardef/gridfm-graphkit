@@ -13,6 +13,7 @@ from gridfm_graphkit.datasets.rrwp import add_full_rrwp
 
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.data import Data
+from typing import Any
 
 def compute_posenc_stats(data, pe_types, cfg):
     """Precompute positional encodings for the given graph.
@@ -57,6 +58,9 @@ class ComputePosencStat(BaseTransform):
     def __init__(self, pe_types, cfg):
         self.pe_types = pe_types
         self.cfg = cfg
+
+    def forward(self, data: Any) -> Any:
+        pass
 
     def __call__(self, data: Data) -> Data:
         data = compute_posenc_stats(data, 
