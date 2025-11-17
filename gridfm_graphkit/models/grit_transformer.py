@@ -167,7 +167,7 @@ class GritTransformer(torch.nn.Module):
             nn.Linear(dim_inner, dim_out),
         )
 
-    def forward(self, batch):
+    def forward(self, batch):   # self, x, pe, edge_index, edge_attr, batch # gps parameters
         print('process--->>', batch)    # TODO remove print
         for module in self.children():
             batch = module(batch)

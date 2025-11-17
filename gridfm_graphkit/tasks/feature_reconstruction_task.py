@@ -74,11 +74,11 @@ class FeatureReconstructionTask(L.LightningModule):
         self.edge_normalizers = edge_normalizers
         self.save_hyperparameters()
 
-    def forward(self, x, pe, edge_index, edge_attr, batch, mask=None):
-        if mask is not None:
-            mask_value_expanded = self.model.mask_value.expand(x.shape[0], -1)
-            x[:, : mask.shape[1]][mask] = mask_value_expanded[mask]
-        return self.model(x, pe, edge_index, edge_attr, batch)
+    def forward(self, batch):
+        if batch.mask is not None:
+            mask_value_expanded = self.model.mask_value.expand(batch.x.shape[0], -1)
+            batch.x[:, : batch.mask.shape[1]][batch.mask] = mask_value_expanded[batch.mask]
+        return self.model(batch)
 
     @rank_zero_only
     def on_fit_start(self):
@@ -111,12 +111,14 @@ class FeatureReconstructionTask(L.LightningModule):
 
     def shared_step(self, batch):
         output = self.forward(
-            x=batch.x,
-            pe=batch.pe,
-            edge_index=batch.edge_index,
-            edge_attr=batch.edge_attr,
-            batch=batch.batch,
-            mask=batch.mask,
+            # TODO update args list in the GPS Transf. for consistency
+            # x=batch.x,
+            # pe=batch.pe,
+            # edge_index=batch.edge_index,
+            # edge_attr=batch.edge_attr,
+            # batch=batch.batch,
+            # mask=batch.mask,
+            batch
         )
 
         loss_dict = self.loss_fn(
