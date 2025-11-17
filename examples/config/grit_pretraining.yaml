@@ -11,21 +11,21 @@ data:
   networks:
   # - Texas2k_case1_2016summerpeak
   - case24_ieee_rts
-  # - case118_ieee
-  # - case300_ieee
+  - case118_ieee
+  - case300_ieee
   - case89_pegase
-  # - case240_pserc
+  - case240_pserc
   normalization: baseMVAnorm
   scenarios:
   # - 5000
-  - 5000
-  - 5000
-  # - 30000
-  # - 50000
-  # - 50000
+  - 50000
+  - 50000
+  - 30000
+  - 50000
+  - 50000
   test_ratio: 0.1
   val_ratio: 0.1
-  workers: 4
+  workers: 8
   posenc_RRWP:  # TODO maybe better with data section...
     enable: True
     ksteps: 21
@@ -36,7 +36,7 @@ model:
   attention_head: 8
   dropout: 0.1
   edge_dim: 2
-  hidden_size: 64 # `gt.dim_hidden` must match `gnn.dim_inner`
+  hidden_size: 116 # `gt.dim_hidden` must match `gnn.dim_inner`
   input_dim: 9
   num_layers: 10
   output_dim: 6
@@ -51,7 +51,7 @@ model:
     edge_encoder_bn: True
   gt:
     layer_type: GritTransformer
-    dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+    dim_hidden: 116  # `gt.dim_hidden` must match `gnn.dim_inner`
     layer_norm: False
     batch_norm: True
     update_e: True

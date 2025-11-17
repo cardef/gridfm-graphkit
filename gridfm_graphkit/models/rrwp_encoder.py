@@ -114,7 +114,7 @@ class RRWPLinearEdgeEncoder(torch.nn.Module):
         if self.batchnorm or self.layernorm:
             warnings.warn("batchnorm/layernorm might ruin some properties of pe on providing shortest-path distance info ")
 
-        print('--------fc in and out:', emb_dim, out_dim)
+        # print('--------fc in and out:', emb_dim, out_dim)
         self.fc = nn.Linear(emb_dim, out_dim, bias=use_bias)
         torch.nn.init.xavier_uniform_(self.fc.weight)
         self.pad_to_full_graph = pad_to_full_graph

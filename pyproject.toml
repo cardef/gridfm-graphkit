@@ -51,6 +51,7 @@ dependencies = [
     "pyyaml",
     "lightning",
     "seaborn",
+    "opt-einsum",
 ]
 
 [project.optional-dependencies]
