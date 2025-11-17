@@ -133,7 +133,7 @@ class GritTransformer(torch.nn.Module):
             rel_pe_dim = args.data.posenc_RRWP.ksteps
             self.rrwp_rel_encoder = RRWPLinearEdgeEncoder(
                 rel_pe_dim, 
-                dim_edge,
+                dim_inner,
                 pad_to_full_graph=args.model.gt.attn.full_attn,
                 add_node_attr_as_self_loop=False,
                 fill_value=0.
