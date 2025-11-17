@@ -1,12 +1,10 @@
 from gridfm_graphkit.io.registries import MODELS_REGISTRY
 from torch import nn
 import torch
-import torch_geometric.graphgym.register as register
-from torch_geometric.graphgym.config import cfg
+
 from torch_geometric.graphgym.models.gnn import GNNPreMP
 from torch_geometric.graphgym.models.layer import (new_layer_config,
                                                    BatchNorm1dNode)
-from torch_geometric.graphgym.register import register_network
 from torch_geometric.graphgym.models.layer import new_layer_config, MLP
 
 
@@ -17,114 +15,49 @@ class FeatureEncoder(torch.nn.Module):
 
     Args:
         dim_in (int): Input feature dimension
+
+
+    TODO replace 'register' with local version of it
+
     """
-    def __init__(self, dim_in):
+    def __init__(
+                self, 
+                dim_in,
+                dim_inner,
+                args
+                ):
         super(FeatureEncoder, self).__init__()
         self.dim_in = dim_in
-        if cfg.dataset.node_encoder:
+        if args.node_encoder:
             # Encode integer node features via nn.Embeddings
             NodeEncoder = register.node_encoder_dict[
-                cfg.dataset.node_encoder_name]
-            self.node_encoder = NodeEncoder(cfg.gnn.dim_inner)
-            if cfg.dataset.node_encoder_bn:
+                args.node_encoder_name]
+            self.node_encoder = NodeEncoder(dim_inner)
+            if args.node_encoder_bn:
                 self.node_encoder_bn = BatchNorm1dNode(
-                    new_layer_config(cfg.gnn.dim_inner, -1, -1, has_act=False,
+                    new_layer_config(dim_inner, -1, -1, has_act=False,
                                      has_bias=False, cfg=cfg))
             # Update dim_in to reflect the new dimension fo the node features
-            self.dim_in = cfg.gnn.dim_inner
-        if cfg.dataset.edge_encoder:
+            self.dim_in = dim_inner
+        if args.edge_encoder:
             # Hard-limit max edge dim for PNA.
-            if 'PNA' in cfg.gt.layer_type:
-                cfg.gnn.dim_edge = min(128, cfg.gnn.dim_inner)
+            if 'PNA' in args.model.gt.layer_type:   # TODO remove condition if PNA not needed
+                dim_edge = min(128, dim_inner)
             else:
-                cfg.gnn.dim_edge = cfg.gnn.dim_inner
+                dim_edge = dim_inner
             # Encode integer edge features via nn.Embeddings
             EdgeEncoder = register.edge_encoder_dict[
                 cfg.dataset.edge_encoder_name]
-            self.edge_encoder = EdgeEncoder(cfg.gnn.dim_edge)
+            self.edge_encoder = EdgeEncoder(dim_edge)
             if cfg.dataset.edge_encoder_bn:
                 self.edge_encoder_bn = BatchNorm1dNode(
-                    new_layer_config(cfg.gnn.dim_edge, -1, -1, has_act=False,
+                    new_layer_config(dim_edge, -1, -1, has_act=False,
                                      has_bias=False, cfg=cfg))
 
     def forward(self, batch):
         for module in self.children():
             batch = module(batch)
         return batch
-    
-
-@register_head('decoder_head')
-class GNNDecoderHead(nn.Module):
-    """
-    Predictoin head for encoder-decoder networks.
-
-    Args:
-        dim_in (int): Input dimension   # TODO update arg comments as needed
-        dim_out (int): Output dimension. For binary prediction, dim_out=1.
-    """
-
-    def __init__(self, dim_in, dim_out):
-        super(GNNDecoderHead, self).__init__()
-        
-
-
-        # note that the input and output dimensions are from the config file
-        # if we want this to be variable that will have to change with 
-        # each layer
-
-        # TODO consider use of a bottleneck
-
-        # note the config is imported as in other modules
-
-        # the number of config layers should apriori be different than the encoder
-
-
-        global_model_type = cfg.gt.get('layer_type', "GritTransformer")
-
-        TransformerLayer = register.layer_dict.get(global_model_type)
-
-        layers = []
-        for l in range(cfg.gnn.layers_decode):
-            layers.append(TransformerLayer(
-                in_dim=cfg.gt.dim_hidden,
-                out_dim=cfg.gt.dim_hidden,
-                num_heads=cfg.gt.n_heads,
-                dropout=cfg.gt.dropout, # TODO could migrate this and others to gnn in config
-                act=cfg.gnn.act,
-                attn_dropout=cfg.gt.attn_dropout,
-                layer_norm=cfg.gt.layer_norm,
-                batch_norm=cfg.gt.batch_norm,
-                residual=True,
-                norm_e=cfg.gt.attn.norm_e,
-                O_e=cfg.gt.attn.O_e,
-                cfg=cfg.gt,
-            ))
-        # layers = []
-
-        self.layers = torch.nn.Sequential(*layers)
-
-
-
-        self.layer_post_mp = MLP(
-            new_layer_config(dim_in, dim_out, cfg.gnn.layers_post_mp,
-                             has_act=False, has_bias=True, cfg=cfg))
-
-
-
-    def _apply_index(self, batch):
-        return batch.x, batch.y
-
-    def forward(self, batch):
-        batch = self.layers(batch)
-        
-        # follow GMAE here and make a final linear projection from the
-        # hiden dimension to the output dimension
-        batch = self.layer_post_mp(batch)
-
-        pred, label = self._apply_index(batch)
-        #print('>>>>>>', pred.size(),label.size())   
-        return pred, label
-
 
 
 @MODELS_REGISTRY.register("GRIT")
@@ -133,60 +66,85 @@ class GritTransformer(torch.nn.Module):
         The proposed GritTransformer (Graph Inductive Bias Transformer)
     '''
 
-    def __init__(self, dim_in, dim_out):
+    def __init__(self, args):
         super().__init__()
-        self.encoder = FeatureEncoder(dim_in)
-        dim_in = self.encoder.dim_in
 
-        self.ablation = True
-        self.ablation = False
+        # ### TODO remove default args not needed ####
+        # self.input_dim = 
+        # self.hidden_dim = 
+        # self.output_dim = 
+        # self.edge_dim = 
+        # self.num_layers = args.model.num_layers
+        # self.heads = getattr(args.model, "attention_head", 1)
+        # self.dropout = getattr(args.model, "dropout", 0.0)
+        # ### ###
 
-        if cfg.posenc_RRWP.enable:
+        dim_in = args.model.input_dim
+        dim_out = args.model.output_dim
+        dim_inner = args.model.hidden_size
+        dim_edge = args.model.edge_dim
+        num_heads = args.model.attention_head
+        dropout = args.model.dropout
+        num_layers = args.model.num_layers
+        
+        self.encoder = FeatureEncoder(
+                        dim_in, 
+                        dim_inner,
+                        args.model.encoder
+                        )   # TODO add args
+        dim_in = self.encoder.dim_in    
+
+
+        if args.model.posenc_RRWP.enable:
+            # TODO connect 'register' to local version
             self.rrwp_abs_encoder = register.node_encoder_dict["rrwp_linear"]\
-                (cfg.posenc_RRWP.ksteps, cfg.gnn.dim_inner)
-            rel_pe_dim = cfg.posenc_RRWP.ksteps
+                (args.model.posenc_RRWP.ksteps, dim_inner)
+            rel_pe_dim = args.model.posenc_RRWP.ksteps
             self.rrwp_rel_encoder = register.edge_encoder_dict["rrwp_linear"] \
-                (rel_pe_dim, cfg.gnn.dim_edge,
-                 pad_to_full_graph=cfg.gt.attn.full_attn,
+                (rel_pe_dim, dim_edge,
+                 pad_to_full_graph=args.model.gt.attn.full_attn,
                  add_node_attr_as_self_loop=False,
                  fill_value=0.
                  )
 
 
-        if cfg.gnn.layers_pre_mp > 0:
+        if args.model.layers_pre_mp > 0:
             self.pre_mp = GNNPreMP(
-                dim_in, cfg.gnn.dim_inner, cfg.gnn.layers_pre_mp)
-            dim_in = cfg.gnn.dim_inner
+                dim_in, dim_inner, args.model.layers_pre_mp)
+            dim_in = dim_inner
 
-        assert cfg.gt.dim_hidden == cfg.gnn.dim_inner == dim_in, \
+        assert args.model.hidden_size == dim_inner == dim_in, \
             "The inner and hidden dims must match."
 
-        global_model_type = cfg.gt.get('layer_type', "GritTransformer")
+        global_model_type = args.model.gt.layer_type
         # global_model_type = "GritTransformer"
-
+        # TODO replace this with local register logic
         TransformerLayer = register.layer_dict.get(global_model_type)
 
         layers = []
-        for l in range(cfg.gt.layers):
+        for ll in range(num_layers):
             layers.append(TransformerLayer(
-                in_dim=cfg.gt.dim_hidden,
-                out_dim=cfg.gt.dim_hidden,
-                num_heads=cfg.gt.n_heads,
-                dropout=cfg.gt.dropout,
-                act=cfg.gnn.act,
-                attn_dropout=cfg.gt.attn_dropout,
-                layer_norm=cfg.gt.layer_norm,
-                batch_norm=cfg.gt.batch_norm,
+                in_dim=args.model.gt.dim_hidden,
+                out_dim=args.model.gt.dim_hidden,
+                num_heads=num_heads,
+                dropout=dropout,
+                act=args.model.act,
+                attn_dropout=args.model.gt.attn_dropout,
+                layer_norm=args.model.gt.layer_norm,
+                batch_norm=args.model.gt.batch_norm,
                 residual=True,
-                norm_e=cfg.gt.attn.norm_e,
-                O_e=cfg.gt.attn.O_e,
-                cfg=cfg.gt,
+                norm_e=args.model.gt.attn.norm_e,
+                O_e=args.model.gt.attn.O_e,
+                cfg=args.model.gt,
             ))
-        # layers = []
 
-        self.layers = torch.nn.Sequential(*layers)
-        GNNHead = register.head_dict[cfg.gnn.head]
-        self.post_mp = GNNHead(dim_in=cfg.gnn.dim_inner, dim_out=dim_out)
+        self.layers = nn.Sequential(*layers)
+
+        self.decoder = nn.Sequential(
+            nn.Linear(dim_inner, dim_inner),
+            nn.LeakyReLU(),
+            nn.Linear(dim_inner, dim_out),
+        )
 
     def forward(self, batch):
         for module in self.children():
