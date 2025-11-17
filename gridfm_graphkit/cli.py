@@ -77,6 +77,11 @@ def main_cli(args):
         max_epochs=config_args.training.epochs,
         callbacks=get_training_callbacks(config_args),
     )
+
+    # print('******model*****')
+    # print(model)
+    # print('******model*****')
+
     if args.command == "train" or args.command == "finetune":
         trainer.fit(model=model, datamodule=litGrid)
 
