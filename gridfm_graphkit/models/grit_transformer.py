@@ -2,11 +2,41 @@ from gridfm_graphkit.io.registries import MODELS_REGISTRY
 from torch import nn
 import torch
 
+from rrwp_encoder import RRWPLinearNodeEncoder, RRWPLinearEdgeEncoder
+from grit_layer import GritTransformerLayer
+
+# TODO verify use
 from torch_geometric.graphgym.models.gnn import GNNPreMP
 from torch_geometric.graphgym.models.layer import (new_layer_config,
                                                    BatchNorm1dNode)
 from torch_geometric.graphgym.models.layer import new_layer_config, MLP
 
+
+class LinearNodeEncoder(torch.nn.Module):
+    def __init__(self, emb_dim):
+        super().__init__()
+
+        self.encoder = torch.nn.Linear(cfg.share.dim_in, emb_dim)
+
+    def forward(self, batch):
+        batch.x = self.encoder(batch.x)
+        return batch
+    
+class LinearEdgeEncoder(torch.nn.Module):
+    def __init__(self, emb_dim):
+        super().__init__()
+        if cfg.dataset.name in ['MNIST', 'CIFAR10']:
+            self.in_dim = 1
+        elif cfg.dataset.name.startswith('attributed_triangle-'):
+            self.in_dim = 2
+        else:
+            raise ValueError("Input edge feature dim is required to be hardset "
+                             "or refactored to use a cfg option.")
+        self.encoder = torch.nn.Linear(self.in_dim, emb_dim)
+
+    def forward(self, batch):
+        batch.edge_attr = self.encoder(batch.edge_attr.view(-1, self.in_dim))
+        return batch
 
 
 class FeatureEncoder(torch.nn.Module):
@@ -15,9 +45,6 @@ class FeatureEncoder(torch.nn.Module):
 
     Args:
         dim_in (int): Input feature dimension
-
-
-    TODO replace 'register' with local version of it
 
     """
     def __init__(
@@ -30,9 +57,7 @@ class FeatureEncoder(torch.nn.Module):
         self.dim_in = dim_in
         if args.node_encoder:
             # Encode integer node features via nn.Embeddings
-            NodeEncoder = register.node_encoder_dict[
-                args.node_encoder_name]
-            self.node_encoder = NodeEncoder(dim_inner)
+            self.node_encoder = LinearNodeEncoder(dim_inner)
             if args.node_encoder_bn:
                 self.node_encoder_bn = BatchNorm1dNode(
                     new_layer_config(dim_inner, -1, -1, has_act=False,
@@ -46,9 +71,7 @@ class FeatureEncoder(torch.nn.Module):
             else:
                 dim_edge = dim_inner
             # Encode integer edge features via nn.Embeddings
-            EdgeEncoder = register.edge_encoder_dict[
-                cfg.dataset.edge_encoder_name]
-            self.edge_encoder = EdgeEncoder(dim_edge)
+            self.edge_encoder = LinearEdgeEncoder(dim_edge)
             if cfg.dataset.edge_encoder_bn:
                 self.edge_encoder_bn = BatchNorm1dNode(
                     new_layer_config(dim_edge, -1, -1, has_act=False,
@@ -65,19 +88,9 @@ class GritTransformer(torch.nn.Module):
     '''
         The proposed GritTransformer (Graph Inductive Bias Transformer)
     '''
-
     def __init__(self, args):
         super().__init__()
 
-        # ### TODO remove default args not needed ####
-        # self.input_dim = 
-        # self.hidden_dim = 
-        # self.output_dim = 
-        # self.edge_dim = 
-        # self.num_layers = args.model.num_layers
-        # self.heads = getattr(args.model, "attention_head", 1)
-        # self.dropout = getattr(args.model, "dropout", 0.0)
-        # ### ###
 
         dim_in = args.model.input_dim
         dim_out = args.model.output_dim
@@ -96,16 +109,19 @@ class GritTransformer(torch.nn.Module):
 
 
         if args.model.posenc_RRWP.enable:
-            # TODO connect 'register' to local version
-            self.rrwp_abs_encoder = register.node_encoder_dict["rrwp_linear"]\
-                (args.model.posenc_RRWP.ksteps, dim_inner)
+
+            self.rrwp_abs_encoder = RRWPLinearNodeEncoder(
+                    args.model.posenc_RRWP.ksteps, 
+                    dim_inner
+                    )
             rel_pe_dim = args.model.posenc_RRWP.ksteps
-            self.rrwp_rel_encoder = register.edge_encoder_dict["rrwp_linear"] \
-                (rel_pe_dim, dim_edge,
-                 pad_to_full_graph=args.model.gt.attn.full_attn,
-                 add_node_attr_as_self_loop=False,
-                 fill_value=0.
-                 )
+            self.rrwp_rel_encoder = RRWPLinearNodeEncoder(
+                rel_pe_dim, 
+                dim_edge,
+                pad_to_full_graph=args.model.gt.attn.full_attn,
+                add_node_attr_as_self_loop=False,
+                fill_value=0.
+                )
 
 
         if args.model.layers_pre_mp > 0:
@@ -116,14 +132,9 @@ class GritTransformer(torch.nn.Module):
         assert args.model.hidden_size == dim_inner == dim_in, \
             "The inner and hidden dims must match."
 
-        global_model_type = args.model.gt.layer_type
-        # global_model_type = "GritTransformer"
-        # TODO replace this with local register logic
-        TransformerLayer = register.layer_dict.get(global_model_type)
-
         layers = []
         for ll in range(num_layers):
-            layers.append(TransformerLayer(
+            layers.append(GritTransformerLayer(
                 in_dim=args.model.gt.dim_hidden,
                 out_dim=args.model.gt.dim_hidden,
                 num_heads=num_heads,
