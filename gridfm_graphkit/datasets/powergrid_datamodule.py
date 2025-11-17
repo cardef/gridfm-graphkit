@@ -10,6 +10,9 @@ from gridfm_graphkit.io.param_handler import (
 )
 from gridfm_graphkit.datasets.utils import split_dataset
 from gridfm_graphkit.datasets.powergrid_dataset import GridDatasetDisk
+
+from gridfm_graphkit.datasets.posenc_stats import ComputePosencStat
+
 import numpy as np
 import random
 import warnings
@@ -129,6 +132,17 @@ class LitGridDataModule(L.LightningDataModule):
                 mask_dim=self.args.data.mask_dim,
                 transform=get_transform(args=self.args),
             )
+
+            if self.args.data.posenc_RRWP.enable:
+                pe_transform = ComputePosencStat(pe_types=pe_enabled_list,  # TODO connect arguments
+                                                is_undirected=is_undirected,
+                                                cfg=cfg
+                                                )
+                if dataset.transform is None:
+                    dataset.transform = pe_transform
+                else:
+                    dataset.transform = T.compose([pe_transform, dataset.transform])
+
             self.datasets.append(dataset)
 
             num_scenarios = self.args.data.scenarios[i]
