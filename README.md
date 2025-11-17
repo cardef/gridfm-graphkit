@@ -34,6 +34,7 @@ cd gridfm-graphkit
 python -m venv venv
 source venv/bin/activate
 pip install -e .
+pip install torch_sparse torch_scatter -f https://data.pyg.org/whl/torch-2.6.0+cu124.html
 ```
 
 For documentation generation and unit testing, install with the optional `dev` and `test` extras:
