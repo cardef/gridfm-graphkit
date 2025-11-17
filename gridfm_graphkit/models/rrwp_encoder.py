@@ -145,8 +145,8 @@ class RRWPLinearEdgeEncoder(torch.nn.Module):
         else:
             # edge_index, edge_attr = add_remaining_self_loops(edge_index, edge_attr, num_nodes=batch.num_nodes, fill_value=0.)
             edge_index, edge_attr = add_self_loops(edge_index, edge_attr, num_nodes=batch.num_nodes, fill_value=0.)
-            print('xxxx', edge_attr.size(), rrwp_val.size())
-            print('yyyy', edge_index.size(), rrwp_idx.size())
+            # print('xxxx', edge_attr.size(), rrwp_val.size())
+            # print('yyyy', edge_index.size(), rrwp_idx.size())
             out_idx, out_val = torch_sparse.coalesce(
                 torch.cat([edge_index, rrwp_idx], dim=1),
                 torch.cat([edge_attr, rrwp_val], dim=0),

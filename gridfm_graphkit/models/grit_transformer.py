@@ -213,11 +213,11 @@ class GritTransformer(torch.nn.Module):
         self.decoder = GraphHead(dim_inner, dim_out)
 
     def forward(self, batch):   # self, x, pe, edge_index, edge_attr, batch # gps parameters
-        print('process--->>', batch)    # TODO remove print
+        # print('process--->>', batch)    # TODO remove print
         for module in self.children():
-            print('----------')
-            print(module)
+            # print('----------')
+            # print(module)
             batch = module(batch)
-            print('--passed--')
+            # print('--passed--')
 
         return batch
