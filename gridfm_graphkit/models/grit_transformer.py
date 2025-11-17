@@ -111,13 +111,13 @@ class GritTransformer(torch.nn.Module):
                         ) 
         dim_in = self.encoder.dim_in    
 
-        if args.model.posenc_RRWP.enable:
+        if args.data.posenc_RRWP.enable:
 
             self.rrwp_abs_encoder = RRWPLinearNodeEncoder(
-                    args.model.posenc_RRWP.ksteps, 
+                    args.data.posenc_RRWP.ksteps, 
                     dim_inner
                     )
-            rel_pe_dim = args.model.posenc_RRWP.ksteps
+            rel_pe_dim = args.data.posenc_RRWP.ksteps
             self.rrwp_rel_encoder = RRWPLinearEdgeEncoder(
                 rel_pe_dim, 
                 dim_edge,

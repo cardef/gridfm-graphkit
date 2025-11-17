@@ -64,6 +64,8 @@ model:
       O_e: True
       norm_e: True
       signed_sqrt: True
+      bn_momentum: 0.1
+      bn_no_runner: False
 
 optimizer:
   beta1: 0.9
