@@ -60,7 +60,7 @@ def compute_posenc_stats(data, pe_types, cfg):
             N = data.num_nodes  # Explicitly given number of nodes, e.g. ogbg-ppa
         else:
             N = data.x.shape[0]  # Number of nodes, including disconnected nodes.
-        if len(kernel_param.times) == 0:
+        if kernel_param.times == 0:
             raise ValueError("List of kernel times required for RWSE")
         rw_landing = get_rw_landing_probs(
                         ksteps=[xx + 1 for xx in range(kernel_param.times)],

@@ -206,6 +206,7 @@ class GritTransformer(torch.nn.Module):
         """
         # print('xxxx',batch.x.min(), batch.x.max())
         # print('yyyyy',batch.y.min(), batch.y.max())
+        print('>>>>', batch)
         for module in self.children():
             batch = module(batch)
 
