@@ -50,7 +50,7 @@ model:
   encoder:
     node_encoder: True
     edge_encoder: True
-    node_encoder_name: TODO
+    node_encoder_name: RWSE
     node_encoder_bn: True
     edge_encoder_bn: True
   gt:

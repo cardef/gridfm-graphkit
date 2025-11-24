@@ -69,7 +69,10 @@ class FeatureEncoder(torch.nn.Module):
         self.dim_in = dim_in
         if args.encoder.node_encoder:
             # Encode integer node features via nn.Embeddings
-            self.node_encoder = LinearNodeEncoder(self.dim_in, dim_inner)
+            if 'RWSE' in self.node_encoder_name:
+                self.node_encoder = RWSENodeEncoder(self.dim_in, dim_inner)
+            else:
+                self.node_encoder = LinearNodeEncoder(self.dim_in, dim_inner)
             if args.encoder.node_encoder_bn:
                 self.node_encoder_bn = BatchNorm1dNode(dim_inner, 1e-5, 0.1)
             # Update dim_in to reflect the new dimension fo the node features
@@ -206,7 +209,7 @@ class GritTransformer(torch.nn.Module):
         """
         # print('xxxx',batch.x.min(), batch.x.max())
         # print('yyyyy',batch.y.min(), batch.y.max())
-        print('>>>>', batch)
+        # print('>>>>', batch)
         for module in self.children():
             batch = module(batch)
 
