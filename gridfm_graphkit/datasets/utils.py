@@ -90,3 +90,26 @@ def split_dataset_by_load_scenario_idx(
     test_dataset = Subset(dataset, test_indices)
 
     return train_dataset, val_dataset, test_dataset
+
+
+def split_from_existing_files(
+    dataset,
+    save_to_folder: str,
+    splits_folder: str,
+) -> Tuple[Subset, Subset, Subset]:
+    output=[]
+
+    indices = {}
+
+    for split in ["train", "val", "test"]:
+        split_file = splits_folder / f"{split}.pt"
+        assert split_file.is_file(), f"{str(split_file)} does not exist"
+        split_indices = torch.load(str(split_file), weights_only=True)
+        split_dataset = Subset(dataset, split_indices)
+        output.append(split_dataset)
+        split_indices = list(split_indices)
+        print(f'{split=} {len(split_indices)=}')
+        indices[split]=[int(t.item()) for t in split_indices]
+
+    output = tuple(output)
+    return output, indices
