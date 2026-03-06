@@ -12,6 +12,7 @@ from gridfm_graphkit.io.param_handler import (
 from gridfm_graphkit.datasets.utils import (
     split_dataset,
     split_dataset_by_load_scenario_idx,
+    split_from_existing_files,
 )
 from gridfm_graphkit.datasets.powergrid_hetero_dataset import HeteroGridDatasetDisk
 import numpy as np
@@ -19,6 +20,7 @@ import random
 import warnings
 import os
 import lightning as L
+from pathlib import Path
 from typing import List
 from lightning.pytorch.loggers import MLFlowLogger
 
@@ -96,6 +98,11 @@ class LitGridHeteroDataModule(L.LightningDataModule):
             "split_by_load_scenario_idx",
             False,
         )
+        self.split_from_existing_files = getattr(
+            args.data,
+            "split_from_existing_files",
+            None,
+        )
         self.args = args
         self.normalizer_stats_path = normalizer_stats_path
         self.data_normalizers = []
@@ -107,6 +114,15 @@ class LitGridHeteroDataModule(L.LightningDataModule):
         self.val_scenario_ids: List[List[int]] = []
         self.test_scenario_ids: List[List[int]] = []
         self._is_setup_done = False
+
+        if self.split_by_load_scenario_idx:
+            assert self.split_from_existing_files is None, " either `split_by_load_scenario_idx` or `split_from_existing_files` may be used, not both"
+
+        if self.split_from_existing_files is not None:
+            assert isinstance(self.split_from_existing_files, str), "`split_from_existing_files` must be an existing folder in string format"
+            self.split_from_existing_files = Path(self.split_from_existing_files)
+            assert self.split_from_existing_files.is_dir(), "`split_from_existing_files` must be an existing folder in string format"
+
 
     def setup(self, stage: str):
         if self._is_setup_done:
@@ -161,49 +177,64 @@ class LitGridHeteroDataModule(L.LightningDataModule):
 
             # Create a subset
             all_indices = list(range(len(dataset)))
-            # Random seed set before every shuffle for reproducibility in case the power grid datasets are analyzed in a different order
-            random.seed(self.args.seed)
-            random.shuffle(all_indices)
-            subset_indices = all_indices[:num_scenarios]
+            splits_dir = Path(data_path_network)
+            splits_dir = splits_dir / "splits"
 
-            # load_scenario for each scenario in the subset
-            load_scenarios = dataset.load_scenarios[subset_indices]
+            if self.split_from_existing_files is not None:
+                (train_dataset, val_dataset, test_dataset), subset_indices = (
+                    split_from_existing_files(
+                        dataset,
+                        splits_dir,
+                        self.split_from_existing_files,
+                    )
+                )
+                train_scenario_ids = subset_indices["train"]
+                val_scenario_ids = subset_indices["val"]
+                test_scenario_ids = subset_indices["test"]
+            else:
+                # Random seed set before every shuffle for reproducibility in case the power grid datasets are analyzed in a different order
+                random.seed(self.args.seed)
+                random.shuffle(all_indices)
+                subset_indices = all_indices[:num_scenarios]
 
-            dataset = Subset(dataset, subset_indices)
+                # load_scenario for each scenario in the subset
+                load_scenarios = dataset.load_scenarios[subset_indices]
 
-            # Random seed set before every split, same as above
-            np.random.seed(self.args.seed)
-            if self.split_by_load_scenario_idx:
-                train_dataset, val_dataset, test_dataset = (
-                    split_dataset_by_load_scenario_idx(
+                dataset = Subset(dataset, subset_indices)
+
+                # Random seed set before every split, same as above
+                np.random.seed(self.args.seed)
+                if self.split_by_load_scenario_idx:
+                    train_dataset, val_dataset, test_dataset = (
+                        split_dataset_by_load_scenario_idx(
+                            dataset,
+                            self.data_dir,
+                            load_scenarios,
+                            self.args.data.val_ratio,
+                            self.args.data.test_ratio,
+                        )
+                    )
+                else:
+                    train_dataset, val_dataset, test_dataset = split_dataset(
                         dataset,
                         self.data_dir,
-                        load_scenarios,
                         self.args.data.val_ratio,
                         self.args.data.test_ratio,
                     )
-                )
-            else:
-                train_dataset, val_dataset, test_dataset = split_dataset(
-                    dataset,
-                    self.data_dir,
-                    self.args.data.val_ratio,
-                    self.args.data.test_ratio,
-                )
 
-            # Extract scenario IDs for each split
-            train_scenario_ids = self._extract_scenario_ids(
-                train_dataset,
-                subset_indices,
-            )
-            val_scenario_ids = self._extract_scenario_ids(
-                val_dataset,
-                subset_indices,
-            )
-            test_scenario_ids = self._extract_scenario_ids(
-                test_dataset,
-                subset_indices,
-            )
+                # Extract scenario IDs for each split
+                train_scenario_ids = self._extract_scenario_ids(
+                    train_dataset,
+                    subset_indices,
+                )
+                val_scenario_ids = self._extract_scenario_ids(
+                    val_dataset,
+                    subset_indices,
+                )
+                test_scenario_ids = self._extract_scenario_ids(
+                    test_dataset,
+                    subset_indices,
+                )
 
             # Fit normalizer: restore from saved stats only for fit_on_train
             # normalizers (global baseMVA must match the model's training run).
@@ -214,7 +245,8 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                 and network in saved_stats
                 and data_normalizer.fit_strategy == "fit_on_train"
             )
-            if use_saved:
+            # if use_saved:
+            if False:
                 print(f"Restoring normalizer for {network} from saved stats")
                 data_normalizer.fit_from_dict(saved_stats[network])
             else:
