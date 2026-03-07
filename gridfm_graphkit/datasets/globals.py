@@ -52,3 +52,11 @@ ANG_MIN = 7  # Angle min (deg)
 ANG_MAX = 8  # Angle max (deg)
 RATE_A = 9  # Thermal limit
 B_ON = 10  # Branch on/off
+
+
+
+# ====================================
+# === EXPECTED OUTPUT DIMENSIONS  ===
+# ====================================
+BUS_OUT_DIMENSIONS = 4
+GEN_OUT_DIMENSIONS = 1
