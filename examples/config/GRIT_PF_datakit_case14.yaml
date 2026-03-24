@@ -45,13 +45,12 @@ model:
     node_encoder_bn: true
     edge_encoder_bn: true
     posenc_RWSE:
-      kernel:
-        times: 21
+      # kernel.times is synced automatically from data.posenc_RWSE.kernel.times
       pe_dim: 20
       raw_norm_type: batchnorm
   gt:
     layer_type: GritTransformer
-    dim_hidden: 116  # must match hidden_size
+    # dim_hidden is synced automatically from model.hidden_size
     layer_norm: false
     batch_norm: true
     update_e: true

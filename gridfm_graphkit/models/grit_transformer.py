@@ -247,6 +247,24 @@ class GritHeteroAdapter(torch.nn.Module):
         if not hasattr(args.model, "output_dim"):
             args.model.output_dim = output_bus_dim
 
+        # Sync PE kernel.times from data config into model encoder config so
+        # users only need to specify it once (under data.posenc_RWSE).
+        if (
+            hasattr(args.data, "posenc_RWSE")
+            and args.data.posenc_RWSE.enable
+            and hasattr(args.model, "encoder")
+            and hasattr(args.model.encoder, "posenc_RWSE")
+        ):
+            from gridfm_graphkit.io.param_handler import NestedNamespace
+            enc_rwse = args.model.encoder.posenc_RWSE
+            if not hasattr(enc_rwse, "kernel"):
+                enc_rwse.kernel = NestedNamespace()
+            enc_rwse.kernel.times = args.data.posenc_RWSE.kernel.times
+
+        # Sync gt.dim_hidden from model.hidden_size so it is specified once.
+        if hasattr(args.model, "gt"):
+            args.model.gt.dim_hidden = args.model.hidden_size
+
         # The original homogeneous GRIT
         # (encoder + optional PE encoders + transformer layers + GraphHead)
         self.grit = GritTransformer(args)
