@@ -31,6 +31,7 @@ for i in "${!CONFIGS[@]}"; do
         output_file="${OUTPUT_DIR}/${config_name}_${nodes}nodes_${edges}edges.csv"
         echo "Running benchmark for $config_name with $nodes nodes and $edges edges..."
         python benchmark_model_inference.py \
+            --model "grit" \
             --config "$config_path" \
             --output_csv "$output_file" \
             --num_nodes "$nodes" \

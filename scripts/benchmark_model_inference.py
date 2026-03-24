@@ -6,7 +6,7 @@ A unified script for benchmarking and limited custom profiling. Benchmarking col
 
 Supports two model types via --model flag:
   - "hetero" (default): GNS_heterogeneous with HeteroData (bus + gen nodes)
-  - "grit": GritTransformer with homogeneous Data (single node type)
+  - "grit": GritHeteroAdapter with HeteroData (bus + gen nodes, optional PE attrs)
 
 Example usage — Heterogeneous GNS (edge count is 2*E (branch count)):
 
@@ -21,12 +21,12 @@ python benchmark_model_inference.py --model hetero --config $CONF_PATH/case118_i
 
 ######################################
 
-Example usage — GRIT (homogeneous, --num_gens is ignored):
+Example usage — GRIT (HeteroData with PE, --num_gens required):
 
 ######################################
 
-python benchmark_model_inference.py --model grit --config $CONF_PATH/grit_pretraining.yaml --num_nodes 30 --num_edges 82 --iterations 20 --output_csv $OUT_DIR/grit_case30.csv || true
-python benchmark_model_inference.py --model grit --config $CONF_PATH/grit_pretraining.yaml --num_nodes 118 --num_edges 372 --iterations 20 --output_csv $OUT_DIR/grit_case118.csv || true
+python benchmark_model_inference.py --model grit --config $CONF_PATH/GRIT_PF_datakit_case14.yaml --num_nodes 30 --num_edges 82 --num_gens 6 --iterations 20 --output_csv $OUT_DIR/grit_case30.csv || true
+python benchmark_model_inference.py --model grit --config $CONF_PATH/GRIT_PF_datakit_case14.yaml --num_nodes 118 --num_edges 372 --num_gens 54 --iterations 20 --output_csv $OUT_DIR/grit_case118.csv || true
 
 ######################################
 
@@ -43,7 +43,7 @@ import argparse
 import platform
 from datetime import datetime
 from torch_geometric.loader import DataLoader
-from torch_geometric.data import Data, HeteroData
+from torch_geometric.data import HeteroData
 from gridfm_graphkit.io.param_handler import NestedNamespace, load_model
 
 # Optional: tqdm (imported but not required for core flow)
@@ -102,27 +102,31 @@ model = load_model(config_args).to(device).eval()
 # ----------------------------
 MODEL_TYPE = args.model
 N_BUS = args.num_nodes
-N_GEN = args.num_gens
 E = args.num_edges
-EDGE_FEATS = config_args.model.edge_dim
 
-if MODEL_TYPE == "hetero":
-    BUS_FEATS = config_args.model.input_bus_dim
-    GEN_FEATS = config_args.model.input_gen_dim
-    NODE_FEATS = None  # not used for hetero
-else:
-    # GRIT homogeneous model
-    NODE_FEATS = config_args.model.input_dim
-    OUTPUT_DIM = config_args.model.output_dim
-    MASK_DIM = getattr(config_args.data, "mask_dim", 6)
-    # Positional encoding config
+# Default num_gens when not provided (shell script omits --num_gens)
+N_GEN = args.num_gens if args.num_gens > 0 else max(1, N_BUS // 5)
+
+EDGE_FEATS = getattr(config_args.model, "edge_dim", 10)
+
+# Both model types use HeteroData with bus + gen nodes.
+# Fall back to input_dim / defaults for configs that lack the hetero keys.
+BUS_FEATS = getattr(config_args.model, "input_bus_dim",
+                    getattr(config_args.model, "input_dim", 15))
+GEN_FEATS = getattr(config_args.model, "input_gen_dim", 6)
+
+if MODEL_TYPE == "grit":
+    # Positional encoding config (only GRIT uses these)
     RRWP_ENABLED = getattr(config_args.data.posenc_RRWP, "enable", False) if hasattr(config_args.data, "posenc_RRWP") else False
     RRWP_KSTEPS = getattr(config_args.data.posenc_RRWP, "ksteps", 21) if RRWP_ENABLED else 0
     RWSE_ENABLED = hasattr(config_args.model, "encoder") and getattr(config_args.model.encoder, "node_encoder", False) \
                    and "RWSE" in getattr(config_args.model.encoder, "node_encoder_name", "")
     RWSE_TIMES = getattr(config_args.model.encoder.posenc_RWSE.kernel, "times", 21) if RWSE_ENABLED else 0
-    BUS_FEATS = NODE_FEATS  # alias for CSV output compatibility
-    GEN_FEATS = 0
+else:
+    RRWP_ENABLED = False
+    RRWP_KSTEPS = 0
+    RWSE_ENABLED = False
+    RWSE_TIMES = 0
 
 # Keep original batch sizes list
 batch_sizes = [1, 2, 4, 8, 16, 32, 64, 96, 128, 256, 512, 640, 768, 1024, 2048, 2560, 3072, 3584, 4096, 6144, 9216, 13824, 17280, 20736, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000, 70000, 75000, 80000, 85000, 90000]
@@ -211,6 +215,10 @@ def generate_hetero_graph():
     data["bus"].x = torch.randn(N_BUS, BUS_FEATS)
     data["gen"].x = torch.randn(N_GEN, GEN_FEATS)
 
+    # Dummy targets
+    data["bus"].y = torch.randn(N_BUS, BUS_FEATS)
+    data["gen"].y = torch.randn(N_GEN, GEN_FEATS)
+
     # Edges: Bus–Bus
     src = torch.randint(0, N_BUS, (E,))
     dst = torch.randint(0, N_BUS, (E,))
@@ -258,44 +266,34 @@ def generate_hetero_graph():
 # ----------------------------
 # Generate Synthetic Homogeneous Graph (GRIT)
 # ----------------------------
-def generate_homo_graph():
+def generate_grit_graph():
     """
-    Generates a dummy homogeneous power network graph for GRIT benchmarking.
+    Generates a dummy heterogeneous graph for GRIT benchmarking.
+
+    GritHeteroAdapter expects a HeteroData batch, so we generate the same
+    structure as generate_hetero_graph() but also attach PE attributes on
+    the bus node store when RWSE / RRWP are enabled.
 
     Returns:
-        data (Data): single self-contained homogeneous graph with:
-            - data.x: node features [N_BUS, NODE_FEATS]
-            - data.y: target labels [N_BUS, OUTPUT_DIM]
-            - data.edge_index: [2, E]
-            - data.edge_attr: [E, EDGE_FEATS]
-            - data.pestat_RWSE (if RWSE enabled): [N_BUS, RWSE_TIMES]
-            - data.rrwp, rrwp_index, rrwp_val (if RRWP enabled)
+        data (HeteroData): heterogeneous graph with bus & gen nodes,
+            plus optional PE attributes on data["bus"].
     """
-    data = Data()
+    data = generate_hetero_graph()
 
-    # Node features: same layout as powergrid_dataset (Pd, Qd, Pg, Qg, Vm, Va, PQ, PV, REF)
-    data.x = torch.randn(N_BUS, NODE_FEATS)
-    data.y = data.x[:, :OUTPUT_DIM].clone()
-
-    # Edges
-    src = torch.randint(0, N_BUS, (E,))
-    dst = torch.randint(0, N_BUS, (E,))
-    data.edge_index = torch.stack([src, dst], dim=0)
-    data.edge_attr = torch.randn(E, EDGE_FEATS)
-
-    # RWSE positional encoding (diagonal of random-walk matrix powers)
+    # RWSE positional encoding on bus nodes
     if RWSE_ENABLED:
-        data.pestat_RWSE = torch.randn(N_BUS, RWSE_TIMES).abs()
+        data["bus"].pestat_RWSE = torch.randn(N_BUS, RWSE_TIMES).abs()
 
-    # RRWP positional / structural encoding
+    # RRWP positional / structural encoding on bus nodes
     if RRWP_ENABLED:
-        data.rrwp = torch.randn(N_BUS, RRWP_KSTEPS)
-        # Sparse RRWP for edges: include existing edges + self-loops
+        data["bus"].rrwp = torch.randn(N_BUS, RRWP_KSTEPS)
+        # Sparse RRWP for edges: include existing bus-bus edges + self-loops
+        bb_ei = data["bus", "connects", "bus"].edge_index
         self_loops = torch.arange(N_BUS).unsqueeze(0).repeat(2, 1)
-        rrwp_idx = torch.cat([data.edge_index, self_loops], dim=1)
+        rrwp_idx = torch.cat([bb_ei, self_loops], dim=1)
         rrwp_nnz = rrwp_idx.size(1)
-        data.rrwp_index = rrwp_idx
-        data.rrwp_val = torch.randn(rrwp_nnz, RRWP_KSTEPS)
+        data["bus"].rrwp_index = rrwp_idx
+        data["bus"].rrwp_val = torch.randn(rrwp_nnz, RRWP_KSTEPS)
 
     return data
 
@@ -312,7 +310,7 @@ def benchmark():
     if MODEL_TYPE == "hetero":
         data = generate_hetero_graph()
     else:
-        data = generate_homo_graph()
+        data = generate_grit_graph()
     t1 = now_ms()
     data_gen_time_ms = t1 - t0
 
@@ -421,10 +419,7 @@ def benchmark():
             t_warmup_start = now_ms()
             with torch.no_grad():
                 for _ in range(5):
-                    if MODEL_TYPE == "hetero":
-                        _ = test_model(batch.x_dict, batch.edge_index_dict, batch.edge_attr_dict, batch.mask_dict)
-                    else:
-                        _ = test_model(batch.clone())
+                    _ = test_model(batch.clone())
             maybe_cuda_sync()
             t_warmup_end = now_ms()
             warmup_time_ms = t_warmup_end - t_warmup_start
@@ -445,10 +440,7 @@ def benchmark():
                 if torch.cuda.is_available():
                     start_event.record()
                 for _ in range(num_iters):
-                    if MODEL_TYPE == "hetero":
-                        _ = test_model(batch.x_dict, batch.edge_index_dict, batch.edge_attr_dict, batch.mask_dict)
-                    else:
-                        _ = test_model(batch.clone())
+                    _ = test_model(batch.clone())
                 if torch.cuda.is_available():
                     end_event.record()
             maybe_cuda_sync()
