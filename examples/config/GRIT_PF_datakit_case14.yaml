@@ -1,0 +1,94 @@
+callbacks:
+  patience: 100
+  tol: 0
+task:
+  task_name: PowerFlow
+data:
+  baseMVA: 100
+  mask_value: 0.0
+  normalization: HeteroDataMVANormalizer
+  networks:
+  - case14_ieee
+  scenarios:
+  - 5000
+  test_ratio: 0.1
+  val_ratio: 0.1
+  workers: 4
+  posenc_RRWP:
+    enable: false
+    ksteps: 21
+  posenc_RWSE:
+    enable: true
+    kernel:
+      times: 21
+model:
+  attention_head: 8
+  dropout: 0.1
+  # edge_dim must match the bus-bus edge feature count after transforms
+  # (P_E, Q_E, YFF_TT_R, YFF_TT_I, YFT_TF_R, YFT_TF_I, TAP, ANG_MIN, ANG_MAX, RATE_A)
+  edge_dim: 10
+  hidden_size: 116
+  # input_dim = bus feature count (used by GRIT core FeatureEncoder)
+  input_dim: 15
+  # Hetero adapter head dimensions
+  input_bus_dim: 15
+  input_gen_dim: 6
+  output_bus_dim: 2
+  output_gen_dim: 1
+  num_layers: 10
+  type: GRIT
+  act: relu
+  encoder:
+    node_encoder: true
+    edge_encoder: true
+    node_encoder_name: RWSE
+    node_encoder_bn: true
+    edge_encoder_bn: true
+    posenc_RWSE:
+      kernel:
+        times: 21
+      pe_dim: 20
+      raw_norm_type: batchnorm
+  gt:
+    layer_type: GritTransformer
+    dim_hidden: 116  # must match hidden_size
+    layer_norm: false
+    batch_norm: true
+    update_e: true
+    attn_dropout: 0.2
+    attn:
+      clamp: 5.
+      act: relu
+      full_attn: true
+      edge_enhance: true
+      O_e: true
+      norm_e: true
+      signed_sqrt: true
+      bn_momentum: 0.1
+      bn_no_runner: false
+optimizer:
+  beta1: 0.9
+  beta2: 0.999
+  learning_rate: 0.0001
+  lr_decay: 0.7
+  lr_patience: 10
+seed: 0
+training:
+  batch_size: 8
+  epochs: 500
+  loss_weights:
+  - 0.01
+  - 0.09
+  - 0.9
+  losses:
+  - PBE
+  - MaskedGenMSE
+  - MaskedBusMSE
+  loss_args:
+  - {}
+  - {}
+  - {}
+  accelerator: auto
+  devices: auto
+  strategy: auto
+verbose: true
