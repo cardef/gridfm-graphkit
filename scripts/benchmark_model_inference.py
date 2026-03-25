@@ -96,6 +96,8 @@ with open(args.config, "r") as f:
 
 config_args = NestedNamespace(**base_config)
 model = load_model(config_args).to(device).eval()
+tot_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print("**Total model trainable params: {}".format(tot_params))
 
 # ----------------------------
 # Parameters

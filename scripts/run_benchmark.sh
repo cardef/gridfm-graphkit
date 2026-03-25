@@ -7,7 +7,7 @@ CONFIGS=(
 )
 
 CONFIG_PATHS=(
-    "../examples/config/r2-1_grit_pretraining_RWSE_multi.yaml"
+    "../examples/config/GRIT_PF_datakit_case14.yaml"
 )
 
 GRAPH_SIZES=(
