@@ -7,6 +7,7 @@ data:
   baseMVA: 100
   mask_type: rnd        # or determinstic
   mask_ratio: 0.5       # for random masking only
+  mask_value: -1
   normalization: HeteroDataMVANormalizer
   networks:
   - case14_ieee

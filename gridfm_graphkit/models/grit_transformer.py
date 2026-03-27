@@ -29,6 +29,27 @@ class BatchNorm1dNode(torch.nn.Module):
         return batch
 
 
+class BatchNorm1dEdge(torch.nn.Module):
+    r"""A batch normalization layer for edge-level features.
+
+    Args:
+        dim_in (int): BatchNorm input dimension.
+        eps (float): BatchNorm eps.
+        momentum (float): BatchNorm momentum.
+    """
+    def __init__(self, dim_in, eps, momentum):
+        super().__init__()
+        self.bn = torch.nn.BatchNorm1d(
+            dim_in,
+            eps=eps,
+            momentum=momentum,
+        )
+
+    def forward(self, batch):
+        batch.edge_attr = self.bn(batch.edge_attr)
+        return batch
+
+
 class LinearNodeEncoder(torch.nn.Module):
     def __init__(self, dim_in, emb_dim):
         super().__init__()
@@ -84,7 +105,7 @@ class FeatureEncoder(torch.nn.Module):
             # Encode integer edge features via nn.Embeddings
             self.edge_encoder = LinearEdgeEncoder(edge_dim, enc_dim_edge)
             if args.encoder.edge_encoder_bn:
-                self.edge_encoder_bn = BatchNorm1dNode(enc_dim_edge, 1e-5, 0.1)
+                self.edge_encoder_bn = BatchNorm1dEdge(enc_dim_edge, 1e-5, 0.1)
 
     def forward(self, batch):
         for module in self.children():
