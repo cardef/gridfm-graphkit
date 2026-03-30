@@ -30,12 +30,12 @@ model:
   # (P_E, Q_E, YFF_TT_R, YFF_TT_I, YFT_TF_R, YFT_TF_I, TAP, ANG_MIN, ANG_MAX, RATE_A)
   edge_dim: 10
   hidden_size: 496
-  # input_dim = bus feature count (used by GRIT core FeatureEncoder)
-  input_dim: 15
+  # input_dim = bus feature count + aggregated PG (used by GRIT core FeatureEncoder)
+  input_dim: 16
   # Hetero adapter head dimensions
-  input_bus_dim: 15
+  input_bus_dim: 16
   input_gen_dim: 6
-  output_bus_dim: 2
+  output_bus_dim: 6    # [VM, VA, PG, QG, PD, QD]
   output_gen_dim: 1
   num_layers: 7
   type: GRIT
@@ -79,14 +79,11 @@ training:
   epochs: 500
   loss_weights:
   - 0.99
-  - 0.001
-  - 0.009
+  - 0.01
   losses:
   - PBE
-  - MaskedGenMSE
-  - MaskedBusMSE
+  - MaskedReconstructionMSE
   loss_args:
-  - {}
   - {}
   - {}
   accelerator: auto
