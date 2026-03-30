@@ -469,14 +469,23 @@ class PBELoss(BaseLoss):
         S_injection = torch.diag(V) @ Y_bus_conj @ V_conj
 
         # --- Net power from predictions/targets ---
-        # Pg: aggregate generator predictions onto buses
+        # Pg: use bus head prediction where masked, ground truth where known.
+        # Ground truth is aggregated from generator targets onto buses.
         gen_to_bus_ei = edge_index_dict[("gen", "connected_to", "bus")]
-        Pg_per_bus = scatter_add(
-            pred_dict["gen"].squeeze(-1),
+        target_pg_agg = scatter_add(
+            target_dict["gen"][:, PG_H],
             gen_to_bus_ei[1],
             dim=0,
             dim_size=num_bus,
         )
+        gen_pg_masked = mask_dict["gen"][:, PG_H].float()
+        any_gen_masked = scatter_add(
+            gen_pg_masked,
+            gen_to_bus_ei[1],
+            dim=0,
+            dim_size=num_bus,
+        ) > 0
+        Pg_per_bus = torch.where(any_gen_masked, pred_bus[:, PG_OUT], target_pg_agg)
 
         Pd = target_bus[:, PD_H]
         Qd = target_bus[:, QD_H]
