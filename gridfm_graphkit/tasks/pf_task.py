@@ -36,11 +36,67 @@ import os
 import pandas as pd
 
 
+def _build_bus_target(batch, num_bus):
+    """Build a 4-column bus-level target tensor [VM, VA, PG_agg, QG].
+
+    Generator PG is aggregated onto buses via scatter_add so that the
+    target layout matches the bus head output columns.
+    """
+    _, gen_to_bus_index = batch.edge_index_dict[("gen", "connected_to", "bus")]
+    agg_gen_on_bus = scatter_add(
+        batch.y_dict["gen"],
+        gen_to_bus_index,
+        dim=0,
+        dim_size=num_bus,
+    )
+    target = torch.stack(
+        [
+            batch.y_dict["bus"][:, VM_H],
+            batch.y_dict["bus"][:, VA_H],
+            agg_gen_on_bus.squeeze(),
+            batch.y_dict["bus"][:, QG_H],
+        ],
+        dim=1,
+    )
+    return target, gen_to_bus_index, agg_gen_on_bus
+
+
+def _clamp_known_to_ground_truth(output_bus, target, batch, gen_to_bus_index, num_bus):
+    """Replace predicted values with ground truth for known (unmasked) quantities.
+
+    During both training (PBELoss) and evaluation, the model is only
+    responsible for predicting masked unknowns.  Known quantities (e.g.
+    VM at PV buses, VA at REF, PG at non-slack generators) are clamped to
+    ground truth so that prediction errors on non-target outputs do not
+    pollute the power-balance residual.
+    """
+    mask_bus = batch.mask_dict["bus"]
+    eval_bus = output_bus.clone()
+    eval_bus[:, VM_OUT] = torch.where(
+        mask_bus[:, VM_H], output_bus[:, VM_OUT], target[:, VM_OUT],
+    )
+    eval_bus[:, VA_OUT] = torch.where(
+        mask_bus[:, VA_H], output_bus[:, VA_OUT], target[:, VA_OUT],
+    )
+    gen_pg_masked = batch.mask_dict["gen"][:, PG_H].float()
+    any_gen_masked = (
+        scatter_add(gen_pg_masked, gen_to_bus_index, dim=0, dim_size=num_bus) > 0
+    )
+    eval_bus[:, PG_OUT] = torch.where(
+        any_gen_masked, output_bus[:, PG_OUT], target[:, PG_OUT],
+    )
+    eval_bus[:, QG_OUT] = torch.where(
+        mask_bus[:, QG_H], output_bus[:, QG_OUT], target[:, QG_OUT],
+    )
+    return eval_bus
+
+
 @TASK_REGISTRY.register("PowerFlow")
 class PowerFlowTask(ReconstructionTask):
     """
-    Concrete Optimal Power Flow task.
-    Extends ReconstructionTask and adds OPF-specific metrics.
+    Concrete Power Flow task.
+    Extends ReconstructionTask and adds PF-specific evaluation metrics
+    (power balance residuals, per-bus-type RMSE).
     """
 
     def __init__(self, args, data_normalizers):
@@ -60,49 +116,10 @@ class PowerFlowTask(ReconstructionTask):
         num_bus = batch.x_dict["bus"].size(0)
         bus_edge_index = batch.edge_index_dict[("bus", "connects", "bus")]
         bus_edge_attr = batch.edge_attr_dict[("bus", "connects", "bus")]
-        _, gen_to_bus_index = batch.edge_index_dict[("gen", "connected_to", "bus")]
 
-        agg_gen_on_bus = scatter_add(
-            batch.y_dict["gen"],
-            gen_to_bus_index,
-            dim=0,
-            dim_size=num_bus,
-        )
-        # output_agg = torch.cat([batch.y_dict["bus"], agg_gen_on_bus], dim=1)
-        target = torch.stack(
-            [
-                batch.y_dict["bus"][:, VM_H],
-                batch.y_dict["bus"][:, VA_H],
-                agg_gen_on_bus.squeeze(),
-                batch.y_dict["bus"][:, QG_H],
-            ],
-            dim=1,
-        )
-
-        # UN-COMMENT THIS TO CHECK PBE ON GROUND TRUTH
-        # output["bus"] = target
-
-        # Clamp known (unmasked) values to ground truth, matching the
-        # PBELoss convention used during training.  The model is only
-        # responsible for predicting masked unknowns; using raw predictions
-        # for known quantities would inflate the residual.
-        mask_bus = batch.mask_dict["bus"]
-        eval_bus = output["bus"].clone()
-        eval_bus[:, VM_OUT] = torch.where(
-            mask_bus[:, VM_H], output["bus"][:, VM_OUT], target[:, VM_OUT],
-        )
-        eval_bus[:, VA_OUT] = torch.where(
-            mask_bus[:, VA_H], output["bus"][:, VA_OUT], target[:, VA_OUT],
-        )
-        gen_pg_masked = batch.mask_dict["gen"][:, PG_H].float()
-        any_gen_masked = (
-            scatter_add(gen_pg_masked, gen_to_bus_index, dim=0, dim_size=num_bus) > 0
-        )
-        eval_bus[:, PG_OUT] = torch.where(
-            any_gen_masked, output["bus"][:, PG_OUT], target[:, PG_OUT],
-        )
-        eval_bus[:, QG_OUT] = torch.where(
-            mask_bus[:, QG_H], output["bus"][:, QG_OUT], target[:, QG_OUT],
+        target, gen_to_bus_index, agg_gen_on_bus = _build_bus_target(batch, num_bus)
+        eval_bus = _clamp_known_to_ground_truth(
+            output["bus"], target, batch, gen_to_bus_index, num_bus,
         )
 
         Pft, Qft = branch_flow_layer(eval_bus, bus_edge_index, bus_edge_attr)
@@ -393,44 +410,10 @@ class PowerFlowTask(ReconstructionTask):
         num_bus = batch.x_dict["bus"].size(0)
         bus_edge_index = batch.edge_index_dict[("bus", "connects", "bus")]
         bus_edge_attr = batch.edge_attr_dict[("bus", "connects", "bus")]
-        _, gen_to_bus_index = batch.edge_index_dict[("gen", "connected_to", "bus")]
 
-        agg_gen_on_bus = scatter_add(
-            batch.y_dict["gen"],
-            gen_to_bus_index,
-            dim=0,
-            dim_size=num_bus,
-        )
-
-        # Build target for clamping known (unmasked) values
-        target = torch.stack(
-            [
-                batch.y_dict["bus"][:, VM_H],
-                batch.y_dict["bus"][:, VA_H],
-                agg_gen_on_bus.squeeze(),
-                batch.y_dict["bus"][:, QG_H],
-            ],
-            dim=1,
-        )
-
-        # Clamp known values to ground truth (same as PBELoss during training)
-        mask_bus = batch.mask_dict["bus"]
-        eval_bus = output["bus"].clone()
-        eval_bus[:, VM_OUT] = torch.where(
-            mask_bus[:, VM_H], output["bus"][:, VM_OUT], target[:, VM_OUT],
-        )
-        eval_bus[:, VA_OUT] = torch.where(
-            mask_bus[:, VA_H], output["bus"][:, VA_OUT], target[:, VA_OUT],
-        )
-        gen_pg_masked = batch.mask_dict["gen"][:, PG_H].float()
-        any_gen_masked = (
-            scatter_add(gen_pg_masked, gen_to_bus_index, dim=0, dim_size=num_bus) > 0
-        )
-        eval_bus[:, PG_OUT] = torch.where(
-            any_gen_masked, output["bus"][:, PG_OUT], target[:, PG_OUT],
-        )
-        eval_bus[:, QG_OUT] = torch.where(
-            mask_bus[:, QG_H], output["bus"][:, QG_OUT], target[:, QG_OUT],
+        target, gen_to_bus_index, agg_gen_on_bus = _build_bus_target(batch, num_bus)
+        eval_bus = _clamp_known_to_ground_truth(
+            output["bus"], target, batch, gen_to_bus_index, num_bus,
         )
 
         Pft, Qft = branch_flow_layer(eval_bus, bus_edge_index, bus_edge_attr)

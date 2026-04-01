@@ -441,7 +441,14 @@ class PBELoss(BaseLoss):
         bus_edge_attr = edge_attr_dict[("bus", "connects", "bus")]
         mask_bus = mask_dict["bus"]
 
-        # --- Voltage: use prediction where masked, target where known ---
+        # --- Clamp known values to ground truth ---
+        # In power flow, certain variables are "known" (unmasked) at each
+        # bus type (e.g. VM at PV buses, VA at REF).  The model only needs
+        # to predict *masked* unknowns; for everything else we substitute
+        # the ground truth so that errors in non-target outputs do not
+        # pollute the physics loss.  This matches the reference's
+        # ``temp_pred[unmasked] = target[unmasked]`` convention.
+
         Vm_pred = pred_bus[:, VM_OUT]
         Va_pred = pred_bus[:, VA_OUT]
         Vm_target = target_bus[:, VM_H]
@@ -527,10 +534,10 @@ class PBELoss(BaseLoss):
         ) > 0
         Pg_per_bus = torch.where(any_gen_masked, pred_bus[:, PG_OUT], target_pg_agg)
 
-        # Pd, Qd: use prediction where masked, target where known.
-        # For deterministic PF/OPF masks PD/QD are never masked, so this
-        # is equivalent to always using target.  For random masking this
-        # lets PBE provide gradient signal for PD/QD reconstruction.
+        # Pd, Qd, Qg: same clamp-to-ground-truth logic.  The size guard
+        # (``pred_bus.size(1) > *_OUT``) handles models with a narrow bus
+        # head (e.g. output_bus_dim=4) that don't predict PD/QD/QG; in that
+        # case the target is always used.
         if pred_bus.size(1) > PD_OUT:
             Pd = torch.where(mask_bus[:, PD_H], pred_bus[:, PD_OUT], target_bus[:, PD_H])
         else:
@@ -539,8 +546,6 @@ class PBELoss(BaseLoss):
             Qd = torch.where(mask_bus[:, QD_H], pred_bus[:, QD_OUT], target_bus[:, QD_H])
         else:
             Qd = target_bus[:, QD_H]
-
-        # Qg: use prediction if the model predicts it, else use target
         if pred_bus.size(1) > QG_OUT:
             Qg = torch.where(mask_bus[:, QG_H], pred_bus[:, QG_OUT], target_bus[:, QG_H])
         else:

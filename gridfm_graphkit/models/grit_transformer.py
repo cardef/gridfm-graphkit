@@ -236,9 +236,6 @@ class GritTransformer(torch.nn.Module):
         Returns:
             output (Tensor): Output node features of shape [num_nodes, output_dim].
         """
-        # print('xxxx',batch.x.min(), batch.x.max())
-        # print('yyyyy',batch.y.min(), batch.y.max())
-        # print('>>>>', batch)
         for module in self.children():
             batch = module(batch)
 
