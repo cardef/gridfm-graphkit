@@ -245,8 +245,7 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                 and network in saved_stats
                 and data_normalizer.fit_strategy == "fit_on_train"
             )
-            # if use_saved:
-            if False:
+            if use_saved:
                 print(f"Restoring normalizer for {network} from saved stats")
                 data_normalizer.fit_from_dict(saved_stats[network])
             else:

@@ -5,7 +5,6 @@ from pytorch_lightning.utilities import rank_zero_only
 from lightning.pytorch.loggers import MLFlowLogger
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from collections.abc import Mapping
 
 
 class BaseTask(L.LightningModule, ABC):
@@ -71,36 +70,23 @@ class BaseTask(L.LightningModule, ABC):
             stats_dict[self.args.data.networks[i]] = normalizer.get_stats()
         torch.save(stats_dict, os.path.join(log_dir, "normalizer_stats.pt"))
 
-
     def configure_optimizers(self):
-        if self.args.optimizer.type is None:
-            self.args.optimizer.type = "Adam"
-        optimizer = getattr(torch.optim, self.args.optimizer.type)
-        print(f'{self.args.optimizer.optimizer_params=}')
-        if not isinstance(self.args.optimizer.optimizer_params, Mapping):
-            self.args.optimizer.optimizer_params = self.args.optimizer.optimizer_params.to_dict()
-        self.optimizer = optimizer(
+        self.optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=self.args.optimizer.learning_rate,
-            **self.args.optimizer.optimizer_params, #unpack all other optim parameters
+            betas=(self.args.optimizer.beta1, self.args.optimizer.beta2),
         )
-        scheduler_type = getattr(self.args.optimizer, "scheduler_type", None)
-        if scheduler_type is None:
-            return {"optimizer": self.optimizer}
-
-        #TODO: add interval handling for scheduler
-        scheduler = getattr(torch.optim.lr_scheduler, scheduler_type)
-        if not isinstance(self.args.optimizer.scheduler_params, Mapping):
-            self.args.optimizer.scheduler_params = self.args.optimizer.scheduler_params.to_dict()
-        self.scheduler = scheduler(
+        self.scheduler = ReduceLROnPlateau(
             self.optimizer,
-            **self.args.optimizer.scheduler_params
+            mode="min",
+            factor=self.args.optimizer.lr_decay,
+            patience=self.args.optimizer.lr_patience,
         )
-        config_optim = {
+        return {
             "optimizer": self.optimizer,
             "lr_scheduler": {
                 "scheduler": self.scheduler,
                 "monitor": "Validation loss",
+                "reduce_on_plateau": True,
             },
         }
-        return config_optim

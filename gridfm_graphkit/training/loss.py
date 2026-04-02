@@ -19,9 +19,6 @@ from gridfm_graphkit.datasets.globals import (
     PG_OUT,
     # Generator feature indices
     PG_H,
-    C0_H,
-    C1_H,
-    C2_H,
     # Qg Limits
     MIN_QG_H, 
     MAX_QG_H,
@@ -43,7 +40,6 @@ class BaseLoss(nn.Module, ABC):
         mask=None,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         """
         Compute the loss.
@@ -81,7 +77,6 @@ class MaskedMSELoss(BaseLoss):
         mask=None,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         loss = F.mse_loss(pred[mask], target[mask], reduction=self.reduction)
         return {"loss": loss, "Masked MSE loss": loss.detach()}
@@ -102,7 +97,6 @@ class MaskedGenMSE(torch.nn.Module):
         mask_dict,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         loss = F.mse_loss(
             pred_dict["gen"][mask_dict["gen"][:, : (PG_H + 1)]],
@@ -128,7 +122,6 @@ class MaskedBusMSE(torch.nn.Module):
         mask_dict,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         if self.args.task == "OptimalPowerFlow":
             pred_cols = [VM_OUT, VA_OUT, QG_OUT]
@@ -167,7 +160,6 @@ class MSELoss(BaseLoss):
         mask=None,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         loss = F.mse_loss(pred, target, reduction=self.reduction)
         return {"loss": loss, "MSE loss": loss.detach()}
@@ -202,7 +194,6 @@ class MixedLoss(BaseLoss):
         mask=None,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         """
         Compute the weighted sum of all specified losses.
@@ -230,7 +221,6 @@ class MixedLoss(BaseLoss):
                 mask,
                 model,
                 x_dict,
-                batch_dict,
             )
 
             # Assume each loss function returns a dictionary with a "loss" key
@@ -262,7 +252,6 @@ class LayeredWeightedPhysicsLoss(BaseLoss):
         mask=None,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         total_loss = 0.0
         loss_details = {}
@@ -314,7 +303,6 @@ class LossPerDim(BaseLoss):
         mask_dict,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         if self.dim == "VM":
             temp_pred = pred_dict["bus"][:, VM_OUT]
@@ -364,7 +352,6 @@ class QgViolationPenaltyLoss(BaseLoss):
         mask=None,
         model=None,
         x_dict=None,
-        batch_dict=None,
     ):
         # --- Qg limit violation mask ---
         Qg_pred = pred["bus"][:, QG_OUT]
@@ -402,161 +389,3 @@ class QgViolationPenaltyLoss(BaseLoss):
         return output
 
 
-
-
-@LOSS_REGISTRY.register("QgViolationBarrier")
-class QgViolationBarrierLoss(BaseLoss):
-    """
-    QgViolation Barrier loss function.
-    * https://en.wikipedia.org/wiki/Barrier_function
-    Available barrier functions are defined in the self.barriers dictionary.
-    References for relaxed barrier functions:
-    * https://arxiv.org/abs/1602.01321
-    * https://arxiv.org/abs/1904.04205v2
-    * https://ieeexplore.ieee.org/document/7493643/
-
-    Modified from https://github.com/pnnl/neuromancer
-    Copyright © 2021, Battelle Memorial Institute
-    https://github.com/pnnl/neuromancer/blob/master/LICENSE.md 
-    """
-    def __init__(self, loss_args, args):
-        super().__init__()
-
-        self.barrier_name = getattr(loss_args, "barrier", 'log10')
-        self.shift = getattr(loss_args, "shift", 1)
-        self.alpha = getattr(loss_args, "alpha", 0.5)
-        self.upper_bound = getattr(loss_args, "upper_bound", 1.0)
-
-        # choices of barrier functions
-        #   warning: log10, log, inverse, and softlog might get numerically unstable
-        #   softexp is numerically stable and thus a prefered option
-        self.barriers = {
-                'log10': lambda value: -torch.log10(-value),
-                'log': lambda value: -torch.log(-value),
-                'inverse': lambda value: 1 / (-value),
-                'softexp': lambda value: (torch.exp(self.alpha * value) - 1) / self.alpha + self.alpha,
-                'softlog': lambda value: -torch.log(1 + self.alpha * (-value - self.alpha)) / self.alpha,
-                'expshift': lambda value: torch.exp(value + self.shift)
-                    }
-        self.barrier = self._set_barrier()
-
-    def _set_barrier(self):
-        if self.barrier_name in self.barriers:
-            return self.barriers[self.barrier_name]
-        else:
-            assert callable(barrier), \
-                f'The barrier, {barrier} must be a key in {self.barriers} or a callable.'
-            return barrier
-
-    def forward(
-        self,
-        pred,
-        target,
-        edge_index=None,
-        edge_attr=None,
-        mask=None,
-        model=None,
-        x_dict=None,
-        batch_dict=None,
-    ):
-        """
-        Calculate the magnitudes of constraint violations via log barriers
-            cviolation > 0 -> penalty (i.e. beyond constraints)
-            cviolation <= 0 -> barrier (i.e. within constraints)
-        """
-
-        # --- Qg limit violation mask ---
-        Qg_pred = pred["bus"][:, QG_OUT]
-        Qg_max = x_dict["bus"][:, MAX_QG_H]
-        Qg_min = x_dict["bus"][:, MIN_QG_H]
-
-        max_penalty_mask = (Qg_pred > Qg_max) 
-        min_penalty_mask = (Qg_pred < Qg_min)
-
-        mask_PQ = mask["PQ"]  # PQ buses
-        mask_PV = mask["PV"]  # PV buses
-        mask_REF = mask["REF"]  # Reference buses
-
-        loss = 0.0
-        
-        if max_penalty_mask.any() or min_penalty_mask.any():
-            # where there are violations, compute penalty loss
-            Qg_over = F.relu(Qg_pred - Qg_max)  # amount above max limit
-            Qg_under = F.relu(Qg_min - Qg_pred)  # amount below min limit
-
-            Qg_over = Qg_over[max_penalty_mask].mean()
-            Qg_under = Qg_under[min_penalty_mask].mean()
-
-            if Qg_over!=Qg_over: # replacing nan with 0 
-                Qg_over = 0.0
-            if Qg_under!=Qg_under: # replacing nan with 0 
-                Qg_under = 0.0
-
-            penalty_loss = Qg_over + Qg_under            
-            loss += penalty_loss
-
-        if (~max_penalty_mask).any() or (~min_penalty_mask).any():
-            Qg_barrier_amount_max = Qg_pred - Qg_max
-            Qg_barrier_amount_min = Qg_min - Qg_pred
-            
-            cbarrier_max = self.barrier(Qg_barrier_amount_max)
-            cbarrier_max[cbarrier_max != cbarrier_max] = 0.0  # replacing nan with 0 -> infeasibility
-            cbarrier_max[cbarrier_max == float("Inf")] = 0.0  # replacing inf with 0 -> active constraints
-            cbarrier_max = torch.clamp(cbarrier_max, min=0.0, max=self.upper_bound)
-            barrier_loss_max = cbarrier_max[~max_penalty_mask].mean()
-            
-            cbarrier_min = self.barrier(Qg_barrier_amount_min)
-            cbarrier_min[cbarrier_min != cbarrier_min] = 0.0  # replacing nan with 0 -> infeasibility
-            cbarrier_min[cbarrier_min == float("Inf")] = 0.0  # replacing inf with 0 -> active constraints
-            cbarrier_min = torch.clamp(cbarrier_min, min=0.0, max=self.upper_bound)
-            barrier_loss_min = cbarrier_min[~min_penalty_mask].mean()
-
-            barrier_loss = barrier_loss_min + barrier_loss_max
-            loss+=barrier_loss
-
-        return {"loss": loss, "Qg Violation Barrier loss": loss.detach()}
-
-
-
-@LOSS_REGISTRY.register("OptimalityLoss")
-class OptimalityLoss(BaseLoss):
-    """
-    """
-
-    def __init__(self, loss_args, args):
-        super().__init__()
-
-    def forward(
-        self,
-        pred,
-        target,
-        edge_index=None,
-        edge_attr=None,
-        mask=None,
-        model=None,
-        x_dict=None,
-        batch_dict=None,
-    ):
-        c0 = x_dict["gen"][:, C0_H]
-        c1 = x_dict["gen"][:, C1_H]
-        c2 = x_dict["gen"][:, C2_H]
-        target_pg = target["gen"].squeeze()
-        pred_pg = pred["gen"].squeeze()
-        gen_cost_gt = c0 + c1 * target_pg + c2 * target_pg**2
-        gen_cost_pred = c0 + c1 * pred_pg + c2 * pred_pg**2
-
-        gen_batch = batch_dict["gen"]  # shape: [N_gen_total]
-
-        cost_gt = scatter_add(gen_cost_gt, gen_batch, dim=0)
-        cost_pred = scatter_add(gen_cost_pred, gen_batch, dim=0)
-
-        loss = torch.mean(torch.abs((cost_pred - cost_gt) / cost_gt * 100))
-        if  loss!=loss:
-            loss=0.0
-
-        try:
-            output = {"loss": loss, "Optimality loss": loss.detach()}
-        except:
-            output = {"loss": loss, "Optimality loss": loss}
-
-        return output
