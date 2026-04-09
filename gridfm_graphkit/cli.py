@@ -18,6 +18,17 @@ from lightning.pytorch.loggers import MLFlowLogger
 import lightning as L
 
 
+def _normalize_loaded_state_dict_keys(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    """Map legacy torch.compile checkpoint keys to the canonical model namespace."""
+    has_compiled_prefix = any(key.startswith("model._orig_mod.") for key in state_dict)
+    if not has_compiled_prefix:
+        return state_dict
+    return {
+        key.replace("model._orig_mod.", "model."): value
+        for key, value in state_dict.items()
+    }
+
+
 def _load_plugins(plugins: list[str]) -> None:
     """Import plugin packages so their registry decorators fire."""
     for plugin_pkg in plugins:
@@ -163,6 +174,7 @@ def main_cli(args):
     if args.command != "train":
         print(f"Loading model weights from {args.model_path}")
         state_dict = torch.load(args.model_path, map_location="cpu")
+        state_dict = _normalize_loaded_state_dict_keys(state_dict)
         model.load_state_dict(state_dict)
 
     precision = "bf16-true" if getattr(args, "bfloat16", False) else None
