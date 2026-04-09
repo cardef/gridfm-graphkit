@@ -55,7 +55,6 @@ class HeteroGridDatasetDisk(Dataset):
     @property
     def processed_file_names(self):
         return [
-            "load_scenarios.pt",
             self.processed_done_file,
         ]
 
@@ -72,11 +71,11 @@ class HeteroGridDatasetDisk(Dataset):
             bus_data["scenario"].min() == 0
             and bus_data["scenario"].max() == len(bus_data["scenario"].unique()) - 1
         )
-
-        load_scenarios = torch.tensor(
-            bus_data.groupby("scenario", sort=True)["load_scenario_idx"].first().values,
-        )
-        torch.save(load_scenarios, osp.join(self.processed_dir, "load_scenarios.pt"))
+        if "load_scenario_idx" in bus_data.columns:
+            load_scenarios = torch.tensor(
+                bus_data.groupby("scenario", sort=True)["load_scenario_idx"].first().values,
+            )
+            torch.save(load_scenarios, osp.join(self.processed_dir, "load_scenarios.pt"))
 
         agg_gen = (
             gen_data.groupby(["scenario", "bus"])[["min_q_mvar", "max_q_mvar"]]
