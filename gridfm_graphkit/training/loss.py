@@ -13,6 +13,8 @@ from gridfm_graphkit.datasets.globals import (
     VA_H,
     QD_H,
     PD_H,
+    GS,
+    BS,
     # Output feature indices
     VM_OUT,
     VA_OUT,
@@ -271,6 +273,7 @@ class MixedLoss(BaseLoss):
         edge_attr=None,
         mask=None,
         model=None,
+        **kwargs,
     ):
         """
         Compute the weighted sum of all specified losses.
@@ -297,6 +300,7 @@ class MixedLoss(BaseLoss):
                 edge_attr,
                 mask,
                 model,
+                **kwargs,
             )
 
             # Assume each loss function returns a dictionary with a "loss" key
@@ -432,6 +436,7 @@ class PBELoss(BaseLoss):
         edge_attr_dict,
         mask_dict,
         model=None,
+        x_dict=None,
     ):
         pred_bus = pred_dict["bus"]          # [N_bus, output_bus_dim]
         target_bus = target_dict["bus"]      # [N_bus, bus_feat_dim]
@@ -497,6 +502,11 @@ class PBELoss(BaseLoss):
             dim_size=num_bus,
         )
         Y_diag = Y_diag_r + 1j * Y_diag_i
+
+        # Add bus shunt admittance (Gs + jBs) to the diagonal
+        if x_dict is not None:
+            bus_orig = x_dict["bus"]
+            Y_diag = Y_diag + bus_orig[:, GS] + 1j * bus_orig[:, BS]
 
         # Build complete Y-bus: off-diagonal edges + self-loops for diagonal
         diag_idx = torch.arange(num_bus, device=bus_edge_index.device)
