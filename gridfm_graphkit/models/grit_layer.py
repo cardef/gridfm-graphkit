@@ -117,7 +117,6 @@ class MultiHeadAttentionLayerGritSparse(nn.Module):
         if self.clamp is not None:
             score = torch.clamp(score, min=-self.clamp, max=self.clamp)
 
-        raw_attn = score
         score = pyg_softmax(
             score,
             batch.edge_index[1],
@@ -223,22 +222,6 @@ class GritTransformerLayer(nn.Module):
             scaled_attn=getattr(cfg.attn, "scaled_attn", False),
             no_qk=getattr(cfg.attn, "no_qk", False),
         )
-
-        if getattr(cfg.attn, "graphormer_attn", False):
-            self.attention = MultiHeadAttentionLayerGraphormerSparse(
-                in_dim=in_dim,
-                out_dim=out_dim // num_heads,
-                num_heads=num_heads,
-                use_bias=getattr(cfg.attn, "use_bias", False),
-                dropout=attn_dropout,
-                clamp=getattr(cfg.attn, "clamp", 5.0),
-                act=getattr(cfg.attn, "act", "relu"),
-                edge_enhance=True,
-                sqrt_relu=getattr(cfg.attn, "sqrt_relu", False),
-                signed_sqrt=getattr(cfg.attn, "signed_sqrt", False),
-                scaled_attn=getattr(cfg.attn, "scaled_attn", False),
-                no_qk=getattr(cfg.attn, "no_qk", False),
-            )
 
         self.O_h = nn.Linear(out_dim // num_heads * num_heads, out_dim)
         if O_e:

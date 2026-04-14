@@ -163,7 +163,6 @@ class GritTransformer(torch.nn.Module):
         dim_in = args.model.input_dim
         dim_out = args.model.output_dim
         dim_inner = args.model.hidden_size
-        dim_edge = args.model.edge_dim
         num_heads = args.model.attention_head
         dropout = args.model.dropout
         num_layers = args.model.num_layers

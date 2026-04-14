@@ -45,6 +45,7 @@ from datetime import datetime
 from torch_geometric.loader import DataLoader
 from torch_geometric.data import HeteroData
 from gridfm_graphkit.io.param_handler import NestedNamespace, load_model
+import logging
 
 # Optional: tqdm (imported but not required for core flow)
 try:
@@ -95,7 +96,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 # --- Custom logging (ensure directory exists)
-import logging
 
 os.makedirs("logs", exist_ok=True)
 logger = logging.getLogger("ibm_benchmark_logger")

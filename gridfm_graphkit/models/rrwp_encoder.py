@@ -4,12 +4,9 @@ The RRWP encoder for GRIT (ours)
 
 import torch
 from torch import nn
-from torch.nn import functional as F
 import torch_sparse
 
 from torch_geometric.utils import (
-    remove_self_loops,
-    add_remaining_self_loops,
     add_self_loops,
 )
 from torch_scatter import scatter

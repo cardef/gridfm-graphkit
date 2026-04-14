@@ -1,13 +1,6 @@
-from copy import deepcopy
-
-import numpy as np
 import torch
-import torch.nn.functional as F
 
 from torch_geometric.utils import (
-    get_laplacian,
-    to_scipy_sparse_matrix,
-    to_undirected,
     to_dense_adj,
 )
 from torch_geometric.utils.num_nodes import maybe_num_nodes
@@ -18,8 +11,6 @@ from gridfm_graphkit.datasets.rrwp import add_full_rrwp
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.data import Data, HeteroData
 from typing import Any
-
-from torch_geometric.utils.num_nodes import maybe_num_nodes
 
 
 def compute_posenc_stats(data, pe_types, cfg):
@@ -112,7 +103,7 @@ def get_rw_landing_probs(
     if edge_weight is None:
         edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
     num_nodes = maybe_num_nodes(edge_index, num_nodes)
-    source, dest = edge_index[0], edge_index[1]
+    source, _ = edge_index[0], edge_index[1]
     deg = scatter_add(edge_weight, source, dim=0, dim_size=num_nodes)  # Out degrees.
     deg_inv = deg.pow(-1.0)
     deg_inv.masked_fill_(deg_inv == float("inf"), 0)
