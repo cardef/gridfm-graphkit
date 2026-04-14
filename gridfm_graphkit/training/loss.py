@@ -194,33 +194,42 @@ class MaskedReconstructionMSE(BaseLoss):
             dim=0,
             dim_size=num_bus,
         )
-        target = torch.stack([
-            target_bus[:, VM_H],
-            target_bus[:, VA_H],
-            target_pg_agg,
-            target_bus[:, QG_H],
-            target_bus[:, PD_H],
-            target_bus[:, QD_H],
-        ], dim=1)
+        target = torch.stack(
+            [
+                target_bus[:, VM_H],
+                target_bus[:, VA_H],
+                target_pg_agg,
+                target_bus[:, QG_H],
+                target_bus[:, PD_H],
+                target_bus[:, QD_H],
+            ],
+            dim=1,
+        )
 
         # --- Build mask: [N_bus, 6] ---
         # PG bus-level mask: True if any generator at the bus has PG masked
         gen_pg_masked = mask_dict["gen"][:, PG_H].float()
-        any_gen_masked = scatter_add(
-            gen_pg_masked,
-            gen_to_bus_ei[1],
-            dim=0,
-            dim_size=num_bus,
-        ) > 0
+        any_gen_masked = (
+            scatter_add(
+                gen_pg_masked,
+                gen_to_bus_ei[1],
+                dim=0,
+                dim_size=num_bus,
+            )
+            > 0
+        )
 
-        mask = torch.stack([
-            mask_dict["bus"][:, VM_H],
-            mask_dict["bus"][:, VA_H],
-            any_gen_masked,
-            mask_dict["bus"][:, QG_H],
-            mask_dict["bus"][:, PD_H],
-            mask_dict["bus"][:, QD_H],
-        ], dim=1)
+        mask = torch.stack(
+            [
+                mask_dict["bus"][:, VM_H],
+                mask_dict["bus"][:, VA_H],
+                any_gen_masked,
+                mask_dict["bus"][:, QG_H],
+                mask_dict["bus"][:, PD_H],
+                mask_dict["bus"][:, QD_H],
+            ],
+            dim=1,
+        )
 
         # --- Prediction: [VM, VA, PG, QG, PD, QD] from bus head ---
         pred = pred_bus[:, [VM_OUT, VA_OUT, PG_OUT, QG_OUT, PD_OUT, QD_OUT]]
@@ -420,7 +429,8 @@ class LossPerDim(BaseLoss):
             f"MSE loss {self.dim}": mse_loss.detach(),
             f"MAE loss {self.dim}": mae_loss.detach(),
         }
-    
+
+
 @LOSS_REGISTRY.register("PBE")
 class PBELoss(BaseLoss):
     """
@@ -446,8 +456,8 @@ class PBELoss(BaseLoss):
         model=None,
         x_dict=None,
     ):
-        pred_bus = pred_dict["bus"]          # [N_bus, output_bus_dim]
-        target_bus = target_dict["bus"]      # [N_bus, bus_feat_dim]
+        pred_bus = pred_dict["bus"]  # [N_bus, output_bus_dim]
+        target_bus = target_dict["bus"]  # [N_bus, bus_feat_dim]
         num_bus = target_bus.size(0)
 
         bus_edge_index = edge_index_dict[("bus", "connects", "bus")]
@@ -519,7 +529,8 @@ class PBELoss(BaseLoss):
         # Build complete Y-bus: off-diagonal edges + self-loops for diagonal
         diag_idx = torch.arange(num_bus, device=bus_edge_index.device)
         full_edge_index = torch.cat(
-            [bus_edge_index, torch.stack([diag_idx, diag_idx])], dim=1,
+            [bus_edge_index, torch.stack([diag_idx, diag_idx])],
+            dim=1,
         )
         full_edge_values = torch.cat([edge_offdiag, Y_diag])
 
@@ -544,12 +555,15 @@ class PBELoss(BaseLoss):
             dim_size=num_bus,
         )
         gen_pg_masked = mask_dict["gen"][:, PG_H].float()
-        any_gen_masked = scatter_add(
-            gen_pg_masked,
-            gen_to_bus_ei[1],
-            dim=0,
-            dim_size=num_bus,
-        ) > 0
+        any_gen_masked = (
+            scatter_add(
+                gen_pg_masked,
+                gen_to_bus_ei[1],
+                dim=0,
+                dim_size=num_bus,
+            )
+            > 0
+        )
         Pg_per_bus = torch.where(any_gen_masked, pred_bus[:, PG_OUT], target_pg_agg)
 
         # Pd, Qd, Qg: same clamp-to-ground-truth logic.  The size guard
@@ -557,15 +571,27 @@ class PBELoss(BaseLoss):
         # head (e.g. output_bus_dim=4) that don't predict PD/QD/QG; in that
         # case the target is always used.
         if pred_bus.size(1) > PD_OUT:
-            Pd = torch.where(mask_bus[:, PD_H], pred_bus[:, PD_OUT], target_bus[:, PD_H])
+            Pd = torch.where(
+                mask_bus[:, PD_H],
+                pred_bus[:, PD_OUT],
+                target_bus[:, PD_H],
+            )
         else:
             Pd = target_bus[:, PD_H]
         if pred_bus.size(1) > QD_OUT:
-            Qd = torch.where(mask_bus[:, QD_H], pred_bus[:, QD_OUT], target_bus[:, QD_H])
+            Qd = torch.where(
+                mask_bus[:, QD_H],
+                pred_bus[:, QD_OUT],
+                target_bus[:, QD_H],
+            )
         else:
             Qd = target_bus[:, QD_H]
         if pred_bus.size(1) > QG_OUT:
-            Qg = torch.where(mask_bus[:, QG_H], pred_bus[:, QG_OUT], target_bus[:, QG_H])
+            Qg = torch.where(
+                mask_bus[:, QG_H],
+                pred_bus[:, QG_OUT],
+                target_bus[:, QG_H],
+            )
         else:
             Qg = target_bus[:, QG_H]
 

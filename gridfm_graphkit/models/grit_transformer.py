@@ -3,7 +3,10 @@ import torch
 from torch import nn
 from torch_geometric.data import Data
 
-from gridfm_graphkit.models.rrwp_encoder import RRWPLinearNodeEncoder, RRWPLinearEdgeEncoder
+from gridfm_graphkit.models.rrwp_encoder import (
+    RRWPLinearNodeEncoder,
+    RRWPLinearEdgeEncoder,
+)
 from gridfm_graphkit.models.grit_layer import GritTransformerLayer
 from gridfm_graphkit.models.kernel_pos_encoder import RWSENodeEncoder
 from torch_scatter import scatter_add
@@ -18,6 +21,7 @@ class BatchNorm1dNode(torch.nn.Module):
         eps (float): BatchNorm eps.
         momentum (float): BatchNorm momentum.
     """
+
     def __init__(self, dim_in, eps, momentum):
         super().__init__()
         self.bn = torch.nn.BatchNorm1d(
@@ -39,6 +43,7 @@ class BatchNorm1dEdge(torch.nn.Module):
         eps (float): BatchNorm eps.
         momentum (float): BatchNorm momentum.
     """
+
     def __init__(self, dim_in, eps, momentum):
         super().__init__()
         self.bn = torch.nn.BatchNorm1d(
@@ -61,7 +66,8 @@ class LinearNodeEncoder(torch.nn.Module):
     def forward(self, batch):
         batch.x = self.encoder(batch.x)
         return batch
-    
+
+
 class LinearEdgeEncoder(torch.nn.Module):
     def __init__(self, edge_dim, emb_dim):
         super().__init__()
@@ -83,18 +89,18 @@ class FeatureEncoder(torch.nn.Module):
         dim_in (int): Input feature dimension
 
     """
-    def __init__(
-                self, 
-                dim_in,
-                dim_inner,
-                args
-                ):
+
+    def __init__(self, dim_in, dim_inner, args):
         super(FeatureEncoder, self).__init__()
         self.dim_in = dim_in
         if args.encoder.node_encoder:
             # Encode integer node features via nn.Embeddings
-            if 'RWSE' in args.encoder.node_encoder_name:
-                self.node_encoder = RWSENodeEncoder(self.dim_in, dim_inner, args.encoder.posenc_RWSE)
+            if "RWSE" in args.encoder.node_encoder_name:
+                self.node_encoder = RWSENodeEncoder(
+                    self.dim_in,
+                    dim_inner,
+                    args.encoder.posenc_RWSE,
+                )
             else:
                 self.node_encoder = LinearNodeEncoder(self.dim_in, dim_inner)
             if args.encoder.node_encoder_bn:
@@ -113,7 +119,8 @@ class FeatureEncoder(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
-    
+
+
 class GraphHead(nn.Module):
     """
     Prediction head for decoding tasks.
@@ -126,11 +133,11 @@ class GraphHead(nn.Module):
     def __init__(self, dim_in, dim_out):
         super().__init__()
 
-        self.FC_layers =  nn.Sequential(
+        self.FC_layers = nn.Sequential(
             nn.Linear(dim_in, dim_in),
             nn.LeakyReLU(),
             nn.Linear(dim_in, dim_out),
-        )  
+        )
 
     def _apply_index(self, batch):
         return batch.graph_feature, batch.y
@@ -149,9 +156,9 @@ class GritTransformer(torch.nn.Module):
     2023.
 
     """
+
     def __init__(self, args, include_decoder=True):
         super().__init__()
-
 
         dim_in = args.model.input_dim
         dim_out = args.model.output_dim
@@ -166,38 +173,34 @@ class GritTransformer(torch.nn.Module):
         if self.learn_mask:
             self.mask_value = nn.Parameter(
                 torch.randn(self.mask_dim) + self.mask_value,
-                requires_grad=True,                                                                  
-                )
-        else:                                                                                        
+                requires_grad=True,
+            )
+        else:
             self.mask_value = nn.Parameter(
-                torch.zeros(self.mask_dim) + self.mask_value,                                            
+                torch.zeros(self.mask_dim) + self.mask_value,
                 requires_grad=False,
             )
-        
-        self.encoder = FeatureEncoder(
-                        dim_in, 
-                        dim_inner,
-                        args.model
-                        ) 
-        dim_in = self.encoder.dim_in    
+
+        self.encoder = FeatureEncoder(dim_in, dim_inner, args.model)
+        dim_in = self.encoder.dim_in
 
         if args.data.posenc_RRWP.enable:
-
             self.rrwp_abs_encoder = RRWPLinearNodeEncoder(
-                    args.data.posenc_RRWP.ksteps, 
-                    dim_inner
-                    )
+                args.data.posenc_RRWP.ksteps,
+                dim_inner,
+            )
             rel_pe_dim = args.data.posenc_RRWP.ksteps
             self.rrwp_rel_encoder = RRWPLinearEdgeEncoder(
-                rel_pe_dim, 
+                rel_pe_dim,
                 dim_inner,
                 pad_to_full_graph=args.model.gt.attn.full_attn,
                 add_node_attr_as_self_loop=False,
-                fill_value=0.
-                )
+                fill_value=0.0,
+            )
 
-        assert args.model.hidden_size == dim_inner == dim_in, \
+        assert args.model.hidden_size == dim_inner == dim_in, (
             "The inner and hidden dims must match."
+        )
 
         layers = []
         for ll in range(num_layers):
@@ -205,28 +208,30 @@ class GritTransformer(torch.nn.Module):
             # (only node features feed into the output heads), so skip
             # creating O_e / norm_e parameters to avoid DDP unused-parameter
             # errors.
-            is_last = (ll == num_layers - 1)
-            layers.append(GritTransformerLayer(
-                in_dim=args.model.gt.dim_hidden,
-                out_dim=args.model.gt.dim_hidden,
-                num_heads=num_heads,
-                dropout=dropout,
-                act=args.model.act,
-                attn_dropout=args.model.gt.attn_dropout,
-                layer_norm=args.model.gt.layer_norm,
-                batch_norm=args.model.gt.batch_norm,
-                residual=True,
-                norm_e=False if is_last else args.model.gt.attn.norm_e,
-                O_e=False if is_last else args.model.gt.attn.O_e,
-                cfg=args.model.gt,
-            ))
+            is_last = ll == num_layers - 1
+            layers.append(
+                GritTransformerLayer(
+                    in_dim=args.model.gt.dim_hidden,
+                    out_dim=args.model.gt.dim_hidden,
+                    num_heads=num_heads,
+                    dropout=dropout,
+                    act=args.model.act,
+                    attn_dropout=args.model.gt.attn_dropout,
+                    layer_norm=args.model.gt.layer_norm,
+                    batch_norm=args.model.gt.batch_norm,
+                    residual=True,
+                    norm_e=False if is_last else args.model.gt.attn.norm_e,
+                    O_e=False if is_last else args.model.gt.attn.O_e,
+                    cfg=args.model.gt,
+                ),
+            )
 
         self.layers = nn.Sequential(*layers)
 
         if include_decoder:
             self.decoder = GraphHead(dim_inner, dim_out)
 
-    def forward(self, batch):   
+    def forward(self, batch):
         """
         Forward pass for GRIT.
 
@@ -243,6 +248,7 @@ class GritTransformer(torch.nn.Module):
             batch = module(batch)
 
         return batch
+
 
 def aggregate_pg(batch, mask_value=-1.0):
     """Aggregate per-generator active power (PG) onto bus nodes.
@@ -327,6 +333,7 @@ class GritHeteroAdapter(torch.nn.Module):
             and hasattr(args.model.encoder, "posenc_RWSE")
         ):
             from gridfm_graphkit.io.param_handler import NestedNamespace
+
             enc_rwse = args.model.encoder.posenc_RWSE
             if not hasattr(enc_rwse, "kernel"):
                 enc_rwse.kernel = NestedNamespace()
@@ -373,8 +380,11 @@ class GritHeteroAdapter(torch.nn.Module):
         # --- Extract bus-only homogeneous subgraph ---
         # Aggregate generator PG onto buses
         pg_per_bus = aggregate_pg(batch, mask_value=self.grit.mask_value[0].item())
-        bus_x = torch.cat([batch["bus"].x, pg_per_bus.unsqueeze(-1)], dim=-1)  # 15 → 16D
-        
+        bus_x = torch.cat(
+            [batch["bus"].x, pg_per_bus.unsqueeze(-1)],
+            dim=-1,
+        )  # 15 → 16D
+
         homo = Data(
             x=bus_x,
             y=batch["bus"].y,
@@ -398,6 +408,10 @@ class GritHeteroAdapter(torch.nn.Module):
 
         # --- Per-type decoding ---
         bus_out = self.bus_head(homo.x)
-        gen_out = self.gen_head(batch["gen"].x) if self.gen_head is not None else batch["gen"].x
+        gen_out = (
+            self.gen_head(batch["gen"].x)
+            if self.gen_head is not None
+            else batch["gen"].x
+        )
 
         return {"bus": bus_out, "gen": gen_out}

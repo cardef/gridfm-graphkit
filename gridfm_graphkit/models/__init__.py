@@ -1,4 +1,3 @@
-
 from gridfm_graphkit.models.gnn_heterogeneous_gns import GNS_heterogeneous
 from gridfm_graphkit.models.grit_transformer import GritHeteroAdapter
 from gridfm_graphkit.models.utils import (
@@ -14,4 +13,3 @@ __all__ = [
     "PhysicsDecoderPF",
     "PhysicsDecoderSE",
 ]
-

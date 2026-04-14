@@ -4,8 +4,12 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from torch_geometric.utils import (get_laplacian, to_scipy_sparse_matrix,
-                                   to_undirected, to_dense_adj)
+from torch_geometric.utils import (
+    get_laplacian,
+    to_scipy_sparse_matrix,
+    to_undirected,
+    to_dense_adj,
+)
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add
 from functools import partial
@@ -17,9 +21,10 @@ from typing import Any
 
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 
+
 def compute_posenc_stats(data, pe_types, cfg):
     """Precompute positional encodings for the given graph.
-    Supported PE statistics to precompute in original implementation, 
+    Supported PE statistics to precompute in original implementation,
     selected by `pe_types`:
     'LapPE': Laplacian eigen-decomposition.
     'RWSE': Random walk landing probabilities (diagonals of RW matrices).
@@ -39,42 +44,55 @@ def compute_posenc_stats(data, pe_types, cfg):
     """
     # Verify PE types.
     for t in pe_types:
-        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet',
-                     'RWSE', 'HKdiagSE', 'HKfullPE', 'ElstaticSE','RRWP']:
+        if t not in [
+            "LapPE",
+            "EquivStableLapPE",
+            "SignNet",
+            "RWSE",
+            "HKdiagSE",
+            "HKfullPE",
+            "ElstaticSE",
+            "RRWP",
+        ]:
             raise ValueError(f"Unexpected PE stats selection {t} in {pe_types}")
 
-    if 'RRWP' in pe_types:
+    if "RRWP" in pe_types:
         param = cfg.posenc_RRWP
-        transform = partial(add_full_rrwp,
-                            walk_length=param.ksteps,
-                            attr_name_abs="rrwp",
-                            attr_name_rel="rrwp",
-                            add_identity=True
-                            )
+        transform = partial(
+            add_full_rrwp,
+            walk_length=param.ksteps,
+            attr_name_abs="rrwp",
+            attr_name_rel="rrwp",
+            add_identity=True,
+        )
         data = transform(data)
 
     # Random Walks.
-    if 'RWSE' in pe_types:
+    if "RWSE" in pe_types:
         kernel_param = cfg.posenc_RWSE.kernel
-        if hasattr(data, 'num_nodes'):
+        if hasattr(data, "num_nodes"):
             N = data.num_nodes  # Explicitly given number of nodes, e.g. ogbg-ppa
         else:
             N = data.x.shape[0]  # Number of nodes, including disconnected nodes.
         if kernel_param.times == 0:
             raise ValueError("List of kernel times required for RWSE")
         rw_landing = get_rw_landing_probs(
-                        ksteps=[xx + 1 for xx in range(kernel_param.times)],
-                        edge_index=data.edge_index,
-                        num_nodes=N
-                        )
+            ksteps=[xx + 1 for xx in range(kernel_param.times)],
+            edge_index=data.edge_index,
+            num_nodes=N,
+        )
         data.pestat_RWSE = rw_landing
 
     return data
 
 
-
-def get_rw_landing_probs(ksteps, edge_index, edge_weight=None,
-                         num_nodes=None, space_dim=0):
+def get_rw_landing_probs(
+    ksteps,
+    edge_index,
+    edge_weight=None,
+    num_nodes=None,
+    space_dim=0,
+):
     """Compute Random Walk landing probabilities for given list of K steps.
 
     Args:
@@ -96,30 +114,35 @@ def get_rw_landing_probs(ksteps, edge_index, edge_weight=None,
     num_nodes = maybe_num_nodes(edge_index, num_nodes)
     source, dest = edge_index[0], edge_index[1]
     deg = scatter_add(edge_weight, source, dim=0, dim_size=num_nodes)  # Out degrees.
-    deg_inv = deg.pow(-1.)
-    deg_inv.masked_fill_(deg_inv == float('inf'), 0)
+    deg_inv = deg.pow(-1.0)
+    deg_inv.masked_fill_(deg_inv == float("inf"), 0)
 
     if edge_index.numel() == 0:
         P = edge_index.new_zeros((1, num_nodes, num_nodes))
     else:
         # P = D^-1 * A
-        P = torch.diag(deg_inv) @ to_dense_adj(edge_index, max_num_nodes=num_nodes)  # 1 x (Num nodes) x (Num nodes)
+        P = torch.diag(deg_inv) @ to_dense_adj(
+            edge_index,
+            max_num_nodes=num_nodes,
+        )  # 1 x (Num nodes) x (Num nodes)
     rws = []
     if ksteps == list(range(min(ksteps), max(ksteps) + 1)):
         # Efficient way if ksteps are a consecutive sequence (most of the time the case)
         Pk = P.clone().detach().matrix_power(min(ksteps))
         for k in range(min(ksteps), max(ksteps) + 1):
-            rws.append(torch.diagonal(Pk, dim1=-2, dim2=-1) * \
-                       (k ** (space_dim / 2)))
+            rws.append(torch.diagonal(Pk, dim1=-2, dim2=-1) * (k ** (space_dim / 2)))
             Pk = Pk @ P
     else:
         # Explicitly raising P to power k for each k \in ksteps.
         for k in ksteps:
-            rws.append(torch.diagonal(P.matrix_power(k), dim1=-2, dim2=-1) * \
-                       (k ** (space_dim / 2)))
+            rws.append(
+                torch.diagonal(P.matrix_power(k), dim1=-2, dim2=-1)
+                * (k ** (space_dim / 2)),
+            )
     rw_landing = torch.cat(rws, dim=0).transpose(0, 1)  # (Num nodes) x (K steps)
 
     return rw_landing
+
 
 class ComputePosencStat(BaseTransform):
     def __init__(self, pe_types, cfg):
@@ -133,10 +156,7 @@ class ComputePosencStat(BaseTransform):
         if isinstance(data, HeteroData):
             return self._call_hetero(data)
 
-        data = compute_posenc_stats(data, 
-                                    pe_types=self.pe_types,
-                                    cfg=self.cfg
-                                    )
+        data = compute_posenc_stats(data, pe_types=self.pe_types, cfg=self.cfg)
         return data
 
     def _call_hetero(self, data: HeteroData) -> HeteroData:
@@ -150,14 +170,19 @@ class ComputePosencStat(BaseTransform):
             bus_data.edge_weight = data["bus", "connects", "bus"].edge_weight
 
         bus_data = compute_posenc_stats(
-            bus_data, pe_types=self.pe_types, cfg=self.cfg,
+            bus_data,
+            pe_types=self.pe_types,
+            cfg=self.cfg,
         )
 
         # Copy computed PE attributes back onto the HeteroData bus store
         pe_attrs = [
-            "pestat_RWSE",          # RWSE
-            "rrwp", "rrwp_index", "rrwp_val",  # RRWP
-            "log_deg", "deg",       # degree info from RRWP
+            "pestat_RWSE",  # RWSE
+            "rrwp",
+            "rrwp_index",
+            "rrwp_val",  # RRWP
+            "log_deg",
+            "deg",  # degree info from RRWP
         ]
         for attr in pe_attrs:
             if hasattr(bus_data, attr):

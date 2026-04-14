@@ -54,34 +54,59 @@ except Exception:
 
 # Compilation (kept from original)
 import torch._dynamo as dynamo
+
 dynamo.config.suppress_errors = False
 
 # ----------------------------
 # Argument Parsing
 # ----------------------------
-parser = argparse.ArgumentParser(description="Benchmark GNN Model inference with profiling CSV")
-parser.add_argument("--model", type=str, choices=["hetero", "grit"], default="hetero",
-                    help="Model type: 'hetero' for GNS_heterogeneous, 'grit' for GritTransformer")
-parser.add_argument("--config", type=str, required=True, help="Path to config YAML for model")
+parser = argparse.ArgumentParser(
+    description="Benchmark GNN Model inference with profiling CSV",
+)
+parser.add_argument(
+    "--model",
+    type=str,
+    choices=["hetero", "grit"],
+    default="hetero",
+    help="Model type: 'hetero' for GNS_heterogeneous, 'grit' for GritTransformer",
+)
+parser.add_argument(
+    "--config",
+    type=str,
+    required=True,
+    help="Path to config YAML for model",
+)
 parser.add_argument("--num_nodes", type=int, required=True)
-parser.add_argument("--num_gens", type=int, default=0,
-                    help="Number of generator nodes (required for hetero, ignored for grit)")
+parser.add_argument(
+    "--num_gens",
+    type=int,
+    default=0,
+    help="Number of generator nodes (required for hetero, ignored for grit)",
+)
 parser.add_argument("--num_edges", type=int, required=True)
 parser.add_argument("--output_csv", type=str, required=True)
 parser.add_argument("--iterations", type=int, default=20)
 parser.add_argument("--num_workers", type=int, default=0, help="DataLoader num_workers")
-parser.add_argument("--pin_memory", action="store_true", help="Enable pin_memory in DataLoader when CUDA is available")
+parser.add_argument(
+    "--pin_memory",
+    action="store_true",
+    help="Enable pin_memory in DataLoader when CUDA is available",
+)
 args = parser.parse_args()
 
 # --- Custom logging (ensure directory exists)
 import logging
-os.makedirs('logs', exist_ok=True)
-logger = logging.getLogger('ibm_benchmark_logger')
+
+os.makedirs("logs", exist_ok=True)
+logger = logging.getLogger("ibm_benchmark_logger")
 logger.setLevel(logging.DEBUG)
 logger.propagate = False
-file_handler = logging.FileHandler('logs/ibm_bench_logs.log', mode='a')  # 'a' for append, 'w' to overwrite
+file_handler = logging.FileHandler(
+    "logs/ibm_bench_logs.log",
+    mode="a",
+)  # 'a' for append, 'w' to overwrite
 file_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 if not logger.handlers:
     logger.addHandler(file_handler)
@@ -113,17 +138,32 @@ EDGE_FEATS = getattr(config_args.model, "edge_dim", 10)
 
 # Both model types use HeteroData with bus + gen nodes.
 # Fall back to input_dim / defaults for configs that lack the hetero keys.
-BUS_FEATS = getattr(config_args.model, "input_bus_dim",
-                    getattr(config_args.model, "input_dim", 15))
+BUS_FEATS = getattr(
+    config_args.model,
+    "input_bus_dim",
+    getattr(config_args.model, "input_dim", 15),
+)
 GEN_FEATS = getattr(config_args.model, "input_gen_dim", 6)
 
 if MODEL_TYPE == "grit":
     # Positional encoding config (only GRIT uses these)
     # Read enablement and dimensions from data config (canonical source).
-    RRWP_ENABLED = getattr(config_args.data.posenc_RRWP, "enable", False) if hasattr(config_args.data, "posenc_RRWP") else False
-    RRWP_KSTEPS = getattr(config_args.data.posenc_RRWP, "ksteps", 21) if RRWP_ENABLED else 0
-    RWSE_ENABLED = hasattr(config_args.data, "posenc_RWSE") and getattr(config_args.data.posenc_RWSE, "enable", False)
-    RWSE_TIMES = getattr(config_args.data.posenc_RWSE.kernel, "times", 21) if RWSE_ENABLED else 0
+    RRWP_ENABLED = (
+        getattr(config_args.data.posenc_RRWP, "enable", False)
+        if hasattr(config_args.data, "posenc_RRWP")
+        else False
+    )
+    RRWP_KSTEPS = (
+        getattr(config_args.data.posenc_RRWP, "ksteps", 21) if RRWP_ENABLED else 0
+    )
+    RWSE_ENABLED = hasattr(config_args.data, "posenc_RWSE") and getattr(
+        config_args.data.posenc_RWSE,
+        "enable",
+        False,
+    )
+    RWSE_TIMES = (
+        getattr(config_args.data.posenc_RWSE.kernel, "times", 21) if RWSE_ENABLED else 0
+    )
 else:
     RRWP_ENABLED = False
     RRWP_KSTEPS = 0
@@ -134,15 +174,18 @@ else:
 batch_sizes = [1, 2, 4, 8, 16, 32]
 iterations = args.iterations
 
+
 # ----------------------------
 # Helpers
 # ----------------------------
 def now_ms() -> float:
     return time.perf_counter() * 1000.0
 
+
 def maybe_cuda_sync():
     if torch.cuda.is_available():
         torch.cuda.synchronize()
+
 
 def get_env_info():
     # CPU name detection
@@ -163,14 +206,22 @@ def get_env_info():
     # GPU names and device info
     if torch.cuda.is_available():
         try:
-            gpu_names_list = [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
+            gpu_names_list = [
+                torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())
+            ]
             gpu_names = "; ".join(gpu_names_list)
         except Exception:
             gpu_names = "cuda_available_but_name_unreadable"
         device_type = "cuda"
-        device_name = torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else "cuda"
+        device_name = (
+            torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else "cuda"
+        )
         cuda_version_in_torch = torch.version.cuda
-        cudnn_version = torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else None
+        cudnn_version = (
+            torch.backends.cudnn.version()
+            if torch.backends.cudnn.is_available()
+            else None
+        )
     else:
         # Apple Metal backend?
         if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
@@ -197,6 +248,7 @@ def get_env_info():
         "python_version": platform.python_version(),
     }
     return info
+
 
 # ----------------------------
 # Generate Synthetic Hetero Graph
@@ -232,12 +284,14 @@ def generate_hetero_graph():
 
     # Gen → Bus
     data["gen", "connected_to", "bus"].edge_index = torch.stack(
-        [torch.arange(N_GEN), gen_to_bus], dim=0
+        [torch.arange(N_GEN), gen_to_bus],
+        dim=0,
     )
 
     # Bus → Gen
     data["bus", "connected_to", "gen"].edge_index = torch.stack(
-        [gen_to_bus, torch.arange(N_GEN)], dim=0
+        [gen_to_bus, torch.arange(N_GEN)],
+        dim=0,
     )
 
     # No edge features for these
@@ -248,7 +302,10 @@ def generate_hetero_graph():
     mask_bus = torch.ones_like(data["bus"].x, dtype=torch.bool)
     mask_gen = torch.ones_like(data["gen"].x, dtype=torch.bool)
     bus_types = torch.randint(0, 3, (N_BUS,))
-    mask_branch = torch.ones_like(data["bus", "connects", "bus"].edge_attr, dtype=torch.bool)
+    mask_branch = torch.ones_like(
+        data["bus", "connects", "bus"].edge_attr,
+        dtype=torch.bool,
+    )
 
     mask_PQ = bus_types == 0
     mask_PV = bus_types == 1
@@ -260,7 +317,7 @@ def generate_hetero_graph():
         "PQ": mask_PQ,
         "PV": mask_PV,
         "REF": mask_REF,
-        "branch": mask_branch
+        "branch": mask_branch,
     }
     return data
 
@@ -299,13 +356,14 @@ def generate_grit_graph():
 
     return data
 
+
 # ----------------------------
 # Benchmark Function
 # ----------------------------
 def benchmark():
     # Environment/context info (constant per run)
     env = get_env_info()
-    timestamp = datetime.now().isoformat(timespec='seconds')
+    timestamp = datetime.now().isoformat(timespec="seconds")
 
     # Measure synthetic graph creation
     t0 = now_ms()
@@ -331,11 +389,9 @@ def benchmark():
         # Keep original first two columns
         "batch_size",
         "avg_time_per_sample_ms",
-
         # Execution config
         "num_iters",
         "total_samples",
-
         # Data/IO timing
         "data_gen_time_ms",
         "graph_to_device_time_ms",
@@ -343,7 +399,6 @@ def benchmark():
         "dataloader_create_time_ms",
         "dataloader_first_iter_time_ms",
         "batch_to_device_time_ms",
-
         # Model timing
         "warmup_time_ms",
         "iter_total_wall_time_ms",
@@ -353,21 +408,25 @@ def benchmark():
         "samples_per_sec_wall",
         "samples_per_sec_gpu",
         "timing_source",  # "cuda_event" or "wall_clock"
-
         # Memory
         "max_cuda_mem_alloc_bytes",
         "max_cuda_mem_reserved_bytes",
-
         # Graph & model context
-        "n_bus", "n_gen", "n_edges",
-        "bus_feats", "gen_feats", "edge_feats",
-
+        "n_bus",
+        "n_gen",
+        "n_edges",
+        "bus_feats",
+        "gen_feats",
+        "edge_feats",
         # Runtime context
-        "device_type", "device_name",
-        "torch_version", "cuda_version_in_torch", "cudnn_version",
+        "device_type",
+        "device_name",
+        "torch_version",
+        "cuda_version_in_torch",
+        "cudnn_version",
         "python_version",
-        "cpu_name",             # NEW
-        "gpu_names",            # NEW
+        "cpu_name",  # NEW
+        "gpu_names",  # NEW
         "timestamp_iso",
         "num_workers",
         "pin_memory",
@@ -409,7 +468,11 @@ def benchmark():
             # Ensure batch on device (likely ~0 if items already on device)
             maybe_cuda_sync()
             t_b2d_start = now_ms()
-            batch = batch.to(device, non_blocking=True) if torch.cuda.is_available() else batch.to(device)
+            batch = (
+                batch.to(device, non_blocking=True)
+                if torch.cuda.is_available()
+                else batch.to(device)
+            )
             maybe_cuda_sync()
             t_b2d_end = now_ms()
             batch_to_device_time_ms = t_b2d_end - t_b2d_start
@@ -455,10 +518,20 @@ def benchmark():
                 timing_source = "cuda_event"
                 avg_time_per_sample_ms = iter_gpu_time_ms / total_samples
                 gpu_idle_time_ms = max(iter_total_wall_time_ms - iter_gpu_time_ms, 0.0)
-                gpu_busy_ratio = (iter_gpu_time_ms / iter_total_wall_time_ms) if iter_total_wall_time_ms > 0 else None
+                gpu_busy_ratio = (
+                    (iter_gpu_time_ms / iter_total_wall_time_ms)
+                    if iter_total_wall_time_ms > 0
+                    else None
+                )
                 max_cuda_mem_alloc_bytes = int(torch.cuda.max_memory_allocated(device))
-                max_cuda_mem_reserved_bytes = int(torch.cuda.max_memory_reserved(device))
-                samples_per_sec_gpu = (total_samples / (iter_gpu_time_ms / 1000.0)) if iter_gpu_time_ms > 0 else None
+                max_cuda_mem_reserved_bytes = int(
+                    torch.cuda.max_memory_reserved(device),
+                )
+                samples_per_sec_gpu = (
+                    (total_samples / (iter_gpu_time_ms / 1000.0))
+                    if iter_gpu_time_ms > 0
+                    else None
+                )
             else:
                 iter_gpu_time_ms = None
                 timing_source = "wall_clock"
@@ -469,23 +542,24 @@ def benchmark():
                 max_cuda_mem_reserved_bytes = None
                 samples_per_sec_gpu = None
 
-            samples_per_sec_wall = (total_samples / (iter_total_wall_time_ms / 1000.0)) if iter_total_wall_time_ms > 0 else None
+            samples_per_sec_wall = (
+                (total_samples / (iter_total_wall_time_ms / 1000.0))
+                if iter_total_wall_time_ms > 0
+                else None
+            )
 
             # Prepare row
             row = [
                 batch_size,
                 avg_time_per_sample_ms,
-
                 num_iters,
                 total_samples,
-
                 data_gen_time_ms,
                 graph_to_device_time_ms,
                 clone_list_time_ms,
                 dataloader_create_time_ms,
                 dataloader_first_iter_time_ms,
                 batch_to_device_time_ms,
-
                 warmup_time_ms,
                 iter_total_wall_time_ms,
                 iter_gpu_time_ms,
@@ -494,15 +568,19 @@ def benchmark():
                 samples_per_sec_wall,
                 samples_per_sec_gpu,
                 timing_source,
-
                 max_cuda_mem_alloc_bytes,
                 max_cuda_mem_reserved_bytes,
-
-                N_BUS, N_GEN, E,
-                BUS_FEATS, GEN_FEATS, EDGE_FEATS,
-
-                env["device_type"], env["device_name"],
-                env["torch_version"], env["cuda_version_in_torch"], env["cudnn_version"],
+                N_BUS,
+                N_GEN,
+                E,
+                BUS_FEATS,
+                GEN_FEATS,
+                EDGE_FEATS,
+                env["device_type"],
+                env["device_name"],
+                env["torch_version"],
+                env["cuda_version_in_torch"],
+                env["cudnn_version"],
                 env["python_version"],
                 env["cpu_name"],
                 env["gpu_names"],

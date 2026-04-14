@@ -1,14 +1,20 @@
 """
-    The RRWP encoder for GRIT (ours)
+The RRWP encoder for GRIT (ours)
 """
+
 import torch
 from torch import nn
 from torch.nn import functional as F
 import torch_sparse
 
-from torch_geometric.utils import remove_self_loops, add_remaining_self_loops, add_self_loops
+from torch_geometric.utils import (
+    remove_self_loops,
+    add_remaining_self_loops,
+    add_self_loops,
+)
 from torch_scatter import scatter
 import warnings
+
 
 def full_edge_index(edge_index, batch=None):
     """
@@ -28,16 +34,14 @@ def full_edge_index(edge_index, batch=None):
 
     batch_size = batch.max().item() + 1
     one = batch.new_ones(batch.size(0))
-    num_nodes = scatter(one, batch,
-                        dim=0, dim_size=batch_size, reduce='add')
+    num_nodes = scatter(one, batch, dim=0, dim_size=batch_size, reduce="add")
     cum_nodes = torch.cat([batch.new_zeros(1), num_nodes.cumsum(dim=0)])
 
     negative_index_list = []
     for i in range(batch_size):
         n = num_nodes[i].item()
         size = [n, n]
-        adj = torch.ones(size, dtype=torch.short,
-                         device=edge_index.device)
+        adj = torch.ones(size, dtype=torch.short, device=edge_index.device)
 
         adj = adj.view(size)
         _edge_index = adj.nonzero(as_tuple=False).t().contiguous()
@@ -48,7 +52,6 @@ def full_edge_index(edge_index, batch=None):
     return edge_index_full
 
 
-
 class RRWPLinearNodeEncoder(torch.nn.Module):
     """
     FC_1(RRWP) + FC_2 (Node-attr)
@@ -56,7 +59,16 @@ class RRWPLinearNodeEncoder(torch.nn.Module):
     Parameters:
     num_classes - the number of classes for the embedding mapping to learn
     """
-    def __init__(self, emb_dim, out_dim, use_bias=False, batchnorm=False, layernorm=False, pe_name="rrwp"):
+
+    def __init__(
+        self,
+        emb_dim,
+        out_dim,
+        use_bias=False,
+        batchnorm=False,
+        layernorm=False,
+        pe_name="rrwp",
+    ):
         super().__init__()
         self.batchnorm = batchnorm
         self.layernorm = layernorm
@@ -98,27 +110,38 @@ class RRWPLinearEdgeEncoder(torch.nn.Module):
     - (optional) add node-attr as the E_{i,i}'s attr
         note: assuming  node-attr and edge-attr is with the same dimension after Encoders
     """
-    def __init__(self, emb_dim, out_dim, batchnorm=False, layernorm=False, use_bias=False,
-                 pad_to_full_graph=True, fill_value=0.,
-                 add_node_attr_as_self_loop=False,
-                 overwrite_old_attr=False):
+
+    def __init__(
+        self,
+        emb_dim,
+        out_dim,
+        batchnorm=False,
+        layernorm=False,
+        use_bias=False,
+        pad_to_full_graph=True,
+        fill_value=0.0,
+        add_node_attr_as_self_loop=False,
+        overwrite_old_attr=False,
+    ):
         super().__init__()
         # note: batchnorm/layernorm might ruin some properties of pe on providing shortest-path distance info
         self.emb_dim = emb_dim
         self.out_dim = out_dim
         self.add_node_attr_as_self_loop = add_node_attr_as_self_loop
-        self.overwrite_old_attr=overwrite_old_attr # remove the old edge-attr
+        self.overwrite_old_attr = overwrite_old_attr  # remove the old edge-attr
 
         self.batchnorm = batchnorm
         self.layernorm = layernorm
         if self.batchnorm or self.layernorm:
-            warnings.warn("batchnorm/layernorm might ruin some properties of pe on providing shortest-path distance info ")
+            warnings.warn(
+                "batchnorm/layernorm might ruin some properties of pe on providing shortest-path distance info ",
+            )
 
         # print('--------fc in and out:', emb_dim, out_dim)
         self.fc = nn.Linear(emb_dim, out_dim, bias=use_bias)
         torch.nn.init.xavier_uniform_(self.fc.weight)
         self.pad_to_full_graph = pad_to_full_graph
-        self.fill_value = 0.
+        self.fill_value = 0.0
 
         padding = torch.ones(1, out_dim, dtype=torch.float) * fill_value
         self.register_buffer("padding", padding)
@@ -143,14 +166,19 @@ class RRWPLinearEdgeEncoder(torch.nn.Module):
         if self.overwrite_old_attr:
             out_idx, out_val = rrwp_idx, rrwp_val
         else:
-            edge_index, edge_attr = add_self_loops(edge_index, edge_attr, num_nodes=batch.num_nodes, fill_value=0.)
+            edge_index, edge_attr = add_self_loops(
+                edge_index,
+                edge_attr,
+                num_nodes=batch.num_nodes,
+                fill_value=0.0,
+            )
             out_idx, out_val = torch_sparse.coalesce(
                 torch.cat([edge_index, rrwp_idx], dim=1),
                 torch.cat([edge_attr, rrwp_val], dim=0),
-                batch.num_nodes, batch.num_nodes,
-                op="add"
+                batch.num_nodes,
+                batch.num_nodes,
+                op="add",
             )
-
 
         if self.pad_to_full_graph:
             edge_index_full = full_edge_index(out_idx, batch=batch.batch)
@@ -159,8 +187,11 @@ class RRWPLinearEdgeEncoder(torch.nn.Module):
             out_idx = torch.cat([out_idx, edge_index_full], dim=1)
             out_val = torch.cat([out_val, edge_attr_pad], dim=0)
             out_idx, out_val = torch_sparse.coalesce(
-               out_idx, out_val, batch.num_nodes, batch.num_nodes,
-               op="add"
+                out_idx,
+                out_val,
+                batch.num_nodes,
+                batch.num_nodes,
+                op="add",
             )
 
         if self.batchnorm:
@@ -169,15 +200,13 @@ class RRWPLinearEdgeEncoder(torch.nn.Module):
         if self.layernorm:
             out_val = self.ln(out_val)
 
-
         batch.edge_index, batch.edge_attr = out_idx, out_val
         return batch
 
     def __repr__(self):
-        return f"{self.__class__.__name__}" \
-               f"(pad_to_full_graph={self.pad_to_full_graph}," \
-               f"fill_value={self.fill_value}," \
-               f"{self.fc.__repr__()})"
-
-
-
+        return (
+            f"{self.__class__.__name__}"
+            f"(pad_to_full_graph={self.pad_to_full_graph},"
+            f"fill_value={self.fill_value},"
+            f"{self.fc.__repr__()})"
+        )

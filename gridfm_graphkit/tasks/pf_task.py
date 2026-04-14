@@ -73,20 +73,28 @@ def _clamp_known_to_ground_truth(output_bus, target, batch, gen_to_bus_index, nu
     mask_bus = batch.mask_dict["bus"]
     eval_bus = output_bus.clone()
     eval_bus[:, VM_OUT] = torch.where(
-        mask_bus[:, VM_H], output_bus[:, VM_OUT], target[:, VM_OUT],
+        mask_bus[:, VM_H],
+        output_bus[:, VM_OUT],
+        target[:, VM_OUT],
     )
     eval_bus[:, VA_OUT] = torch.where(
-        mask_bus[:, VA_H], output_bus[:, VA_OUT], target[:, VA_OUT],
+        mask_bus[:, VA_H],
+        output_bus[:, VA_OUT],
+        target[:, VA_OUT],
     )
     gen_pg_masked = batch.mask_dict["gen"][:, PG_H].float()
     any_gen_masked = (
         scatter_add(gen_pg_masked, gen_to_bus_index, dim=0, dim_size=num_bus) > 0
     )
     eval_bus[:, PG_OUT] = torch.where(
-        any_gen_masked, output_bus[:, PG_OUT], target[:, PG_OUT],
+        any_gen_masked,
+        output_bus[:, PG_OUT],
+        target[:, PG_OUT],
     )
     eval_bus[:, QG_OUT] = torch.where(
-        mask_bus[:, QG_H], output_bus[:, QG_OUT], target[:, QG_OUT],
+        mask_bus[:, QG_H],
+        output_bus[:, QG_OUT],
+        target[:, QG_OUT],
     )
     return eval_bus
 
@@ -119,7 +127,11 @@ class PowerFlowTask(ReconstructionTask):
 
         target, gen_to_bus_index, agg_gen_on_bus = _build_bus_target(batch, num_bus)
         eval_bus = _clamp_known_to_ground_truth(
-            output["bus"], target, batch, gen_to_bus_index, num_bus,
+            output["bus"],
+            target,
+            batch,
+            gen_to_bus_index,
+            num_bus,
         )
 
         Pft, Qft = branch_flow_layer(eval_bus, bus_edge_index, bus_edge_attr)
@@ -413,7 +425,11 @@ class PowerFlowTask(ReconstructionTask):
 
         target, gen_to_bus_index, agg_gen_on_bus = _build_bus_target(batch, num_bus)
         eval_bus = _clamp_known_to_ground_truth(
-            output["bus"], target, batch, gen_to_bus_index, num_bus,
+            output["bus"],
+            target,
+            batch,
+            gen_to_bus_index,
+            num_bus,
         )
 
         Pft, Qft = branch_flow_layer(eval_bus, bus_edge_index, bus_edge_attr)

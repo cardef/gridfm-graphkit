@@ -154,19 +154,15 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                     data_normalizer=data_normalizer,
                     transform=get_task_transforms(args=self.args),
                 )
-            
-            if ('posenc_RRWP' in self.args.data) and self.args.data.posenc_RRWP.enable:
-                pe_transform = ComputePosencStat(pe_types=['RRWP'],
-                                                cfg=self.args.data
-                                                )
+
+            if ("posenc_RRWP" in self.args.data) and self.args.data.posenc_RRWP.enable:
+                pe_transform = ComputePosencStat(pe_types=["RRWP"], cfg=self.args.data)
                 if dataset.transform is None:
                     dataset.transform = pe_transform
                 else:
                     dataset.transform = T.Compose([pe_transform, dataset.transform])
-            if ('posenc_RWSE' in self.args.data) and self.args.data.posenc_RWSE.enable:
-                pe_transform = ComputePosencStat(pe_types=['RWSE'],
-                                                cfg=self.args.data
-                                                )
+            if ("posenc_RWSE" in self.args.data) and self.args.data.posenc_RWSE.enable:
+                pe_transform = ComputePosencStat(pe_types=["RWSE"], cfg=self.args.data)
                 if dataset.transform is None:
                     dataset.transform = pe_transform
                 else:
