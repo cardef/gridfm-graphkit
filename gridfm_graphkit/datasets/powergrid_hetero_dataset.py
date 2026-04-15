@@ -136,7 +136,8 @@ class HeteroGridDatasetDisk(Dataset):
         ] + common_branch_features
 
         # Group by scenario
-        bus_groups = bus_data.groupby("scenario")
+        bus_groups = bus_data.groupby("scenario") # Groupby preserves the order of rows within each group. 
+        # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html
         gen_groups = gen_data.groupby("scenario")
         branch_groups = branch_data.groupby("scenario")
 
@@ -157,12 +158,17 @@ class HeteroGridDatasetDisk(Dataset):
 
             # Bus nodes
             bus_df = bus_groups.get_group(scenario)
+            # assert that the buses are in increasing order
+            assert (bus_df["bus"].values == torch.arange(len(bus_df))).all(), "Buses are not in increasing order"
+            #todo: we should remove this assert and store the bus idx in the tensors
+            # right now we need the increasing order for e.g. the predict step that uses torch.arange(n_nodes) to index the buses.
             data["bus"].x = torch.tensor(bus_df[bus_features].values, dtype=torch.float)
 
             # Generator nodes
             gen_df = gen_groups.get_group(scenario).reset_index()
             data["gen"].x = torch.tensor(gen_df[gen_features].values, dtype=torch.float)
             gen_df["gen_index"] = gen_df.index  # Use actual index as generator ID
+            # todo: change this to instead use the generator id as the index
 
             data["bus"].y = data["bus"].x[:, : (VA_H + 1)].clone()
             data["gen"].y = data["gen"].x[:, : (PG_H + 1)].clone()
