@@ -513,7 +513,7 @@ class HeteroDataPerSampleMVANormalizer(Normalizer):
         data.is_normalized = True
 
     def inverse_transform(self, data: HeteroData):
-        """Undo per-unit normalization (multiply by baseMVA, rad->deg, inverse log1p for cost coeffs)."""
+        """Undo per-unit normalization (multiply by baseMVA, inverse log1p for cost coeffs)."""
         if self._baseMVA_lookup is None:
             raise ValueError("Normalizer not fitted or lookups not loaded")
         if not data.is_normalized.all():
