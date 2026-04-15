@@ -99,7 +99,7 @@ def _compute_runtime_stats(runtime_df: pd.DataFrame) -> dict:
     return results
 
 
-def compute_ac_dc_metrics(
+def compute_pf_ac_dc_metrics(
     artifacts_dir: str,
     data_dir: str,
     grid_name: str,

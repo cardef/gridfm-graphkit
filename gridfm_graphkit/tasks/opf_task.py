@@ -1,5 +1,7 @@
 from gridfm_graphkit.datasets.globals import (
     # Bus feature indices
+    PD_H,
+    QD_H,
     QG_H,
     VM_H,
     VA_H,
@@ -12,6 +14,8 @@ from gridfm_graphkit.datasets.globals import (
     QG_OUT,
     # Generator feature indices
     PG_H,
+    MIN_PG,
+    MAX_PG,
     C0_H,
     C1_H,
     C2_H,
@@ -28,8 +32,8 @@ from gridfm_graphkit.tasks.utils import (
     plot_residuals_histograms,
     residual_stats_by_type,
 )
-from pytorch_lightning.utilities import rank_zero_only
 import torch
+import torch.distributed as dist
 import torch.nn.functional as F
 from torch_scatter import scatter_add
 from gridfm_graphkit.models.utils import (
@@ -112,7 +116,7 @@ class OptimalPowerFlowTask(ReconstructionTask):
         # output["bus"] = target
 
         Pft, Qft = branch_flow_layer(output["bus"], bus_edge_index, bus_edge_attr)
-        # Compute branch termal limits violations
+        # Compute branch thermal limits violations
         Sft = torch.sqrt(Pft**2 + Qft**2)  # apparent power flow per branch
         branch_thermal_limits = bus_edge_attr[:, RATE_A]
         branch_thermal_excess = F.relu(Sft - branch_thermal_limits)
@@ -132,13 +136,14 @@ class OptimalPowerFlowTask(ReconstructionTask):
         bus_angles = output["bus"][:, VA_OUT]  # in degrees
         from_bus = bus_edge_index[0]
         to_bus = bus_edge_index[1]
-        angle_diff = torch.abs(bus_angles[from_bus] - bus_angles[to_bus])
+        angle_diff = bus_angles[from_bus] - bus_angles[to_bus] # keep sign
+        angle_diff = (angle_diff + torch.pi) % (2 * torch.pi) - torch.pi # wrap to [-pi, pi]
+        angle_excess_low = F.relu(angle_min - angle_diff)
+        angle_excess_high = F.relu(angle_diff - angle_max)
 
-        angle_excess_low = F.relu(angle_min - angle_diff)  # violation if too small
-        angle_excess_high = F.relu(angle_diff - angle_max)  # violation if too large
-        branch_angle_violation_mean = (
-            torch.mean(angle_excess_low + angle_excess_high) * 180.0 / torch.pi
-        )
+        branch_angle_violation_mean = torch.mean(
+            angle_excess_low + angle_excess_high
+        ) # mean of the abs violation
 
         P_in, Q_in = node_injection_layer(Pft, Qft, bus_edge_index, num_bus)
         residual_P, residual_Q = node_residuals_layer(
@@ -167,6 +172,8 @@ class OptimalPowerFlowTask(ReconstructionTask):
 
         mean_Qg_violation_PV = Qg_violation_amount[mask_PV].mean()
         mean_Qg_violation_REF = Qg_violation_amount[mask_REF].mean()
+        mask_PV_REF = mask_PV | mask_REF # PV or REF buses
+        mean_Qg_violation = Qg_violation_amount[mask_PV_REF].mean() #
 
         if self.args.verbose:
             mean_res_P_PQ, max_res_P_PQ = residual_stats_by_type(
@@ -261,8 +268,10 @@ class OptimalPowerFlowTask(ReconstructionTask):
         loss_dict["Branch voltage angle difference violations"] = (
             branch_angle_violation_mean
         )
-        loss_dict["Mean Qg violation PV buses"] = mean_Qg_violation_PV
+        loss_dict["Mean Qg violation PV buses"] = mean_Qg_violation_PV # mean of the abs violation over the entire batch (all oines in the batch). 
+        # this is then overaged over all the batches and gives same weight to all batches despite them possibly having varying number of branches
         loss_dict["Mean Qg violation REF buses"] = mean_Qg_violation_REF
+        loss_dict["Mean Qg violation"] = mean_Qg_violation
 
         loss_dict["MSE PQ nodes - PG"] = mse_PQ[PG_OUT]
         loss_dict["MSE PV nodes - PG"] = mse_PV[PG_OUT]
@@ -293,8 +302,25 @@ class OptimalPowerFlowTask(ReconstructionTask):
             )
         return
 
-    @rank_zero_only
     def on_test_end(self):
+        # In DDP, gather verbose test outputs from all ranks to rank 0
+        # so that plots and detailed analysis cover the full test set.
+        if self.args.verbose and dist.is_available() and dist.is_initialized():
+            world_size = dist.get_world_size()
+            gathered = [None] * world_size if dist.get_rank() == 0 else None
+            dist.gather_object(self.test_outputs, gathered, dst=0)
+            if dist.get_rank() == 0:
+                merged = {i: [] for i in range(len(self.args.data.networks))}
+                for rank_data in gathered:
+                    for dl_idx, batches in rank_data.items():
+                        merged[dl_idx].extend(batches)
+                self.test_outputs = merged
+
+        # Only rank 0 proceeds with logging, CSV writing, and plotting
+        if dist.is_available() and dist.is_initialized() and dist.get_rank() != 0:
+            self.test_outputs.clear()
+            return
+
         if isinstance(self.logger, MLFlowLogger):
             artifact_dir = os.path.join(
                 self.logger.save_dir,
@@ -341,10 +367,10 @@ class OptimalPowerFlowTask(ReconstructionTask):
             rmse_gen = metrics.get("MSE PG", 0) ** 0.5
             optimality_gap = metrics.get("Opt gap", " ")
             branch_thermal_violation_from = metrics.get(
-                "Branch termal violation from",
+                "Branch thermal violation from",
                 " ",
             )
-            branch_thermal_violation_to = metrics.get("Branch termal violation to", " ")
+            branch_thermal_violation_to = metrics.get("Branch thermal violation to", " ")
             branch_angle_violation = metrics.get(
                 "Branch voltage angle difference violations",
                 " ",
@@ -354,6 +380,7 @@ class OptimalPowerFlowTask(ReconstructionTask):
                 "Mean Qg violation REF buses",
                 " ",
             )
+            mean_qg_violation = metrics.get("Mean Qg violation", " ")
 
             # --- Main RMSE metrics file ---
             data_main = {
@@ -372,11 +399,12 @@ class OptimalPowerFlowTask(ReconstructionTask):
                     "Avg. reactive res. (MVar)",
                     "RMSE PG generators (MW)",
                     "Mean optimality gap (%)",
-                    "Mean branch termal violation from (MVA)",
-                    "Mean branch termal violation to (MVA)",
+                    "Mean branch thermal violation from (MVA)",
+                    "Mean branch thermal violation to (MVA)",
                     "Mean branch angle difference violation (radians)",
                     "Mean Qg violation PV buses",
                     "Mean Qg violation REF buses",
+                    "Mean Qg violation",
                 ],
                 "Value": [
                     avg_active_res,
@@ -388,6 +416,7 @@ class OptimalPowerFlowTask(ReconstructionTask):
                     branch_angle_violation,
                     mean_qg_violation_PV_buses,
                     mean_qg_violation_REF_buses,
+                    mean_qg_violation,
                 ],
             }
             df_residuals = pd.DataFrame(data_residuals)
@@ -482,4 +511,93 @@ class OptimalPowerFlowTask(ReconstructionTask):
         self.test_outputs.clear()
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        raise NotImplementedError
+        output, _ = self.shared_step(batch)
+
+        self.data_normalizers[dataloader_idx].inverse_transform(batch)
+        self.data_normalizers[dataloader_idx].inverse_output(output, batch)
+
+        branch_flow_layer = ComputeBranchFlow()
+        node_injection_layer = ComputeNodeInjection()
+        node_residuals_layer = ComputeNodeResiduals()
+
+        num_bus = batch.x_dict["bus"].size(0)
+        bus_edge_index = batch.edge_index_dict[("bus", "connects", "bus")]
+        bus_edge_attr = batch.edge_attr_dict[("bus", "connects", "bus")]
+
+        Pft, Qft = branch_flow_layer(output["bus"], bus_edge_index, bus_edge_attr)
+        P_in, Q_in = node_injection_layer(Pft, Qft, bus_edge_index, num_bus)
+        residual_P, residual_Q = node_residuals_layer(
+            P_in,
+            Q_in,
+            output["bus"],
+            batch.x_dict["bus"],
+        )
+        residual_P = torch.abs(residual_P)
+        residual_Q = torch.abs(residual_Q)
+        residual_mva = torch.sqrt(residual_P**2 + residual_Q**2)
+
+        bus_batch = batch.batch_dict["bus"]
+        scenario_ids = batch["scenario_id"][bus_batch]
+        local_bus_idx = torch.cat(
+            [
+                torch.arange(c, device=bus_batch.device)
+                for c in torch.bincount(bus_batch) 
+            ],
+        ) # this works because the order of the buses is preserved by the groupby in the dataset wrapper and datakit data has buses in increasing order.
+
+        bus_x = batch.x_dict["bus"]
+        bus_y = batch.y_dict["bus"]
+        mask_PQ = batch.mask_dict["PQ"]
+        mask_PV = batch.mask_dict["PV"]
+        mask_REF = batch.mask_dict["REF"]
+
+        _, gen_to_bus_index = batch.edge_index_dict[("gen", "connected_to", "bus")]
+        agg_gen_on_bus = scatter_add(
+            batch.y_dict["gen"],
+            gen_to_bus_index,
+            dim=0,
+            dim_size=num_bus,
+        )
+        gen_batch = batch.batch_dict["gen"]
+        gen_scenario_ids = batch["scenario_id"][gen_batch]
+        local_gen_idx = torch.cat(
+            [
+                torch.arange(c, device=gen_batch.device)
+                for c in torch.bincount(gen_batch)
+            ],
+        )
+        gen_x = batch.x_dict["gen"]
+        gen_target = batch.y_dict["gen"].reshape(-1)
+        gen_pred = output["gen"].reshape(-1)
+
+        return {
+            "bus": {
+                "scenario": scenario_ids.cpu().numpy(),
+                "bus": local_bus_idx.cpu().numpy(),
+                "pd_mw": bus_x[:, PD_H].cpu().numpy(),
+                "qd_mvar": bus_x[:, QD_H].cpu().numpy(),
+                "vm_pu_target": bus_y[:, VM_H].cpu().numpy(),
+                "va_target": bus_y[:, VA_H].cpu().numpy(),
+                "pg_mw_target": agg_gen_on_bus.squeeze().cpu().numpy(),
+                "qg_mvar_target": bus_y[:, QG_H].cpu().numpy(),
+                "is_pq": mask_PQ.cpu().numpy().astype(int),
+                "is_pv": mask_PV.cpu().numpy().astype(int),
+                "is_ref": mask_REF.cpu().numpy().astype(int),
+                "vm_pu": output["bus"][:, VM_OUT].detach().cpu().numpy(),
+                "va": output["bus"][:, VA_OUT].detach().cpu().numpy(),
+                "pg_mw": output["bus"][:, PG_OUT].detach().cpu().numpy(),
+                "qg_mvar": output["bus"][:, QG_OUT].detach().cpu().numpy(),
+                "active res. (MW)": residual_P.detach().cpu().numpy(),
+                "reactive res. (MVar)": residual_Q.detach().cpu().numpy(),
+                "PBE": residual_mva.detach().cpu().numpy(),
+            },
+            "gen": {
+                "scenario": gen_scenario_ids.cpu().numpy(),
+                "gen": local_gen_idx.cpu().numpy(),
+                "connected_bus": local_bus_idx[gen_to_bus_index].cpu().numpy(),
+                "pg_mw_target": gen_target.cpu().numpy(),
+                "pg_mw": gen_pred.detach().cpu().numpy(),
+                "min_pg_mw": gen_x[:, MIN_PG].cpu().numpy(),
+                "max_pg_mw": gen_x[:, MAX_PG].cpu().numpy(),
+            },
+        }
