@@ -433,6 +433,7 @@ class LitGridHeteroDataModule(L.LightningDataModule):
         return kwargs
 
     def train_dataloader(self):
+        print("creating train dataloader for rank ", dist.get_rank())
         return DataLoader(
             self.train_dataset_multi,
             batch_size=self.batch_size,
