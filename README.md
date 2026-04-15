@@ -29,7 +29,6 @@ source venv/bin/activate
 Install gridfm-graphkit in editable mode
 ```bash
 pip install -e .
-pip install torch_sparse torch_scatter -f https://data.pyg.org/whl/torch-2.6.0+cu124.html
 ```
 
 Get PyTorch + CUDA version for torch-scatter
