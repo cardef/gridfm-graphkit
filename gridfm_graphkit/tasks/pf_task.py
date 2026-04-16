@@ -24,7 +24,12 @@ from gridfm_graphkit.tasks.utils import (
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-from torch_scatter import scatter_add
+
+try:
+    from torch_scatter import scatter_add
+except ImportError:
+    scatter_add = None
+
 from torch_geometric.nn import global_mean_pool
 from gridfm_graphkit.models.utils import (
     ComputeBranchFlow,
