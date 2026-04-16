@@ -9,8 +9,14 @@ __all__ = [
 ]
 
 _LAZY_IMPORTS = {
-    "GNS_heterogeneous": ("gridfm_graphkit.models.gnn_heterogeneous_gns", "GNS_heterogeneous"),
-    "GritHeteroAdapter": ("gridfm_graphkit.models.grit_transformer", "GritHeteroAdapter"),
+    "GNS_heterogeneous": (
+        "gridfm_graphkit.models.gnn_heterogeneous_gns",
+        "GNS_heterogeneous",
+    ),
+    "GritHeteroAdapter": (
+        "gridfm_graphkit.models.grit_transformer",
+        "GritHeteroAdapter",
+    ),
     "PhysicsDecoderOPF": ("gridfm_graphkit.models.utils", "PhysicsDecoderOPF"),
     "PhysicsDecoderPF": ("gridfm_graphkit.models.utils", "PhysicsDecoderPF"),
     "PhysicsDecoderSE": ("gridfm_graphkit.models.utils", "PhysicsDecoderSE"),
