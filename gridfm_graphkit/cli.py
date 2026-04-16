@@ -210,7 +210,6 @@ def main_cli(args):
         profiler=profiler,
     )
 
-
     if args.command == "train" or args.command == "finetune":
         trainer.fit(model=model, datamodule=litGrid)
         if (
