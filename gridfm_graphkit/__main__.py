@@ -76,6 +76,10 @@ def main():
         choices=["simple", "advanced", "pytorch"],
         help="Enable Lightning profiler: 'simple', 'advanced', or 'pytorch'.",
     )
+    train_parser.add_argument(
+        "--compute_dc_ac_metrics",
+        action="store_true",
+    )
 
     # ---- FINETUNE SUBCOMMAND ----
     finetune_parser = subparsers.add_parser("finetune", help="Run fine-tuning")
