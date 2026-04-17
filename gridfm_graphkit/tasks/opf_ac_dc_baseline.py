@@ -51,7 +51,7 @@ def _load_test_data(data_dir: str, test_scenario_ids: list[int]):
         os.path.join(data_dir, "branch_data.parquet"),
         filters=partition_filter,
     )
-    branch_df = branch_df.drop(columns=["pf_dc", "pt_dc"], axis=1, errors="ignore")
+    branch_df = branch_df.drop(columns=["pf_dc", "pt_dc"], axis=1)
     runtime_df = pd.read_parquet(
         os.path.join(data_dir, "runtime_data.parquet"),
         filters=partition_filter,
@@ -148,8 +148,8 @@ def _compute_branch_violations(branch_df: pd.DataFrame, bus_df: pd.DataFrame) ->
 
     bus_angles = bus_df[["scenario", "bus", "Va", "Va_dc"]]
     # convert to radians
-    bus_angles["Va"] = bus_angles["Va"] * np.pi / 180.0 
-    bus_angles["Va_dc"] = bus_angles["Va_dc"] * np.pi / 180.0
+    bus_angles.loc[:, "Va"] = bus_angles["Va"] * np.pi / 180.0 
+    bus_angles.loc[:, "Va_dc"] = bus_angles["Va_dc"] * np.pi / 180.0
     from_angles = bus_angles.rename(
         columns={"bus": "from_bus", "Va": "Va_from", "Va_dc": "Va_dc_from"},
     )
@@ -248,8 +248,6 @@ def compute_opf_ac_dc_metrics(
     branch_df["pf_dc_computed"] = pf_dc
     branch_df["pt_dc_computed"] = pt_dc
     
-    # drop pf_dc and pt_dc from branch_df
-    branch_df = branch_df.drop(columns=["pf_dc", "pt_dc"], axis=1)
 
     opf_extra = {}
     opf_extra.update(_compute_optimality_gap(gen_df))
