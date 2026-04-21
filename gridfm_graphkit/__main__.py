@@ -3,7 +3,64 @@ from datetime import datetime
 from gridfm_graphkit.cli import main_cli, benchmark_cli
 
 
+import subprocess
+import os
+
+def is_lsf():
+    return (
+        os.environ.get("LSB_JOBID") is not None
+        and os.environ.get("LSB_MCPU_HOSTS") is not None
+        and "LSF_ENVDIR" in os.environ  # strong LSF indicator
+    )
+
+def fix_infiniband():
+    """Configure NCCL to skip Ethernet-only IB ports on this host."""
+    ibv = subprocess.run("ibv_devinfo", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    lines = ibv.stdout.decode("utf-8").split("\n")
+    exclude = ""
+    for line in lines:
+        if "hca_id:" in line:
+            name = line.split(":")[1].strip()
+        if "\tport:" in line:
+            port = line.split(":")[1].strip()
+        if "link_layer:" in line and "Ethernet" in line:
+            exclude = exclude + f"{name}:{port},"
+
+    if exclude:
+        exclude = "^" + exclude[:-1]
+        os.environ["NCCL_IB_HCA"] = exclude
+
+
+def set_env():
+    """Populate distributed-training environment variables from LSF metadata."""
+    # print("Using " + str(torch.cuda.device_count()) + " GPUs---------------------------------------------------------------------")
+    LSB_MCPU_HOSTS = os.environ[
+        "LSB_MCPU_HOSTS"
+    ].split(
+        " ",
+    )  # Parses Node list set by LSF, in format hostname proceeded by number of cores requested
+    HOST_LIST = LSB_MCPU_HOSTS[::2]  # Strips the cores per node items in the list
+    LSB_JOBID = os.environ[
+        "LSB_JOBID"
+    ]  # Parses Node list set by LSF, in format hostname proceeded by number of cores requested
+    os.environ["MASTER_ADDR"] = HOST_LIST[
+        0
+    ]  # Sets the MasterNode to thefirst node on the list of hosts
+    os.environ["MASTER_PORT"] = "5" + LSB_JOBID[-5:-1]
+    os.environ["NODE_RANK"] = str(
+        HOST_LIST.index(os.environ["HOSTNAME"]),
+    )  # Uses the list index for node rank, master node rank must be 0
+    os.environ["NCCL_SOCKET_IFNAME"] = (
+        "ib,bond"  # avoids using docker of loopback interface
+    )
+    os.environ["NCCL_IB_CUDA_SUPPORT"] = "1"  # Force use of infiniband
+
 def main():
+    """Parse CLI arguments and dispatch to the selected GridFM subcommand."""
+    if is_lsf():
+        print("Using LSF")
+        set_env()
+        fix_infiniband()
     parser = argparse.ArgumentParser(
         prog="gridfm_graphkit",
         description="gridfm-graphkit CLI",
