@@ -35,6 +35,7 @@ from gridfm_graphkit.tasks.pf_ac_dc_baseline import (
 
 
 def _load_test_data(data_dir: str, test_scenario_ids: list[int]):
+    """Load OPF test-split bus/gen/branch/runtime tables from partitioned parquet."""
     partitions = sorted(set(s // N_SCENARIO_PER_PARTITION for s in test_scenario_ids))
     test_set = set(test_scenario_ids)
     partition_filter = [("scenario_partition", "in", partitions)]
@@ -71,6 +72,7 @@ def _load_test_data(data_dir: str, test_scenario_ids: list[int]):
 
 
 def _compute_optimality_gap(gen_df: pd.DataFrame) -> dict:
+    """Compute mean AC/DC scenario-level optimality gap from generator costs."""
     # Same aggregation as opf_task scatter_add + mean over graphs, but compares
     # scenario DC cost vs AC cost (not model pred vs GT).
     c0 = gen_df["cp0_eur"].to_numpy(dtype=float)
@@ -92,6 +94,7 @@ def _compute_optimality_gap(gen_df: pd.DataFrame) -> dict:
 
 
 def _compute_pg_violations(gen_df: pd.DataFrame) -> dict:
+    """Compute mean AC/DC generator active-power bound violations."""
     min_p = gen_df["min_p_mw"].to_numpy(dtype=float)
     max_p = gen_df["max_p_mw"].to_numpy(dtype=float)
     pg_ac = gen_df["p_mw"].to_numpy(dtype=float)
@@ -105,6 +108,7 @@ def _compute_pg_violations(gen_df: pd.DataFrame) -> dict:
 
 
 def _compute_qg_violations_ac(bus_df: pd.DataFrame, gen_df: pd.DataFrame) -> dict:
+    """Compute AC reactive-power limit violations for PV/REF buses."""
     # opf_task style on bus Qg; AC only 
     bus = bus_df.copy()
     qg = bus["Qg"].to_numpy(dtype=float)
@@ -131,6 +135,7 @@ def _compute_qg_violations_ac(bus_df: pd.DataFrame, gen_df: pd.DataFrame) -> dic
 
 
 def _compute_branch_violations(branch_df: pd.DataFrame, bus_df: pd.DataFrame) -> dict:
+    """Compute AC/DC branch thermal and angle-limit violation statistics."""
     rate = branch_df["rate_a"].to_numpy(dtype=float)
     ac_from = np.sqrt(
         branch_df["pf"].to_numpy(dtype=float) ** 2 + branch_df["qf"].to_numpy(dtype=float) ** 2,

@@ -7,6 +7,7 @@ import os
 
 
 def residual_stats_by_type(residual, mask, bus_batch):
+    """Return per-graph mean and max absolute residuals for a masked bus subset."""
     residual_masked = residual[mask]
     batch_masked = bus_batch[mask]
     abs_residual = torch.abs(residual_masked)

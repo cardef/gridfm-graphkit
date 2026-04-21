@@ -84,6 +84,7 @@ class MaskedMSELoss(BaseLoss):
 
 @LOSS_REGISTRY.register("MaskedGenMSE")
 class MaskedGenMSE(torch.nn.Module):
+    """Compute MSE on generator targets restricted to generator mask entries."""
     def __init__(self, loss_args, args):
         super().__init__()
         self.reduction = "mean"
@@ -108,6 +109,7 @@ class MaskedGenMSE(torch.nn.Module):
 
 @LOSS_REGISTRY.register("MaskedBusMSE")
 class MaskedBusMSE(torch.nn.Module):
+    """Compute MSE on selected bus targets, respecting task-specific output columns."""
     def __init__(self, loss_args, args):
         super().__init__()
         self.reduction = "mean"
@@ -239,6 +241,7 @@ class MixedLoss(BaseLoss):
 
 @LOSS_REGISTRY.register("LayeredWeightedPhysics")
 class LayeredWeightedPhysicsLoss(BaseLoss):
+    """Combine intermediate physics residuals using normalized geometric weights."""
     def __init__(self, loss_args, args) -> None:
         super().__init__()
         self.base_weight = loss_args.base_weight
@@ -279,6 +282,7 @@ class LayeredWeightedPhysicsLoss(BaseLoss):
 
 @LOSS_REGISTRY.register("LossPerDim")
 class LossPerDim(BaseLoss):
+    """Compute MAE/MSE for one named physical dimension of bus outputs."""
     def __init__(self, loss_args, args):
         super(LossPerDim, self).__init__()
         self.reduction = "mean"

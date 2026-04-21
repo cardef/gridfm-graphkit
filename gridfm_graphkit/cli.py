@@ -48,6 +48,7 @@ def _load_plugins(plugins: list[str]) -> None:
 
 
 def _predictions_to_dataframe(predictions: list[dict[str, np.ndarray]]) -> pd.DataFrame:
+    """Convert a list of prediction batch dicts into one concatenated DataFrame."""
     rows = {key: [] for key in predictions[0].keys()}
     for batch in predictions:
         for key in rows:
@@ -124,6 +125,7 @@ def benchmark_cli(args):
 
 
 def get_training_callbacks(args):
+    """Build the standard callback stack used for train/finetune runs."""
     early_stop_callback = EarlyStopping(
         monitor="Validation loss",
         min_delta=args.callbacks.tol,
@@ -149,6 +151,7 @@ def get_training_callbacks(args):
 
 
 def main_cli(args):
+    """Run a GridFM CLI command using config-driven datamodule and trainer setup."""
     if getattr(args, "tf32", False):
         torch.set_float32_matmul_precision("high")  # enables TF32 on Ampere+ GPUs
 

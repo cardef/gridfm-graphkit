@@ -59,6 +59,7 @@ def split_dataset_by_load_scenario_idx(
     val_ratio: float = 0.1,
     test_ratio: float = 0.1,
 ) -> Tuple[Subset, Subset, Subset]:
+    """Split dataset by unique load-scenario IDs to avoid scenario leakage."""
     if val_ratio + test_ratio >= 1:
         raise ValueError("The sum of val_ratio and test_ratio must be less than 1.")
 
