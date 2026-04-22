@@ -241,6 +241,7 @@ class PowerFlowTask(ReconstructionTask):
 
         # Only rank 0 proceeds with logging, CSV writing, and plotting
         if dist.is_available() and dist.is_initialized() and dist.get_rank() != 0:
+            self.test_outputs.clear() # clear the test outputs for other ranks
             return
 
         if isinstance(self.logger, MLFlowLogger):
@@ -351,22 +352,22 @@ class PowerFlowTask(ReconstructionTask):
         self.test_outputs.clear()
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        output, _ = self.shared_step(batch)
+        output, _ = self.shared_step(batch) # get the predicted output from the model
 
-        self.data_normalizers[dataloader_idx].inverse_transform(batch)
-        self.data_normalizers[dataloader_idx].inverse_output(output, batch)
+        self.data_normalizers[dataloader_idx].inverse_transform(batch) # normalize the batch data back to the original scale
+        self.data_normalizers[dataloader_idx].inverse_output(output, batch) # inverse transform the predicted output back to the original scale
 
-        branch_flow_layer = ComputeBranchFlow()
-        node_injection_layer = ComputeNodeInjection()
-        node_residuals_layer = ComputeNodeResiduals()
+        branch_flow_layer = ComputeBranchFlow() # layer to compute the branch flows
+        node_injection_layer = ComputeNodeInjection() # layer to compute the node injections
+        node_residuals_layer = ComputeNodeResiduals() # layer to compute the node residuals
 
-        num_bus = batch.x_dict["bus"].size(0)
-        bus_edge_index = batch.edge_index_dict[("bus", "connects", "bus")]
-        bus_edge_attr = batch.edge_attr_dict[("bus", "connects", "bus")]
+        num_bus = batch.x_dict["bus"].size(0) # number of buses in the batch
+        bus_edge_index = batch.edge_index_dict[("bus", "connects", "bus")] # from and to buses
+        bus_edge_attr = batch.edge_attr_dict[("bus", "connects", "bus")] # edge attributes (admittance) of the bus connections
 
-        Pft, Qft = branch_flow_layer(output["bus"], bus_edge_index, bus_edge_attr)
-        P_in, Q_in = node_injection_layer(Pft, Qft, bus_edge_index, num_bus)
-        residual_P, residual_Q = node_residuals_layer(
+        Pft, Qft = branch_flow_layer(output["bus"], bus_edge_index, bus_edge_attr) # compute the branch flows
+        P_in, Q_in = node_injection_layer(Pft, Qft, bus_edge_index, num_bus) # compute the node injections
+        residual_P, residual_Q = node_residuals_layer( # compute the node residuals
             P_in,
             Q_in,
             output["bus"],
@@ -383,8 +384,9 @@ class PowerFlowTask(ReconstructionTask):
                 torch.arange(c, device=bus_batch.device)
                 for c in torch.bincount(bus_batch)
             ],
-        )
-
+        ) # this is based on the assumptions that the buses within a graph are ordered and indexed as 0 ... n_nodes-1.
+        # todo: we should remove this assert and store the bus idx in the tensors
+        # right now we need the increasing order and we have an assert in the dataset to check it.
         bus_x = batch.x_dict["bus"]
         bus_y = batch.y_dict["bus"]
         mask_PQ = batch.mask_dict["PQ"]
@@ -402,20 +404,20 @@ class PowerFlowTask(ReconstructionTask):
         return {
             "scenario": scenario_ids.cpu().numpy(),
             "bus": local_bus_idx.cpu().numpy(),
-            "pd_mw": bus_x[:, PD_H].cpu().numpy(),
-            "qd_mvar": bus_x[:, QD_H].cpu().numpy(),
-            "vm_pu_target": bus_y[:, VM_H].cpu().numpy(),
-            "va_target": bus_y[:, VA_H].cpu().numpy(),
-            "pg_mw_target": agg_gen_on_bus.squeeze().cpu().numpy(),
-            "qg_mvar_target": bus_y[:, QG_H].cpu().numpy(),
-            "is_pq": mask_PQ.cpu().numpy().astype(int),
-            "is_pv": mask_PV.cpu().numpy().astype(int),
-            "is_ref": mask_REF.cpu().numpy().astype(int),
-            "vm_pu": output["bus"][:, VM_OUT].detach().cpu().numpy(),
-            "va": output["bus"][:, VA_OUT].detach().cpu().numpy(),
-            "pg_mw": output["bus"][:, PG_OUT].detach().cpu().numpy(),
-            "qg_mvar": output["bus"][:, QG_OUT].detach().cpu().numpy(),
-            "active res. (MW)": residual_P.detach().cpu().numpy(),
-            "reactive res. (MVar)": residual_Q.detach().cpu().numpy(),
-            "PBE": residual_mva.detach().cpu().numpy(),
+            "pd_mw": bus_x[:, PD_H].cpu().numpy(), # from original input
+            "qd_mvar": bus_x[:, QD_H].cpu().numpy(), # from original input
+            "vm_pu_target": bus_y[:, VM_H].cpu().numpy(), # from original input
+            "va_target": bus_y[:, VA_H].cpu().numpy(), # from original input
+            "pg_mw_target": agg_gen_on_bus.squeeze().cpu().numpy(), # from original input
+            "qg_mvar_target": bus_y[:, QG_H].cpu().numpy(), # from original input
+            "is_pq": mask_PQ.cpu().numpy().astype(int), # from original input
+            "is_pv": mask_PV.cpu().numpy().astype(int), # from original input
+            "is_ref": mask_REF.cpu().numpy().astype(int), # from original input
+            "vm_pu": output["bus"][:, VM_OUT].detach().cpu().numpy(), # predicted output
+            "va": output["bus"][:, VA_OUT].detach().cpu().numpy(), # predicted output
+            "pg_mw": output["bus"][:, PG_OUT].detach().cpu().numpy(), # predicted output
+            "qg_mvar": output["bus"][:, QG_OUT].detach().cpu().numpy(), # predicted output
+            "active res. (MW)": residual_P.detach().cpu().numpy(), # predicted output
+            "reactive res. (MVar)": residual_Q.detach().cpu().numpy(), # predicted output
+            "PBE": residual_mva.detach().cpu().numpy(), # predicted output
         }

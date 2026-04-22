@@ -15,12 +15,24 @@ import torch.distributed as dist
 import pandas as pd
 
 from gridfm_graphkit.io.param_handler import get_task
-from gridfm_graphkit.tasks.compute_ac_dc_metrics import compute_ac_dc_metrics
+from gridfm_graphkit.tasks.opf_ac_dc_baseline import compute_opf_ac_dc_metrics
+from gridfm_graphkit.tasks.pf_ac_dc_baseline import compute_pf_ac_dc_metrics
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch.strategies import DDPStrategy
 import lightning as L
+
+
+def _normalize_loaded_state_dict_keys(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    """Map legacy torch.compile checkpoint keys to the canonical model namespace."""
+    has_compiled_prefix = any(key.startswith("model._orig_mod.") for key in state_dict)
+    if not has_compiled_prefix:
+        return state_dict
+    return {
+        key.replace("model._orig_mod.", "model."): value
+        for key, value in state_dict.items()
+    }
 
 
 def _load_plugins(plugins: list[str]) -> None:
@@ -33,6 +45,15 @@ def _load_plugins(plugins: list[str]) -> None:
                 f"Plugin package '{plugin_pkg}' could not be imported: {e}. "
                 "Make sure it is installed in the current environment.",
             ) from e
+
+
+def _predictions_to_dataframe(predictions: list[dict[str, np.ndarray]]) -> pd.DataFrame:
+    """Convert a list of prediction batch dicts into one concatenated DataFrame."""
+    rows = {key: [] for key in predictions[0].keys()}
+    for batch in predictions:
+        for key in rows:
+            rows[key].append(batch[key])
+    return pd.DataFrame({key: np.concatenate(vals) for key, vals in rows.items()})
 
 
 def _validate_dataset_wrapper(name: str | None) -> None:
@@ -104,6 +125,7 @@ def benchmark_cli(args):
 
 
 def get_training_callbacks(args):
+    """Build the standard callback stack used for train/finetune runs."""
     early_stop_callback = EarlyStopping(
         monitor="Validation loss",
         min_delta=args.callbacks.tol,
@@ -129,6 +151,7 @@ def get_training_callbacks(args):
 
 
 def main_cli(args):
+    """Run a GridFM CLI command using config-driven datamodule and trainer setup."""
     if getattr(args, "tf32", False):
         torch.set_float32_matmul_precision("high")  # enables TF32 on Ampere+ GPUs
 
@@ -168,6 +191,7 @@ def main_cli(args):
     if args.command != "train":
         print(f"Loading model weights from {args.model_path}")
         state_dict = torch.load(args.model_path, map_location="cpu")
+        state_dict = _normalize_loaded_state_dict_keys(state_dict)
         model.load_state_dict(state_dict)
 
     precision = "bf16-true" if getattr(args, "bfloat16", False) else None
@@ -279,12 +303,20 @@ def main_cli(args):
         )
 
     compute_dc_ac = getattr(args, "compute_dc_ac_metrics", False)
+    task_type = {"optimalpowerflow": "opf", "powerflow": "pf"}.get(
+        str(getattr(getattr(config_args, "task", None), "task_name", "")).lower(),
+    )
     if is_rank0 and compute_dc_ac:
         sn_mva = config_args.data.baseMVA
         for grid_name in config_args.data.networks:
             raw_dir = os.path.join(args.data_path, grid_name, "raw")
             print(f"\nComputing ground-truth AC/DC metrics for {grid_name}...")
-            compute_ac_dc_metrics(artifacts_dir, raw_dir, grid_name, sn_mva)
+            if task_type == "opf":
+                compute_opf_ac_dc_metrics(artifacts_dir, raw_dir, grid_name, sn_mva)
+            elif task_type == "pf":
+                compute_pf_ac_dc_metrics(artifacts_dir, raw_dir, grid_name, sn_mva)
+            else:
+                raise ValueError(f"Invalid task: {task_type}")
 
     save_output = getattr(args, "save_output", False) or args.command == "predict"
     if is_rank0 and save_output:
@@ -305,19 +337,27 @@ def main_cli(args):
         )
         predictions = predict_trainer.predict(model=model, datamodule=litGrid)
 
-        rows = {key: [] for key in predictions[0].keys()}
-        for batch in predictions:
-            for key in rows:
-                rows[key].append(batch[key])
-
-        df = pd.DataFrame({key: np.concatenate(vals) for key, vals in rows.items()})
-
         grid_name = config_args.data.networks[0]
         if args.command == "predict":
             output_dir = args.output_path
         else:
             output_dir = os.path.join(artifacts_dir, "test")
         os.makedirs(output_dir, exist_ok=True)
-        out_path = os.path.join(output_dir, f"{grid_name}_predictions.parquet")
-        df.to_parquet(out_path, index=False)
-        print(f"Saved predictions to {out_path}")
+        first_prediction = predictions[0]
+        if any(isinstance(value, dict) for value in first_prediction.values()):
+            for table_name in first_prediction:
+                df = _predictions_to_dataframe(
+                    [batch[table_name] for batch in predictions],
+                )
+                suffix = "" if table_name == "bus" else f"_{table_name}"
+                out_path = os.path.join(
+                    output_dir,
+                    f"{grid_name}{suffix}_predictions.parquet",
+                )
+                df.to_parquet(out_path, index=False)
+                print(f"Saved {table_name} predictions to {out_path}")
+        else:
+            df = _predictions_to_dataframe(predictions)
+            out_path = os.path.join(output_dir, f"{grid_name}_predictions.parquet")
+            df.to_parquet(out_path, index=False)
+            print(f"Saved predictions to {out_path}")
