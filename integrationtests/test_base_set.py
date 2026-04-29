@@ -6,6 +6,8 @@ import pandas as pd
 import yaml
 import urllib.request
 import shutil
+import zipfile
+import gdown
 
 
 def execute_and_live_output(cmd) -> None:
@@ -106,13 +108,28 @@ def test_train(cleanup_test_artifacts):
     data_dir = "data_out"
 
     if not os.path.exists(data_dir) or not os.listdir(data_dir):
-        print("Data directory not found or empty, generating data...")
+        print("Data directory not found or empty, downloading pre-generated data...")
 
-        config_path = prepare_config()
+        # --- Dataset generation (commented out, using pre-generated data instead) ---
+        # config_path = prepare_config()
+        # execute_and_live_output(f"gridfm_datakit generate {config_path}")
+        # -------------------------------------------------------------------------
 
-        execute_and_live_output(f"gridfm_datakit generate {config_path}")
+        gdrive_file_id = "1NtE_4Fn3-1_BNWidZVFeSTfXf3-B50Yr"
+        zip_filename = "case14_ieee.10000_scenarios_2_variants.zip"
+        gdrive_url = f"https://drive.google.com/uc?id={gdrive_file_id}"
+
+        print(f"Downloading {zip_filename} from Google Drive...")
+        gdown.download(gdrive_url, zip_filename, quiet=False)
+
+        print(f"Extracting {zip_filename}...")
+        with zipfile.ZipFile(zip_filename, "r") as zf:
+            zf.extractall(".")
+
+        os.remove(zip_filename)
+        print(f"Data extracted to '{data_dir}'.")
     else:
-        print(f"Data directory '{data_dir}' already exists, skipping generation.")
+        print(f"Data directory '{data_dir}' already exists, skipping download.")
 
     training_config_path = prepare_training_config()
 
