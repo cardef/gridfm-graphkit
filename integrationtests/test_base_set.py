@@ -4,7 +4,6 @@ import os
 import glob
 import pandas as pd
 import yaml
-import urllib.request
 import shutil
 import zipfile
 import gdown
@@ -12,37 +11,6 @@ import gdown
 
 def execute_and_live_output(cmd) -> None:
     subprocess.run(cmd, text=True, shell=True, check=True)
-
-
-def prepare_config():
-    """
-    Download default.yaml from gridfm-datakit repo and modify it with test parameters.
-    """
-    config_url = "https://raw.githubusercontent.com/gridfm/gridfm-datakit/refs/heads/main/scripts/config/default.yaml"
-    config_path = "integrationtests/default.yaml"
-
-    print(f"Downloading config from {config_url}...")
-    with urllib.request.urlopen(config_url) as response:
-        config_content = response.read().decode("utf-8")
-
-    config = yaml.safe_load(config_content)
-
-    config["network"]["name"] = "case14_ieee"
-    config["load"]["scenarios"] = 10000
-    config["topology_perturbation"]["n_topology_variants"] = 2
-
-    with open(config_path, "w") as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-
-    print(f"Config prepared at {config_path} with:")
-    print(f"  - network.name: {config['network']['name']}")
-    print(f"  - load.scenarios: {config['load']['scenarios']}")
-    print(
-        f"  - topology_perturbation.n_topology_variants: "
-        f"{config['topology_perturbation']['n_topology_variants']}",
-    )
-
-    return config_path
 
 
 def prepare_training_config():
@@ -109,11 +77,6 @@ def test_train(cleanup_test_artifacts):
 
     if not os.path.exists(data_dir) or not os.listdir(data_dir):
         print("Data directory not found or empty, downloading pre-generated data...")
-
-        # --- Dataset generation (commented out, using pre-generated data instead) ---
-        # config_path = prepare_config()
-        # execute_and_live_output(f"gridfm_datakit generate {config_path}")
-        # -------------------------------------------------------------------------
 
         gdrive_file_id = "1NtE_4Fn3-1_BNWidZVFeSTfXf3-B50Yr"
         zip_filename = "case14_ieee.10000_scenarios_2_variants.zip"
