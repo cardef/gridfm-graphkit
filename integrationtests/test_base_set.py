@@ -197,11 +197,11 @@ def test_train(cleanup_test_artifacts, calibrate_runs):
     metrics = all_runs[0]
     pbe_mean_value = metrics["PBE Mean"]
 
-    assert 1.1 <= pbe_mean_value <= 2.9, (
-        f"PBE Mean value {pbe_mean_value} is outside acceptable range [1.1, 2.9]"
+    assert 0.2239 <= pbe_mean_value <= 0.6535, (
+        f"PBE Mean value {pbe_mean_value} is outside 95% CI [0.2239, 0.6535]"
     )
 
-    print(f"PBE Mean value {pbe_mean_value} is within acceptable range [1.1, 2.9]")
+    print(f"PBE Mean value {pbe_mean_value} is within 95% CI [0.2239, 0.6535]")
 
 
 @pytest.fixture
@@ -289,22 +289,22 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs):
     metrics = all_runs[0]
 
     checks = {
-        "Avg. active res. (MW)": (0.0, 2.0),
-        "Avg. reactive res. (MVar)": (0.0, 2.0),
-        "RMSE PG generators (MW)": (0.0, 50.0),
-        "Mean optimality gap (%)": (0.0, 10.0),
-        "Mean branch thermal violation from (MVA)": (0.0, 5.0),
-        "Mean branch thermal violation to (MVA)": (0.0, 5.0),
-        "Mean branch angle difference violation (radians)": (0.0, 1.0),
-        "Mean Qg violation PV buses": (0.0, 5.0),
-        "Mean Qg violation REF buses": (0.0, 5.0),
-        "Mean Qg violation": (0.0, 5.0),
+        "Avg. active res. (MW)": (0.2652, 0.4217),
+        "Avg. reactive res. (MVar)": (0.1005, 0.1827),
+        "RMSE PG generators (MW)": (2.6918, 3.1753),
+        "Mean optimality gap (%)": (1.2375, 1.5709),
+        "Mean branch thermal violation from (MVA)": (0.0, 0.0),
+        "Mean branch thermal violation to (MVA)": (0.0, 0.0),
+        "Mean branch angle difference violation (radians)": (0.0, 0.0),
+        "Mean Qg violation PV buses": (-0.0008, 0.2543),
+        "Mean Qg violation REF buses": (0.0245, 0.4099),
+        "Mean Qg violation": (0.0108, 0.2801),
     }
 
     for metric_name, (lo, hi) in checks.items():
         assert metric_name in metrics, f"Metric '{metric_name}' not found in CSV"
         value = metrics[metric_name]
         assert lo <= value <= hi, (
-            f"Metric '{metric_name}' value {value} is outside acceptable range [{lo}, {hi}]"
+            f"Metric '{metric_name}' value {value} is outside 95% CI [{lo}, {hi}]"
         )
-        print(f"{metric_name}: {value} is within [{lo}, {hi}]")
+        print(f"{metric_name}: {value} is within 95% CI [{lo}, {hi}]")
