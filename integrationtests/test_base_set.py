@@ -30,17 +30,26 @@ def collect_metrics_from_log(log_base: str, metric_keys: list) -> dict:
     return dict(zip(df["Metric"], df["Value"].astype(float)))
 
 
-def print_calibration_stats(all_runs: list, metric_keys: list) -> None:
+def print_calibration_stats(all_runs: list, metric_keys: list, confidence_interval: float = 0.95) -> None:
     """
     Print per-metric stats across calibration runs:
       - std with Bessel's correction (ddof=1)
-      - two-sided 95% CI using Student-t distribution (t_{0.975, n-1})
+      - two-sided CI using Student-t distribution
+
+    Args:
+        all_runs: list of per-run metric dicts
+        metric_keys: list of metric names to report
+        confidence_interval: desired confidence level (default 0.95).
+            Example with higher confidence:
+                print_calibration_stats(all_runs, metric_keys, confidence_interval=0.995)
     """
     n = len(all_runs)
-    t_crit = stats.t.ppf(0.975, df=max(n - 1, 1))  # t_{0.975, n-1}
+    alpha_half = (1 + confidence_interval) / 2
+    t_crit = stats.t.ppf(alpha_half, df=max(n - 1, 1))
+    ci_pct = int(confidence_interval * 100)
     col_w = max(len(k) for k in metric_keys) + 2
-    header = f"  {'Metric':<{col_w}}  {'Mean':>10}  {'Std(ddof=1)':>12}  {'CI 95% lo':>10}  {'CI 95% hi':>10}"
-    print(f"\n===== Calibration Results (n={n}, t_crit={t_crit:.4f}) =====")
+    header = f"  {'Metric':<{col_w}}  {'Mean':>10}  {'Std(ddof=1)':>12}  {f'CI {ci_pct}% lo':>10}  {f'CI {ci_pct}% hi':>10}"
+    print(f"\n===== Calibration Results (n={n}, CI={confidence_interval}, t_crit={t_crit:.4f}) =====")
     print(header)
     print("  " + "-" * (len(header) - 2))
     for key in metric_keys:
@@ -137,7 +146,7 @@ def cleanup_test_artifacts():
             shutil.rmtree(d, ignore_errors=True)
 
 
-def test_train(cleanup_test_artifacts, calibrate_runs):
+def test_train(cleanup_test_artifacts, calibrate_runs, ci_level):
     """
     Integration test for gridfm-datakit data generation and gridfm-graphkit training.
 
@@ -191,7 +200,7 @@ def test_train(cleanup_test_artifacts, calibrate_runs):
         all_runs.append(metrics)
 
     if calibrate_runs > 0:
-        print_calibration_stats(all_runs, pf_metric_keys)
+        print_calibration_stats(all_runs, pf_metric_keys, confidence_interval=ci_level)
         return
 
     metrics = all_runs[0]
@@ -216,7 +225,7 @@ def cleanup_opf_test_artifacts():
             shutil.rmtree(d, ignore_errors=True)
 
 
-def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs):
+def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
     """
     Integration test for OPF data download and gridfm-graphkit OPF training.
 
@@ -283,7 +292,7 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs):
         all_runs.append(metrics)
 
     if calibrate_runs > 0:
-        print_calibration_stats(all_runs, opf_metric_keys)
+        print_calibration_stats(all_runs, opf_metric_keys, confidence_interval=ci_level)
         return
 
     metrics = all_runs[0]
