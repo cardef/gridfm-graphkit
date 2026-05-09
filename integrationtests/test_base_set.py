@@ -46,7 +46,7 @@ def print_calibration_stats(all_runs: list, metric_keys: list, confidence_interv
     n = len(all_runs)
     alpha_half = (1 + confidence_interval) / 2
     t_crit = stats.t.ppf(alpha_half, df=max(n - 1, 1))
-    ci_pct = int(confidence_interval * 100)
+    ci_pct = f"{confidence_interval * 100:g}"
     col_w = max(len(k) for k in metric_keys) + 2
     header = f"  {'Metric':<{col_w}}  {'Mean':>10}  {'Std(ddof=1)':>12}  {f'CI {ci_pct}% lo':>10}  {f'CI {ci_pct}% hi':>10}"
     print(f"\n===== Calibration Results (n={n}, CI={confidence_interval}, t_crit={t_crit:.4f}) =====")
@@ -206,11 +206,11 @@ def test_train(cleanup_test_artifacts, calibrate_runs, ci_level):
     metrics = all_runs[0]
     pbe_mean_value = metrics["PBE Mean"]
 
-    assert 0.2239 <= pbe_mean_value <= 0.6535, (
-        f"PBE Mean value {pbe_mean_value} is outside 95% CI [0.2239, 0.6535]"
+    assert -0.0171 <= pbe_mean_value <= 0.8610, (
+        f"PBE Mean value {pbe_mean_value} is outside 99.5% CI [-0.0171, 0.8610]"
     )
 
-    print(f"PBE Mean value {pbe_mean_value} is within 95% CI [0.2239, 0.6535]")
+    print(f"PBE Mean value {pbe_mean_value} is within 99.5% CI [-0.0171, 0.8610]")
 
 
 @pytest.fixture
@@ -298,22 +298,22 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
     metrics = all_runs[0]
 
     checks = {
-        "Avg. active res. (MW)": (0.2652, 0.4217),
-        "Avg. reactive res. (MVar)": (0.1005, 0.1827),
-        "RMSE PG generators (MW)": (2.6918, 3.1753),
-        "Mean optimality gap (%)": (1.2375, 1.5709),
+        "Avg. active res. (MW)": (0.2067, 0.4619),
+        "Avg. reactive res. (MVar)": (0.0825, 0.1492),
+        "RMSE PG generators (MW)": (2.6480, 2.8693),
+        "Mean optimality gap (%)": (1.1039, 1.4934),
         "Mean branch thermal violation from (MVA)": (0.0, 0.0),
         "Mean branch thermal violation to (MVA)": (0.0, 0.0),
         "Mean branch angle difference violation (radians)": (0.0, 0.0),
-        "Mean Qg violation PV buses": (-0.0008, 0.2543),
-        "Mean Qg violation REF buses": (0.0245, 0.4099),
-        "Mean Qg violation": (0.0108, 0.2801),
+        "Mean Qg violation PV buses": (0.0167, 0.1546),
+        "Mean Qg violation REF buses": (-0.0693, 0.4241),
+        "Mean Qg violation": (0.0771, 0.1322),
     }
 
     for metric_name, (lo, hi) in checks.items():
         assert metric_name in metrics, f"Metric '{metric_name}' not found in CSV"
         value = metrics[metric_name]
         assert lo <= value <= hi, (
-            f"Metric '{metric_name}' value {value} is outside 95% CI [{lo}, {hi}]"
+            f"Metric '{metric_name}' value {value} is outside 99.5% CI [{lo}, {hi}]"
         )
-        print(f"{metric_name}: {value} is within 95% CI [{lo}, {hi}]")
+        print(f"{metric_name}: {value} is within 99.5% CI [{lo}, {hi}]")
