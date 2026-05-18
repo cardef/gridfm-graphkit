@@ -12,8 +12,8 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ci",
         type=float,
-        default=0.95,
-        help="Confidence interval level for calibration stats (default 0.95). "
+        default=0.995,
+        help="Confidence interval level for calibration stats (default 0.995). "
         "Example: pytest --calibrate 5 -s --ci 0.995",
     )
 
@@ -26,6 +26,6 @@ def calibrate_runs(request):
 
 @pytest.fixture
 def ci_level(request):
-    """Confidence interval level requested via --ci (default 0.95)."""
+    """Confidence interval level requested via --ci (default 0.995)."""
     return request.config.getoption("--ci")
 

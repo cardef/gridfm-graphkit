@@ -30,7 +30,7 @@ def collect_metrics_from_log(log_base: str, metric_keys: list) -> dict:
     return dict(zip(df["Metric"], df["Value"].astype(float)))
 
 
-def print_calibration_stats(all_runs: list, metric_keys: list, confidence_interval: float = 0.95) -> None:
+def print_calibration_stats(all_runs: list, metric_keys: list, confidence_interval: float = 0.995) -> None:
     """
     Print per-metric stats across calibration runs:
       - std with Bessel's correction (ddof=1)
@@ -39,7 +39,7 @@ def print_calibration_stats(all_runs: list, metric_keys: list, confidence_interv
     Args:
         all_runs: list of per-run metric dicts
         metric_keys: list of metric names to report
-        confidence_interval: desired confidence level (default 0.95).
+        confidence_interval: desired confidence level (default 0.995).
             Example with higher confidence:
                 print_calibration_stats(all_runs, metric_keys, confidence_interval=0.995)
     """
