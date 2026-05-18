@@ -146,13 +146,13 @@ def cleanup_test_artifacts():
             shutil.rmtree(d, ignore_errors=True)
 
 
-def test_train(cleanup_test_artifacts, calibrate_runs, ci_level):
+def test_train_pf(cleanup_test_artifacts, calibrate_runs, ci_level):
     """
-    Integration test for gridfm-datakit data generation and gridfm-graphkit training.
+    Integration test for power flow (PF): gridfm-datakit data generation and gridfm-graphkit training.
 
     Steps:
-    1. Generate power grid data using gridfm-datakit
-    2. Train a model using gridfm-graphkit
+    1. Generate power flow grid data using gridfm-datakit
+    2. Train a PF model using gridfm-graphkit
     3. Validate the PBE Mean metric
 
     Pass --calibrate N to pytest (e.g. pytest --calibrate 5) to run N training passes
