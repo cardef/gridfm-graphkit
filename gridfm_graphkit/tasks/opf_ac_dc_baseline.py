@@ -48,11 +48,15 @@ def _load_test_data(data_dir: str, test_scenario_ids: list[int]):
         os.path.join(data_dir, "gen_data.parquet"),
         filters=partition_filter,
     )
+    # drop where in_service is 0 so the means are computed over the same number of gens as for the model in opf_task
+    gen_df = gen_df[gen_df["in_service"] == 1].reset_index(drop=True)
     branch_df = pd.read_parquet(
         os.path.join(data_dir, "branch_data.parquet"),
         filters=partition_filter,
     )
     branch_df = branch_df.drop(columns=["pf_dc", "pt_dc"], axis=1)
+    # drop where br_status is 0 so the means are computed over the same number of branches as for the model in opf_task
+    branch_df = branch_df[branch_df["br_status"] == 1].reset_index(drop=True)
     runtime_df = pd.read_parquet(
         os.path.join(data_dir, "runtime_data.parquet"),
         filters=partition_filter,
@@ -81,8 +85,8 @@ def _compute_optimality_gap(gen_df: pd.DataFrame) -> dict:
     pg_ac = gen_df["p_mw"].to_numpy(dtype=float)
     pg_dc = gen_df["p_mw_dc"].to_numpy(dtype=float)
     g = gen_df.copy()
-    g["cost_ac"] = c0 + c1 * pg_ac + c2 * pg_ac * pg_ac # all is already in MW
-    g["cost_dc"] = c0 + c1 * pg_dc + c2 * pg_dc * pg_dc # all is already in MW
+    g["cost_ac"] = (c0 + c1 * pg_ac + c2 * pg_ac * pg_ac) * g["in_service"] # all is already in MW
+    g["cost_dc"] = (c0 + c1 * pg_dc + c2 * pg_dc * pg_dc) * g["in_service"] # all is already in MW
     per_scenario = g.groupby("scenario")[["cost_ac", "cost_dc"]].sum()
     cost_ac = per_scenario["cost_ac"].to_numpy(dtype=float)
     cost_dc = per_scenario["cost_dc"].to_numpy(dtype=float)
@@ -112,8 +116,6 @@ def _compute_qg_violations_ac(bus_df: pd.DataFrame, gen_df: pd.DataFrame) -> dic
     # opf_task style on bus Qg; AC only 
     bus = bus_df.copy()
     qg = bus["Qg"].to_numpy(dtype=float)
-    # complain if max_q_mvar == min_q_mvar for some gens of gen_df
-    assert (gen_df["max_q_mvar"] == gen_df["min_q_mvar"]).any() == False, "max_q_mvar == min_q_mvar for some gens of gen_df"
     agg_gen = (
     gen_df.groupby(["scenario", "bus"])[["min_q_mvar", "max_q_mvar"]]
     .sum()
@@ -143,8 +145,8 @@ def _compute_branch_violations(branch_df: pd.DataFrame, bus_df: pd.DataFrame) ->
     ac_to = np.sqrt(
         branch_df["pt"].to_numpy(dtype=float) ** 2 + branch_df["qt"].to_numpy(dtype=float) ** 2,
     )
-    dc_from = np.abs(branch_df["pf_dc_computed"].to_numpy(dtype=float))
-    dc_to = np.abs(branch_df["pt_dc_computed"].to_numpy(dtype=float))
+    dc_from = np.sqrt(branch_df["pf_dc_computed"].to_numpy(dtype=float) ** 2 + branch_df["qf_dc_computed"].to_numpy(dtype=float) ** 2) # reactive part is needed here
+    dc_to = np.sqrt(branch_df["pt_dc_computed"].to_numpy(dtype=float) ** 2 + branch_df["qt_dc_computed"].to_numpy(dtype=float) ** 2)
 
     ac_thermal_from = np.maximum(ac_from - rate, 0.0)
     ac_thermal_to = np.maximum(ac_to - rate, 0.0)
@@ -231,7 +233,7 @@ def compute_opf_ac_dc_metrics(
     ac_stats = _compute_residual_stats(balance_ac, dc=False)
 
     print("  Computing DC power balance...")
-    pf_dc, _, pt_dc, _ = compute_branch_powers_vectorized(
+    pf_dc, qf_dc, pt_dc, qt_dc = compute_branch_powers_vectorized(
         branch_df,
         bus_df,
         dc=True,
@@ -252,6 +254,8 @@ def compute_opf_ac_dc_metrics(
     branch_df = branch_df.copy()
     branch_df["pf_dc_computed"] = pf_dc
     branch_df["pt_dc_computed"] = pt_dc
+    branch_df["qf_dc_computed"] = qf_dc
+    branch_df["qt_dc_computed"] = qt_dc
     
 
     opf_extra = {}
