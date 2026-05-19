@@ -21,3 +21,12 @@ mlruns
 *data_out*
 site*
 .venv
+mlflow_alban/
+to_del/
+scripts/
+mlflow_opf_datakit/
+
+
+
+
+
