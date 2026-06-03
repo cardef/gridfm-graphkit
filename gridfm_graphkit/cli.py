@@ -257,6 +257,20 @@ def main_cli(args):
         **trainer_kwargs,
         profiler=profiler,
     )
+
+    # Print device summary so it's visible in job logs
+    if torch.cuda.is_available():
+        n_gpus = torch.cuda.device_count()
+        gpu_names = [torch.cuda.get_device_name(i) for i in range(n_gpus)]
+        print(f"[device] CUDA available: {n_gpus} GPU(s): {gpu_names}")
+        print(f"[device] CUDA_HOME={os.environ.get('CUDA_HOME', 'not set')}")
+        nvcc = os.popen("which nvcc 2>/dev/null").read().strip()
+        print(f"[device] nvcc={'not found' if not nvcc else nvcc}")
+    elif torch.backends.mps.is_available():
+        print("[device] Using Apple MPS (Metal Performance Shaders)")
+    else:
+        print("[device] WARNING: No GPU found, running on CPU only")
+
     if args.command == "train" or args.command == "finetune":
         trainer.fit(model=model, datamodule=litGrid)
         if (
