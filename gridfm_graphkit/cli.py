@@ -93,7 +93,7 @@ def benchmark_cli(args):
         args.data_path,
         dataset_wrapper=dataset_wrapper,
         dataset_wrapper_cache_dir=dataset_wrapper_cache_dir,
-        multiprocessing_context=getattr(args, "mp_context", "spawn") or "spawn",
+        multiprocessing_context=getattr(args, "mp_context", None),
     )
     dm.setup(stage="fit")
     setup_time = time.perf_counter() - t0
@@ -197,7 +197,7 @@ def main_cli(args):
         normalizer_stats_path=normalizer_stats_path,
         dataset_wrapper=dataset_wrapper,
         dataset_wrapper_cache_dir=dataset_wrapper_cache_dir,
-        multiprocessing_context=getattr(args, "mp_context", "spawn") or "spawn",
+        multiprocessing_context=getattr(args, "mp_context", None),
     )
     model = get_task(config_args, litGrid.data_normalizers)
     if args.command != "train":

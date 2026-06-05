@@ -1,10 +1,26 @@
 import argparse
+import platform
+import warnings
 from datetime import datetime
 from gridfm_graphkit.cli import main_cli, benchmark_cli
 
 
 import subprocess
 import os
+
+
+def _warn_mp_context_on_linux(mp_context):
+    """On Linux, recommend 'spawn' when mp_context is unset, 'fork', or 'forkserver'."""
+    if platform.system() != "Linux":
+        return
+    if mp_context in (None, "fork", "forkserver"):
+        chosen = mp_context if mp_context is not None else "PyTorch default"
+        warnings.warn(
+            f"--mp_context is '{chosen}' on Linux. 'spawn' is recommended for safety "
+            "(avoids issues with CUDA initialization and forked processes), though "
+            "'fork'/'forkserver' may be faster.",
+            stacklevel=2,
+        )
 
 def is_lsf():
     return (
@@ -94,13 +110,15 @@ def main():
     _mp_context_kwargs = dict(
         dest="mp_context",
         type=str,
-        default="spawn",
+        default=None,
         choices=["spawn", "fork", "forkserver"],
         help=(
             "Multiprocessing start method for DataLoader workers. "
-            "'spawn' (default) is safest and works everywhere. "
+            "Defaults to None so PyTorch picks automatically. "
+            "'spawn' is safest and works everywhere. "
             "'fork' avoids re-importing modules but is unsafe after CUDA init. "
-            "'forkserver' uses a clean server process but requires file-descriptor passing."
+            "'forkserver' uses a clean server process but requires file-descriptor passing. "
+            "On Linux, 'spawn' is recommended; other choices emit a warning."
         ),
     )
 
@@ -369,6 +387,8 @@ def main():
     benchmark_parser.add_argument("--mp_context", **_mp_context_kwargs)
 
     args = parser.parse_args()
+
+    _warn_mp_context_on_linux(getattr(args, "mp_context", None))
 
     if args.command == "benchmark":
         benchmark_cli(args)
