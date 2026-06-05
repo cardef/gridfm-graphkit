@@ -13,10 +13,11 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout Tag
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # required for ancestry checks
+          ref: ${{ github.ref }} # Explicitly ensures the tag is checked out
+          fetch-depth: 0         # Required for setuptools_scm and ancestry checks
 
       - name: Validate tag format and origin
         run: |
@@ -30,7 +31,7 @@ jobs:
             exit 1
           fi
 
-          # Fetch main branch
+          # Fetch main branch history just to validate ancestry
           git fetch origin main
 
           # Check if tag commit is contained in main
