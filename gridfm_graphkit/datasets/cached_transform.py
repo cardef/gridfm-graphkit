@@ -3,11 +3,10 @@ import tempfile
 import hashlib
 
 import torch
-from torch_geometric.transforms import BaseTransform
 from torch_geometric.data import HeteroData
 
 
-class CachedPosencTransform(BaseTransform):
+class CachedPosencTransform:
     """Disk-caching wrapper for positional encoding transforms.
 
     Computes the PE on the first access for each sample and caches the
