@@ -53,6 +53,8 @@ jobs:
           pip install torch-scatter -f "https://data.pyg.org/whl/torch-${TORCH_VERSION}+cpu.html"
 
       - name: Unit tests
+        env:
+          MLFLOW_ALLOW_FILE_STORE: "true"
         run: |
           pytest --cov=. tests/
 
