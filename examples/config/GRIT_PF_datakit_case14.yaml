@@ -19,6 +19,17 @@ data:
   posenc_RRWP:
     enable: false
     ksteps: 21
+    cache: true
+    # topk: Number of highest-ranked neighbors to retain per node based on
+    # the L2 norm of their multi-step random walk probability vector.
+    # Original graph edges and self-loops are always retained regardless of
+    # rank.  This provides sparse attention that interpolates between:
+    #   topk=0 (or omitted): full RRWP — all N^2 pairs (dense attention)
+    #   topk=K: each node attends to its K structurally most important
+    #           neighbors plus the original graph edges
+    # For case14 (14 buses), topk=5 retains ~36% of all pairs + graph edges,
+    # providing global reach while being significantly sparser than full.
+    topk: 5
   posenc_RWSE:
     enable: true
     cache: true   # cache the computed positional encoding at first pass (if false computes every access)
@@ -61,6 +72,10 @@ model:
     attn:
       clamp: 5.
       act: relu
+      # full_attn: false because the Top-K RRWP sparsification already
+      # determines the attention pattern.  The RRWPLinearEdgeEncoder will
+      # merge the sparse RRWP edges with original graph edges without
+      # padding to a fully-connected graph.
       full_attn: true
       edge_enhance: true
       O_e: true

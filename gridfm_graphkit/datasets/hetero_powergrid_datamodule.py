@@ -170,22 +170,12 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                     cache_dir = make_pe_cache_dir(
                         dataset.processed_dir, "RRWP", self.args.data,
                     )
-                    _use_admw = getattr(
-                        self.args.data.posenc_RRWP,
-                        "use_admittance_weights", False,
-                    )
-                    _rm_sl = getattr(
-                        self.args.data.posenc_RRWP,
-                        "admittance_remove_self_loops", True,
-                    )
                     pe_transform = CachedPosencTransform(
                         pe_transform,
                         cache_dir,
                         cached_attrs=["rrwp", "log_deg", "deg"],
                         cached_edge_type=("bus", "rrwp", "bus"),
                         key_attr="topology",
-                        use_admittance=_use_admw,
-                        admittance_remove_self_loops=_rm_sl,
                     )
                 if dataset.transform is None:
                     dataset.transform = pe_transform
