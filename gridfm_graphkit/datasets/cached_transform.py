@@ -33,7 +33,7 @@ class CachedPosencTransform:
 
     def __init__(
         self,
-        transform: BaseTransform,
+        transform,
         cache_dir: str,
         cached_attrs: list[str],
         key_attr: str = "scenario_id",
