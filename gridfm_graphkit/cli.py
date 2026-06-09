@@ -8,6 +8,7 @@ from gridfm_graphkit.training.callbacks import (
 import importlib
 import numpy as np
 import os
+import socket
 import time
 import yaml
 import torch
@@ -259,6 +260,7 @@ def main_cli(args):
     )
 
     # Print device summary so it's visible in job logs
+    print(f"[device] hostname={socket.gethostname()}")
     if torch.cuda.is_available():
         n_gpus = torch.cuda.device_count()
         gpu_names = [torch.cuda.get_device_name(i) for i in range(n_gpus)]
