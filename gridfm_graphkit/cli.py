@@ -265,6 +265,12 @@ def main_cli(args):
         print(f"[device] CUDA available: {n_gpus} GPU(s): {gpu_names}")
         print(f"[device] CUDA_HOME={os.environ.get('CUDA_HOME', 'not set')}")
         nvcc = os.popen("which nvcc 2>/dev/null").read().strip()
+        if not nvcc:
+            cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
+            if cuda_home:
+                candidate = os.path.join(cuda_home, "bin", "nvcc")
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    nvcc = f"{candidate} (not on PATH)"
         print(f"[device] nvcc={'not found' if not nvcc else nvcc}")
     elif torch.backends.mps.is_available():
         print("[device] Using Apple MPS (Metal Performance Shaders)")

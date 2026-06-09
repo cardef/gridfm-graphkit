@@ -92,7 +92,7 @@ class LitGridHeteroDataModule(L.LightningDataModule):
         normalizer_stats_path: str = None,
         dataset_wrapper: str = None,
         dataset_wrapper_cache_dir: str = None,
-        multiprocessing_context: str = "spawn",
+        multiprocessing_context: str = None,
     ):
         super().__init__()
         self.data_dir = data_dir
