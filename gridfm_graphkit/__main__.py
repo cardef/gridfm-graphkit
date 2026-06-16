@@ -1,9 +1,82 @@
 import argparse
+import platform
+import warnings
 from datetime import datetime
 from gridfm_graphkit.cli import main_cli, benchmark_cli
 
 
+import subprocess
+import os
+
+
+def _warn_mp_context_on_linux(mp_context):
+    """On Linux, recommend 'spawn' when mp_context is unset, 'fork', or 'forkserver'."""
+    if platform.system() != "Linux":
+        return
+    if mp_context in (None, "fork", "forkserver"):
+        chosen = mp_context if mp_context is not None else "PyTorch default"
+        warnings.warn(
+            f"--mp_context is '{chosen}' on Linux. 'spawn' is recommended for safety "
+            "(avoids issues with CUDA initialization and forked processes), though "
+            "'fork'/'forkserver' may be faster.",
+            stacklevel=2,
+        )
+
+def is_lsf():
+    return (
+        os.environ.get("LSB_JOBID") is not None
+        and os.environ.get("LSB_MCPU_HOSTS") is not None
+        and "LSF_ENVDIR" in os.environ  # strong LSF indicator
+    )
+
+def fix_infiniband():
+    """Configure NCCL to skip Ethernet-only IB ports on this host."""
+    ibv = subprocess.run("ibv_devinfo", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    lines = ibv.stdout.decode("utf-8").split("\n")
+    exclude = ""
+    for line in lines:
+        if "hca_id:" in line:
+            name = line.split(":")[1].strip()
+        if "\tport:" in line:
+            port = line.split(":")[1].strip()
+        if "link_layer:" in line and "Ethernet" in line:
+            exclude = exclude + f"{name}:{port},"
+
+    if exclude:
+        exclude = "^" + exclude[:-1]
+        os.environ["NCCL_IB_HCA"] = exclude
+
+
+def set_env():
+    """Populate distributed-training environment variables from LSF metadata."""
+    # print("Using " + str(torch.cuda.device_count()) + " GPUs---------------------------------------------------------------------")
+    LSB_MCPU_HOSTS = os.environ[
+        "LSB_MCPU_HOSTS"
+    ].split(
+        " ",
+    )  # Parses Node list set by LSF, in format hostname proceeded by number of cores requested
+    HOST_LIST = LSB_MCPU_HOSTS[::2]  # Strips the cores per node items in the list
+    LSB_JOBID = os.environ[
+        "LSB_JOBID"
+    ]  # Parses Node list set by LSF, in format hostname proceeded by number of cores requested
+    os.environ["MASTER_ADDR"] = HOST_LIST[
+        0
+    ]  # Sets the MasterNode to thefirst node on the list of hosts
+    os.environ["MASTER_PORT"] = "5" + LSB_JOBID[-5:-1]
+    os.environ["NODE_RANK"] = str(
+        HOST_LIST.index(os.environ["HOSTNAME"]),
+    )  # Uses the list index for node rank, master node rank must be 0
+    os.environ["NCCL_SOCKET_IFNAME"] = (
+        "ib,bond"  # avoids using docker of loopback interface
+    )
+    os.environ["NCCL_IB_CUDA_SUPPORT"] = "1"  # Force use of infiniband
+
 def main():
+    """Parse CLI arguments and dispatch to the selected GridFM subcommand."""
+    if is_lsf():
+        print("Using LSF")
+        set_env()
+        fix_infiniband()
     parser = argparse.ArgumentParser(
         prog="gridfm_graphkit",
         description="gridfm-graphkit CLI",
@@ -33,6 +106,20 @@ def main():
         action="store_true",
         default=False,
         help="Enable TF32 on Ampere+ GPUs via torch.set_float32_matmul_precision('high').",
+    )
+    _mp_context_kwargs = dict(
+        dest="mp_context",
+        type=str,
+        default=None,
+        choices=["spawn", "fork", "forkserver"],
+        help=(
+            "Multiprocessing start method for DataLoader workers. "
+            "Defaults to None so PyTorch picks automatically. "
+            "'spawn' is safest and works everywhere. "
+            "'fork' avoids re-importing modules but is unsafe after CUDA init. "
+            "'forkserver' uses a clean server process but requires file-descriptor passing. "
+            "On Linux, 'spawn' is recommended; other choices emit a warning."
+        ),
     )
 
     # ---- TRAIN SUBCOMMAND ----
@@ -77,11 +164,18 @@ def main():
         help="Enable Lightning profiler: 'simple', 'advanced', or 'pytorch'.",
     )
     train_parser.add_argument(
+        "--compute_dc_ac_metrics",
+        action="store_true",
+    )
+    train_parser.add_argument(
         "--report-performance",
         dest="report_performance",
         action="store_true",
         help="Print the last training epoch time and a single test metric to stdout.",
     )
+    train_parser.add_argument("--mp_context", **_mp_context_kwargs)
+
+    # ---- FINETUNE SUBCOMMAND ----
     finetune_parser = subparsers.add_parser("finetune", help="Run fine-tuning")
     finetune_parser.add_argument("--config", type=str, required=True)
     finetune_parser.add_argument("--model_path", type=str, required=True)
@@ -124,11 +218,16 @@ def main():
         help="Enable Lightning profiler: 'simple', 'advanced', or 'pytorch'.",
     )
     finetune_parser.add_argument(
+        "--compute_dc_ac_metrics",
+        action="store_true",
+    )
+    finetune_parser.add_argument(
         "--report-performance",
         dest="report_performance",
         action="store_true",
         help="Print the last training epoch time and a single test metric to stdout.",
     )
+    finetune_parser.add_argument("--mp_context", **_mp_context_kwargs)
 
     # ---- EVALUATE SUBCOMMAND ----
     evaluate_parser = subparsers.add_parser(
@@ -147,6 +246,12 @@ def main():
     evaluate_parser.add_argument("--run_name", type=str, default="run")
     evaluate_parser.add_argument("--log_dir", type=str, default="mlruns")
     evaluate_parser.add_argument("--data_path", type=str, default="data")
+    evaluate_parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Override training.batch_size from the YAML config for evaluation.",
+    )
     evaluate_parser.add_argument("--compile", **_compile_kwargs)
     evaluate_parser.add_argument("--bfloat16", **_bfloat16_kwargs)
     evaluate_parser.add_argument("--tf32", **_tf32_kwargs)
@@ -189,6 +294,7 @@ def main():
         "--save_output",
         action="store_true",
     )
+    evaluate_parser.add_argument("--mp_context", **_mp_context_kwargs)
 
     # ---- PREDICT SUBCOMMAND ----
     predict_parser = subparsers.add_parser("predict", help="Run prediction")
@@ -199,6 +305,12 @@ def main():
     predict_parser.add_argument("--run_name", type=str, default="run")
     predict_parser.add_argument("--log_dir", type=str, default="mlruns")
     predict_parser.add_argument("--data_path", type=str, default="data")
+    predict_parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Override training.batch_size from the YAML config for prediction.",
+    )
     predict_parser.add_argument(
         "--dataset_wrapper",
         type=str,
@@ -233,6 +345,7 @@ def main():
         default=None,
         choices=["simple", "advanced", "pytorch"],
     )
+    predict_parser.add_argument("--mp_context", **_mp_context_kwargs)
 
     # ---- BENCHMARK SUBCOMMAND ----
     benchmark_parser = subparsers.add_parser(
@@ -271,8 +384,11 @@ def main():
         default=[],
         help="Python packages to import for plugin registration.",
     )
+    benchmark_parser.add_argument("--mp_context", **_mp_context_kwargs)
 
     args = parser.parse_args()
+
+    _warn_mp_context_on_linux(getattr(args, "mp_context", None))
 
     if args.command == "benchmark":
         benchmark_cli(args)

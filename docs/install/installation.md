@@ -1,49 +1,37 @@
 # Installation
 
-You can install `gridfm-graphkit` directly from PyPI:
+The steps below mirror the [README](https://github.com/gridfm/gridfm-graphkit/blob/main/README.md#installation).
+
+Create and activate a virtual environment (make sure you use the right python version = 3.10, 3.11 or 3.12. I highly recommend 3.12)
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+Install gridfm-graphkit from PyPI
 
 ```bash
 pip install gridfm-graphkit
 ```
 
-For GPU support and compatibility with PyTorch Geometric's scatter operations, install PyTorch (and optionally CUDA) first, then install the matching `torch-scatter` wheel. See [PyTorch and torch-scatter](#pytorch-and-torch-scatter-optional) below.
+**`torch-scatter` is a required dependency.** It cannot be bundled in `pyproject.toml` because the correct wheel depends on your PyTorch and CUDA versions, so it must be installed separately.
 
----
-
-## Development Setup
-
-To contribute or develop locally, clone the repository and install in editable mode. Use Python 3.10, 3.11, or 3.12 (3.12 is recommended).
+Get PyTorch + CUDA version for torch-scatter
 
 ```bash
-git clone git@github.com:gridfm/gridfm-graphkit.git
-cd gridfm-graphkit
-python -m venv venv
-source venv/bin/activate
-pip install -e .
+TORCH_CUDA_VERSION=$(python -c "import torch; print(torch.__version__ + ('+cpu' if torch.version.cuda is None else ''))")
 ```
 
-### PyTorch and torch-scatter (optional)
+Install the correct torch-scatter wheel
 
-If you need GPU acceleration or PyTorch Geometric scatter ops (used by the library), install PyTorch and the matching `torch-scatter` wheel:
+```bash
+pip install torch-scatter -f https://data.pyg.org/whl/torch-${TORCH_CUDA_VERSION}.html
+```
 
-1. Install PyTorch (see [pytorch.org](https://pytorch.org/) for your platform and CUDA version).
-
-2. Get your Torch + CUDA version string:
-   ```bash
-   TORCH_CUDA_VERSION=$(python -c "import torch; print(torch.__version__ + ('+cpu' if torch.version.cuda is None else ''))")
-   ```
-
-3. Install the correct `torch-scatter` wheel:
-   ```bash
-   pip install torch-scatter -f https://data.pyg.org/whl/torch-${TORCH_CUDA_VERSION}.html
-   ```
-
----
-
-## Optional extras
 
 For documentation generation and unit testing, install with the optional `dev` and `test` extras:
 
 ```bash
-pip install -e .[dev,test]
+pip install "gridfm-graphkit[dev,test]"
 ```

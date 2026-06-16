@@ -8,6 +8,7 @@ from gridfm_graphkit.training.callbacks import (
 import importlib
 import numpy as np
 import os
+import socket
 import time
 import yaml
 import torch
@@ -15,11 +16,24 @@ import torch.distributed as dist
 import pandas as pd
 
 from gridfm_graphkit.io.param_handler import get_task
-from gridfm_graphkit.tasks.compute_ac_dc_metrics import compute_ac_dc_metrics
+from gridfm_graphkit.tasks.opf_ac_dc_baseline import compute_opf_ac_dc_metrics
+from gridfm_graphkit.tasks.pf_ac_dc_baseline import compute_pf_ac_dc_metrics
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
+from lightning.pytorch.strategies import DDPStrategy
 import lightning as L
+
+
+def _normalize_loaded_state_dict_keys(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    """Map legacy torch.compile checkpoint keys to the canonical model namespace."""
+    has_compiled_prefix = any(key.startswith("model._orig_mod.") for key in state_dict)
+    if not has_compiled_prefix:
+        return state_dict
+    return {
+        key.replace("model._orig_mod.", "model."): value
+        for key, value in state_dict.items()
+    }
 
 
 def _load_plugins(plugins: list[str]) -> None:
@@ -32,6 +46,15 @@ def _load_plugins(plugins: list[str]) -> None:
                 f"Plugin package '{plugin_pkg}' could not be imported: {e}. "
                 "Make sure it is installed in the current environment.",
             ) from e
+
+
+def _predictions_to_dataframe(predictions: list[dict[str, np.ndarray]]) -> pd.DataFrame:
+    """Convert a list of prediction batch dicts into one concatenated DataFrame."""
+    rows = {key: [] for key in predictions[0].keys()}
+    for batch in predictions:
+        for key in rows:
+            rows[key].append(batch[key])
+    return pd.DataFrame({key: np.concatenate(vals) for key, vals in rows.items()})
 
 
 def _validate_dataset_wrapper(name: str | None) -> None:
@@ -71,6 +94,7 @@ def benchmark_cli(args):
         args.data_path,
         dataset_wrapper=dataset_wrapper,
         dataset_wrapper_cache_dir=dataset_wrapper_cache_dir,
+        multiprocessing_context=getattr(args, "mp_context", None),
     )
     dm.setup(stage="fit")
     setup_time = time.perf_counter() - t0
@@ -103,6 +127,7 @@ def benchmark_cli(args):
 
 
 def get_training_callbacks(args):
+    """Build the standard callback stack used for train/finetune runs."""
     early_stop_callback = EarlyStopping(
         monitor="Validation loss",
         min_delta=args.callbacks.tol,
@@ -128,6 +153,7 @@ def get_training_callbacks(args):
 
 
 def main_cli(args):
+    """Run a GridFM CLI command using config-driven datamodule and trainer setup."""
     if getattr(args, "tf32", False):
         torch.set_float32_matmul_precision("high")  # enables TF32 on Ampere+ GPUs
 
@@ -136,6 +162,12 @@ def main_cli(args):
         experiment_name=args.exp_name,
         run_name=args.run_name,
     )
+
+    # When using torch.compile with Triton, dynamic graph support can cause 
+    # out-of-memory errors during autotuning on some kernels.
+    # Disabling dynamic graph support allows those kernels
+    # to be skipped gracefully instead of causing errors.
+    torch._inductor.config.triton.cudagraph_skip_dynamic_graphs = True
 
     with open(args.config, "r") as f:
         base_config = yaml.safe_load(f)
@@ -153,6 +185,10 @@ def main_cli(args):
     if num_workers_override is not None:
         config_args.data.workers = num_workers_override
 
+    batch_size_override = getattr(args, "batch_size", None)
+    if batch_size_override is not None:
+        config_args.training.batch_size = batch_size_override
+
     _load_plugins(getattr(args, "plugins", []))
     _validate_dataset_wrapper(dataset_wrapper)
 
@@ -162,11 +198,13 @@ def main_cli(args):
         normalizer_stats_path=normalizer_stats_path,
         dataset_wrapper=dataset_wrapper,
         dataset_wrapper_cache_dir=dataset_wrapper_cache_dir,
+        multiprocessing_context=getattr(args, "mp_context", None),
     )
     model = get_task(config_args, litGrid.data_normalizers)
     if args.command != "train":
         print(f"Loading model weights from {args.model_path}")
         state_dict = torch.load(args.model_path, map_location="cpu")
+        state_dict = _normalize_loaded_state_dict_keys(state_dict)
         model.load_state_dict(state_dict)
 
     precision = "bf16-true" if getattr(args, "bfloat16", False) else None
@@ -197,11 +235,22 @@ def main_cli(args):
     if epoch_timer is not None:
         training_callbacks = training_callbacks + [epoch_timer]
 
+    _accelerator = config_args.training.accelerator
+    _strategy = config_args.training.strategy
+    # if mps is available and accelerator is auto, explicitely set accelerator to mps to select the right strategy in the next block
+    if _accelerator == "auto" and torch.backends.mps.is_available(): 
+        _accelerator = "mps"
+    if _accelerator not in ("mps", "cpu") and isinstance(_strategy, str) and _strategy in (
+        "auto",
+        "ddp",
+    ): # when using mps, we don't want to use ddp.
+        _strategy = DDPStrategy(find_unused_parameters=False)
+
     trainer = L.Trainer(
         logger=logger,
         accelerator=config_args.training.accelerator,
         devices=config_args.training.devices,
-        strategy=config_args.training.strategy,
+        strategy=_strategy,
         log_every_n_steps=1000,
         default_root_dir=args.log_dir,
         max_epochs=config_args.training.epochs,
@@ -209,6 +258,26 @@ def main_cli(args):
         **trainer_kwargs,
         profiler=profiler,
     )
+
+    # Print device summary so it's visible in job logs
+    print(f"[device] hostname={socket.gethostname()}")
+    if torch.cuda.is_available():
+        n_gpus = torch.cuda.device_count()
+        gpu_names = [torch.cuda.get_device_name(i) for i in range(n_gpus)]
+        print(f"[device] CUDA available: {n_gpus} GPU(s): {gpu_names}")
+        print(f"[device] CUDA_HOME={os.environ.get('CUDA_HOME', 'not set')}")
+        nvcc = os.popen("which nvcc 2>/dev/null").read().strip()
+        if not nvcc:
+            cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
+            if cuda_home:
+                candidate = os.path.join(cuda_home, "bin", "nvcc")
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    nvcc = f"{candidate} (not on PATH)"
+        print(f"[device] nvcc={'not found' if not nvcc else nvcc}")
+    elif torch.backends.mps.is_available():
+        print("[device] Using Apple MPS (Metal Performance Shaders)")
+    else:
+        print("[device] WARNING: No GPU found, running on CPU only")
 
     if args.command == "train" or args.command == "finetune":
         trainer.fit(model=model, datamodule=litGrid)
@@ -271,12 +340,20 @@ def main_cli(args):
         )
 
     compute_dc_ac = getattr(args, "compute_dc_ac_metrics", False)
+    task_type = {"optimalpowerflow": "opf", "powerflow": "pf"}.get(
+        str(getattr(getattr(config_args, "task", None), "task_name", "")).lower(),
+    )
     if is_rank0 and compute_dc_ac:
         sn_mva = config_args.data.baseMVA
         for grid_name in config_args.data.networks:
             raw_dir = os.path.join(args.data_path, grid_name, "raw")
             print(f"\nComputing ground-truth AC/DC metrics for {grid_name}...")
-            compute_ac_dc_metrics(artifacts_dir, raw_dir, grid_name, sn_mva)
+            if task_type == "opf":
+                compute_opf_ac_dc_metrics(artifacts_dir, raw_dir, grid_name, sn_mva)
+            elif task_type == "pf":
+                compute_pf_ac_dc_metrics(artifacts_dir, raw_dir, grid_name, sn_mva)
+            else:
+                raise ValueError(f"Invalid task: {task_type}")
 
     save_output = getattr(args, "save_output", False) or args.command == "predict"
     if is_rank0 and save_output:
@@ -297,19 +374,27 @@ def main_cli(args):
         )
         predictions = predict_trainer.predict(model=model, datamodule=litGrid)
 
-        rows = {key: [] for key in predictions[0].keys()}
-        for batch in predictions:
-            for key in rows:
-                rows[key].append(batch[key])
-
-        df = pd.DataFrame({key: np.concatenate(vals) for key, vals in rows.items()})
-
         grid_name = config_args.data.networks[0]
         if args.command == "predict":
             output_dir = args.output_path
         else:
             output_dir = os.path.join(artifacts_dir, "test")
         os.makedirs(output_dir, exist_ok=True)
-        out_path = os.path.join(output_dir, f"{grid_name}_predictions.parquet")
-        df.to_parquet(out_path, index=False)
-        print(f"Saved predictions to {out_path}")
+        first_prediction = predictions[0]
+        if any(isinstance(value, dict) for value in first_prediction.values()):
+            for table_name in first_prediction:
+                df = _predictions_to_dataframe(
+                    [batch[table_name] for batch in predictions],
+                )
+                suffix = "" if table_name == "bus" else f"_{table_name}"
+                out_path = os.path.join(
+                    output_dir,
+                    f"{grid_name}{suffix}_predictions.parquet",
+                )
+                df.to_parquet(out_path, index=False)
+                print(f"Saved {table_name} predictions to {out_path}")
+        else:
+            df = _predictions_to_dataframe(predictions)
+            out_path = os.path.join(output_dir, f"{grid_name}_predictions.parquet")
+            df.to_parquet(out_path, index=False)
+            print(f"Saved predictions to {out_path}")

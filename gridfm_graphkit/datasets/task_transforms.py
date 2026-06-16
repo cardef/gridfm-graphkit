@@ -16,6 +16,7 @@ from gridfm_graphkit.io.registries import TRANSFORM_REGISTRY
 
 @TRANSFORM_REGISTRY.register("PowerFlow")
 class PowerFlowTransforms(Compose):
+    """Compose preprocessing and masking transforms for PowerFlow datasets."""
     def __init__(self, args):
         transforms = []
 
@@ -36,6 +37,7 @@ class PowerFlowTransforms(Compose):
 
 @TRANSFORM_REGISTRY.register("OptimalPowerFlow")
 class OptimalPowerFlowTransforms(Compose):
+    """Compose preprocessing and masking transforms for OptimalPowerFlow datasets."""
     def __init__(self, args):
         transforms = []
 
@@ -56,6 +58,7 @@ class OptimalPowerFlowTransforms(Compose):
 
 @TRANSFORM_REGISTRY.register("StateEstimation")
 class StateEstimationTransforms(Compose):
+    """Compose preprocessing and measurement transforms for StateEstimation datasets."""
     def __init__(self, args):
         transforms = []
 
