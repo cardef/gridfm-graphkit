@@ -194,7 +194,8 @@ def test_train_pf(cleanup_test_artifacts, calibrate_runs, ci_level):
             f"--data_path data_out/ "
             f"--exp_name exp1 "
             f"--run_name run{run_i + 1} "
-            f"--log_dir logs",
+            f"--log_dir logs "
+            f"--mp_context spawn",
         )
         metrics = collect_metrics_from_log("logs", pf_metric_keys)
         all_runs.append(metrics)
@@ -214,7 +215,8 @@ def test_train_pf(cleanup_test_artifacts, calibrate_runs, ci_level):
                 f"--data_path data_out/ "
                 f"--exp_name exp1 "
                 f"--run_name retry{attempt} "
-                f"--log_dir logs",
+                f"--log_dir logs "
+                f"--mp_context spawn",
             )
             metrics = collect_metrics_from_log("logs", pf_metric_keys)
         else:
@@ -309,7 +311,8 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
             f"--data_path {opf_data_dir}/ "
             f"--exp_name exp_opf "
             f"--run_name run{run_i + 1} "
-            f"--log_dir logs_opf",
+            f"--log_dir logs_opf "
+            f"--mp_context spawn",
         )
         metrics = collect_metrics_from_log("logs_opf", opf_metric_keys)
         all_runs.append(metrics)
@@ -342,7 +345,8 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
                 f"--data_path {opf_data_dir}/ "
                 f"--exp_name exp_opf "
                 f"--run_name retry{attempt} "
-                f"--log_dir logs_opf",
+                f"--log_dir logs_opf "
+                f"--mp_context spawn",
             )
             metrics = collect_metrics_from_log("logs_opf", opf_metric_keys)
         else:
