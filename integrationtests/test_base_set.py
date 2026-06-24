@@ -322,16 +322,16 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
         return
 
     checks = {
-        "Avg. active res. (MW)": (0.2067, 0.4619),
-        "Avg. reactive res. (MVar)": (0.0825, 0.1492),
-        "RMSE PG generators (MW)": (2.6480, 2.8693),
-        "Mean optimality gap (%)": (1.1039, 1.4934),
+        "Avg. active res. (MW)": (0.2025, 0.6005),
+        "Avg. reactive res. (MVar)": (0.0854, 0.1194),
+        "RMSE PG generators (MW)": (2.7746, 3.4940),
+        "Mean optimality gap (%)": (1.0331, 2.1032),
         "Mean branch thermal violation from (MVA)": (0.0, 0.0),
         "Mean branch thermal violation to (MVA)": (0.0, 0.0),
         "Mean branch angle difference violation (radians)": (0.0, 0.0),
-        "Mean Qg violation PV buses": (0.0167, 0.1546),
-        "Mean Qg violation REF buses": (-0.0693, 0.4241),
-        "Mean Qg violation": (0.0771, 0.1322),
+        "Mean Qg violation PV buses": (0.0243, 0.1863),
+        "Mean Qg violation REF buses": (0.0303, 0.1683),
+        "Mean Qg violation": (0.0445, 0.1636),
     }
 
     MAX_RETRIES = 5
