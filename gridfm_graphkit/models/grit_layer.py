@@ -8,9 +8,10 @@ from torch_geometric.utils.num_nodes import maybe_num_nodes
 try:
     from torch_scatter import scatter, scatter_max, scatter_add
 except ImportError:
-    scatter = None
-    scatter_max = None
-    scatter_add = None
+    raise ImportError(
+        "torch-scatter is required for the GRIT layers but is not installed. "
+        "Install it with: pip install torch-scatter",
+    )
 
 import opt_einsum as oe
 
