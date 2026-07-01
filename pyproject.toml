@@ -9,7 +9,7 @@ namespaces = false
 [project]
 name = "gridfm-graphkit"
 description = "Grid Foundation Model"
-version = "0.0.7"
+version = "0.8.0rc3"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10,<3.13"
@@ -48,15 +48,15 @@ dependencies = [
     "pandas>=2.3.0",
     "plotly>=6.1.2",
     "pyyaml>=6.0.2",
-    "torch>=2.7.1,<2.9",
+    "torch>=2.10",
     "torch-geometric>=2.6.1",
-    "torchaudio>=2.7.1",
-    "torchvision>=0.22.1",
+    "torchaudio>=2.10",
+    "torchvision>=0.25",
     "lightning",
     "seaborn",
     "urllib3>=2.6.0",
     "gdown>=6.0.0",
-    "gridfm-datakit>=1.0.2",
+    "gridfm-datakit==1.0.5rc1",
 ]
 
 [project.optional-dependencies]

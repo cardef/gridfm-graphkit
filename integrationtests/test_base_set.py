@@ -13,7 +13,9 @@ from scipy import stats
 
 
 def execute_and_live_output(cmd) -> None:
-    subprocess.run(cmd, text=True, shell=True, check=True)
+    env = os.environ.copy()
+    env.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    subprocess.run(cmd, text=True, shell=True, check=True, env=env)
 
 
 def collect_metrics_from_log(log_base: str, metric_keys: list) -> dict:
@@ -209,7 +211,9 @@ def test_train_pf(cleanup_test_artifacts, calibrate_runs, ci_level):
             f"--data_path data_out/ "
             f"--exp_name exp1 "
             f"--run_name run{run_i + 1} "
-            f"--log_dir logs",
+            f"--log_dir logs "
+            f"--mp_context spawn "
+            f"--deterministic warn",
         )
         metrics = collect_metrics_from_log("logs", pf_metric_keys)
         all_runs.append(metrics)
@@ -231,7 +235,9 @@ def test_train_pf(cleanup_test_artifacts, calibrate_runs, ci_level):
                 f"--data_path data_out/ "
                 f"--exp_name exp1 "
                 f"--run_name retry{attempt} "
-                f"--log_dir logs",
+                f"--log_dir logs "
+                f"--mp_context spawn "
+                f"--deterministic warn",
             )
             metrics = collect_metrics_from_log("logs", pf_metric_keys)
         else:
@@ -330,7 +336,9 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
             f"--data_path {opf_data_dir}/ "
             f"--exp_name exp_opf "
             f"--run_name run{run_i + 1} "
-            f"--log_dir logs_opf",
+            f"--log_dir logs_opf "
+            f"--mp_context spawn "
+            f"--deterministic warn",
         )
         metrics = collect_metrics_from_log("logs_opf", opf_metric_keys)
         all_runs.append(metrics)
@@ -340,16 +348,16 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
         return
 
     checks = {
-        "Avg. active res. (MW)": (0.2067, 0.4619),
-        "Avg. reactive res. (MVar)": (0.0825, 0.1492),
-        "RMSE PG generators (MW)": (2.6480, 2.8693),
-        "Mean optimality gap (%)": (1.1039, 1.4934),
+        "Avg. active res. (MW)": (0.2559, 0.2611),
+        "Avg. reactive res. (MVar)": (0.1028, 0.1048),
+        "RMSE PG generators (MW)": (2.7297, 2.7850),
+        "Mean optimality gap (%)": (1.2041, 1.2285),
         "Mean branch thermal violation from (MVA)": (0.0, 0.0),
         "Mean branch thermal violation to (MVA)": (0.0, 0.0),
         "Mean branch angle difference violation (radians)": (0.0, 0.0),
-        "Mean Qg violation PV buses": (0.0167, 0.1546),
-        "Mean Qg violation REF buses": (-0.0693, 0.4241),
-        "Mean Qg violation": (0.0771, 0.1322),
+        "Mean Qg violation PV buses": (0.0782, 0.0798),
+        "Mean Qg violation REF buses": (0.1251, 0.1277),
+        "Mean Qg violation": (0.0879, 0.0897),
     }
 
     MAX_RETRIES = 5
@@ -365,7 +373,9 @@ def test_train_opf(cleanup_opf_test_artifacts, calibrate_runs, ci_level):
                 f"--data_path {opf_data_dir}/ "
                 f"--exp_name exp_opf "
                 f"--run_name retry{attempt} "
-                f"--log_dir logs_opf",
+                f"--log_dir logs_opf "
+                f"--mp_context spawn "
+                f"--deterministic warn",
             )
             metrics = collect_metrics_from_log("logs_opf", opf_metric_keys)
         else:
