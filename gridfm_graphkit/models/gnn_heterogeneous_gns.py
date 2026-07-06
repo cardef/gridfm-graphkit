@@ -217,9 +217,12 @@ class GNS_heterogeneous(nn.Module):
             h_bus = h_bus + out_bus if out_bus.shape == h_bus.shape else out_bus
             h_gen = h_gen + out_gen if out_gen.shape == h_gen.shape else out_gen
 
-            # Decode bus and generator predictions
-            bus_temp = self.mlp_bus(h_bus)  # [Nb, 2]  -> Vm, Va
-            gen_temp = self.mlp_gen(h_gen)  # [Ng, 1]  -> Pg
+            # Decode bus and generator predictions. In StateEstimation only
+            # the final layer's decode is consumed (physics block below), so
+            # skip the heads on intermediate layers.
+            if self.task != "StateEstimation" or i == self.num_layers - 1:
+                bus_temp = self.mlp_bus(h_bus)  # [Nb, 2]  -> Vm, Va
+                gen_temp = self.mlp_gen(h_gen)  # [Ng, 1]  -> Pg
 
             if self.task == "StateEstimation":
                 if i == self.num_layers - 1:
