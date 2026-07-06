@@ -16,7 +16,10 @@ from gridfm_graphkit.datasets.utils import (
     split_dataset_by_load_scenario_idx,
     split_from_existing_files,
 )
-from gridfm_graphkit.datasets.powergrid_hetero_dataset import HeteroGridDatasetDisk
+from gridfm_graphkit.datasets.powergrid_hetero_dataset import (
+    HeteroGridDatasetDisk,
+    HeteroGridDatasetMMap,
+)
 
 from gridfm_graphkit.datasets.posenc_stats import ComputePosencStat
 from gridfm_graphkit.datasets.cached_transform import (
@@ -169,8 +172,14 @@ class LitGridHeteroDataModule(L.LightningDataModule):
 
             is_distributed = dist.is_available() and dist.is_initialized()
 
+            dataset_cls = (
+                HeteroGridDatasetMMap
+                if getattr(self.args.data, "consolidated", False)
+                else HeteroGridDatasetDisk
+            )
+
             if not is_distributed or dist.get_rank() == 0:
-                dataset = HeteroGridDatasetDisk(
+                dataset = dataset_cls(
                     root=data_path_network,
                     data_normalizer=data_normalizer,
                     transform=get_task_transforms(args=self.args),
@@ -181,7 +190,7 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                 dist.barrier()
 
             if is_distributed and dist.get_rank() != 0:
-                dataset = HeteroGridDatasetDisk(
+                dataset = dataset_cls(
                     root=data_path_network,
                     data_normalizer=data_normalizer,
                     transform=get_task_transforms(args=self.args),
