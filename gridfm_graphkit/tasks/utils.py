@@ -1,5 +1,5 @@
 import torch
-from torch_scatter import scatter_mean, scatter_max
+from gridfm_graphkit.utils.scatter import scatter_mean, scatter_max
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -12,20 +12,10 @@ def residual_stats_by_type(residual, mask, bus_batch):
     batch_masked = bus_batch[mask]
     abs_residual = torch.abs(residual_masked)
 
-    # torch_scatter on MPS can dispatch into a CPU-only path for scatter_max.
-    # Compute the grouped stats on CPU and move the results back so verbose
-    # evaluation works without changing the torch/torch_scatter stack.
-    if abs_residual.device.type == "mps":
-        abs_residual_cpu = abs_residual.cpu()
-        batch_masked_cpu = batch_masked.cpu()
-        mean_res = scatter_mean(abs_residual_cpu, batch_masked_cpu, dim=0).to(
-            abs_residual.device,
-        )
-        max_res, _ = scatter_max(abs_residual_cpu, batch_masked_cpu, dim=0)
-        max_res = max_res.to(abs_residual.device)
-    else:
-        mean_res = scatter_mean(abs_residual, batch_masked, dim=0)
-        max_res, _ = scatter_max(abs_residual, batch_masked, dim=0)
+    # Native scatter ops dispatch correctly on MPS, so the old torch_scatter
+    # CPU-detour workaround is gone.
+    mean_res = scatter_mean(abs_residual, batch_masked, dim=0)
+    max_res, _ = scatter_max(abs_residual, batch_masked, dim=0)
     return mean_res, max_res
 
 

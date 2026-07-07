@@ -12,10 +12,7 @@ from gridfm_graphkit.models.rrwp_encoder import (
 from gridfm_graphkit.models.grit_layer import GritTransformerLayer
 from gridfm_graphkit.models.kernel_pos_encoder import RWSENodeEncoder
 
-try:
-    from torch_scatter import scatter_add
-except ImportError:
-    scatter_add = None
+from gridfm_graphkit.utils.scatter import scatter_add
 
 from gridfm_graphkit.datasets.globals import PG_H
 
@@ -263,12 +260,6 @@ def aggregate_pg(batch, mask_value=-1.0):
     where *all* connected generators are masked receive the mask value
     instead, preserving a consistent "unknown" indicator.
     """
-    if scatter_add is None:
-        raise ImportError(
-            "torch-scatter is required for the GRIT modules but is not installed. "
-            "Install it with: pip install torch-scatter",
-        )
-
     gen_to_bus = batch["gen", "connected_to", "bus"].edge_index
     gen_pg = batch["gen"].x[:, PG_H]
     gen_masked = batch.mask_dict["gen"][:, PG_H]  # True = masked

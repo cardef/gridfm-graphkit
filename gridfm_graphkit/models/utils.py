@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch_scatter import scatter_add
+from gridfm_graphkit.utils.scatter import scatter_add
 from gridfm_graphkit.io.registries import PHYSICS_DECODER_REGISTRY
 
 from gridfm_graphkit.datasets.globals import (

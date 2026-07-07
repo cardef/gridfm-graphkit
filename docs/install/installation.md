@@ -15,19 +15,9 @@ Install gridfm-graphkit from PyPI
 pip install gridfm-graphkit
 ```
 
-**`torch-scatter` is a required dependency.** It cannot be bundled in `pyproject.toml` because the correct wheel depends on your PyTorch and CUDA versions, so it must be installed separately.
-
-Get PyTorch + CUDA version for torch-scatter
-
-```bash
-TORCH_CUDA_VERSION=$(python -c "import torch; print(torch.__version__ + ('+cpu' if torch.version.cuda is None else ''))")
-```
-
-Install the correct torch-scatter wheel
-
-```bash
-pip install torch-scatter -f https://data.pyg.org/whl/torch-${TORCH_CUDA_VERSION}.html
-```
+`torch-scatter` / `torch-sparse` are **no longer required**: all scatter and
+sparse operations use native PyTorch (`gridfm_graphkit/utils/scatter.py`,
+parity-tested in `tests/test_native_scatter.py`).
 
 
 For documentation generation and unit testing, install with the optional `dev` and `test` extras:
