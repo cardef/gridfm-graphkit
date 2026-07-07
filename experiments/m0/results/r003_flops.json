@@ -6,7 +6,8 @@
       "e_busbus": 40,
       "n_cbus": 5,
       "e_coarse": 20,
-      "nnz_prolong": 50
+      "nnz_prolong": 50,
+      "n_int": 9
     },
     "ks_flops": 361620536,
     "flat_flops_by_depth": {
@@ -26,7 +27,8 @@
       "e_busbus": 82,
       "n_cbus": 6,
       "e_coarse": 30,
-      "nnz_prolong": 150
+      "nnz_prolong": 150,
+      "n_int": 24
     },
     "ks_flops": 681922484,
     "flat_flops_by_depth": {
@@ -46,7 +48,8 @@
       "e_busbus": 160,
       "n_cbus": 7,
       "e_coarse": 34,
-      "nnz_prolong": 357
+      "nnz_prolong": 357,
+      "n_int": 50
     },
     "ks_flops": 1207893262,
     "flat_flops_by_depth": {
@@ -66,7 +69,8 @@
       "e_busbus": 372,
       "n_cbus": 54,
       "e_coarse": 314,
-      "nnz_prolong": 1078
+      "nnz_prolong": 1078,
+      "n_int": 64
     },
     "ks_flops": 3327746356,
     "flat_flops_by_depth": {
@@ -86,9 +90,10 @@
       "e_busbus": 1456,
       "n_cbus": 113,
       "e_coarse": 6670,
-      "nnz_prolong": 12497
+      "nnz_prolong": 24881,
+      "n_int": 387
     },
-    "ks_flops": 14134275134,
+    "ks_flops": 14162931710,
     "flat_flops_by_depth": {
       "8": 10573889024,
       "16": 22344457408,
@@ -96,7 +101,7 @@
       "48": 69426730944
     },
     "matched_flat_depth": 8,
-    "matched_ratio_flat_over_ks": 0.7481026740851046,
+    "matched_ratio_flat_over_ks": 0.7465890001103451,
     "matched_within_0.9_1.1": false
   },
   "case2000_goc": {
@@ -106,9 +111,10 @@
       "e_busbus": 7266,
       "n_cbus": 348,
       "e_coarse": 8026,
-      "nnz_prolong": 26780
+      "nnz_prolong": 106076,
+      "n_int": 1652
     },
-    "ks_flops": 46059611720,
+    "ks_flops": 46243102664,
     "flat_flops_by_depth": {
       "8": 38836295040,
       "16": 81993232896,
@@ -116,7 +122,7 @@
       "48": 254620984320
     },
     "matched_flat_depth": 8,
-    "matched_ratio_flat_over_ks": 0.8431746076386595,
+    "matched_ratio_flat_over_ks": 0.8398289215622602,
     "matched_within_0.9_1.1": false
   },
   "Texas2k_case1_2016summerpeak": {
@@ -124,11 +130,12 @@
       "n_bus": 2000,
       "n_gen": 431,
       "e_busbus": 6440,
-      "n_cbus": 591,
-      "e_coarse": 21082,
-      "nnz_prolong": 45679
+      "n_cbus": 499,
+      "e_coarse": 17890,
+      "nnz_prolong": 96563,
+      "n_int": 1501
     },
-    "ks_flops": 54084014594,
+    "ks_flops": 52280319866,
     "flat_flops_by_depth": {
       "8": 40268678848,
       "16": 85060812224,
@@ -136,7 +143,7 @@
       "48": 264229345728
     },
     "matched_flat_depth": 8,
-    "matched_ratio_flat_over_ks": 0.7445578726041419,
+    "matched_ratio_flat_over_ks": 0.7702454566309634,
     "matched_within_0.9_1.1": false
   },
   "case9241_pegase": {
@@ -146,7 +153,8 @@
       "e_busbus": 32098,
       "n_cbus": 2904,
       "e_coarse": 33108,
-      "nnz_prolong": 104296
+      "nnz_prolong": 104296,
+      "n_int": 6337
     },
     "ks_flops": 226815974976,
     "flat_flops_by_depth": {

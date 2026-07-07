@@ -18,6 +18,7 @@ import os.path as osp
 import sys
 
 import pandas as pd
+import torch
 
 HERE = osp.dirname(osp.abspath(__file__))
 REPO = osp.abspath(osp.join(HERE, "..", ".."))
@@ -28,6 +29,7 @@ from pilot_cpu import load_case, ybus  # noqa: E402
 from r002_precompute import GRIDS  # noqa: E402
 from gridfm_graphkit.datasets.hierarchy import (  # noqa: E402
     build_operators,
+    hierarchy_cache_name,
     select_boundary,
 )
 from gridfm_graphkit.utils.flops import (  # noqa: E402
@@ -54,28 +56,45 @@ BASE_CFG = {
 
 
 def grid_sizes(name, mpath):
-    """Element counts + hierarchy operator counts for one grid."""
+    """Element counts + hierarchy operator counts for one grid.
+
+    Operator counts come from the R006-gated hierarchy cache when local data
+    exists (the tensors the model actually consumes; the recon gate needs
+    scenarios). Fallback: mass-only operators from the .m file (case9241 at
+    M0 -- k there is a lower bound until the cluster re-runs R006).
+    """
     bus, branch, gen = load_case(mpath)
     Y, _, _, br = ybus(bus, branch)
     nb = Y.shape[0]
     n_gen = int((gen[:, 7] > 0).sum())
     e_busbus = 2 * br.shape[0]
-    bus0 = pd.DataFrame(
-        {
-            "PV": (bus[:, 1] == 2).astype(int),
-            "REF": (bus[:, 1] == 3).astype(int),
-            "vn_kv": bus[:, 9],
-        },
-    )
-    boundary, interior = select_boundary(bus0)
-    ops, _, stats = build_operators(Y, boundary, interior)
+    cache_path = osp.join(REPO, "data", name, "processed", hierarchy_cache_name())
+    if osp.exists(cache_path):
+        cache = torch.load(cache_path, weights_only=True)
+        n_cbus = int(cache["boundary_idx"].numel())
+        e_coarse = int(cache["coarse_edge_index"].shape[1])
+        nnz_prolong = int(cache["prolong_edge_index"].shape[1])
+    else:
+        bus0 = pd.DataFrame(
+            {
+                "PV": (bus[:, 1] == 2).astype(int),
+                "REF": (bus[:, 1] == 3).astype(int),
+                "vn_kv": bus[:, 9],
+            },
+        )
+        boundary, interior = select_boundary(bus0)
+        ops, _, stats = build_operators(Y, boundary, interior)
+        n_cbus = len(boundary)
+        e_coarse = int(ops["coarse_edge_index"].shape[1])
+        nnz_prolong = int(ops["prolong_edge_index"].shape[1])
     return GraphSizes(
         n_bus=nb,
         n_gen=n_gen,
         e_busbus=e_busbus,
-        n_cbus=len(boundary),
-        e_coarse=int(ops["coarse_edge_index"].shape[1]),
-        nnz_prolong=int(ops["prolong_edge_index"].shape[1]),
+        n_cbus=n_cbus,
+        e_coarse=e_coarse,
+        nnz_prolong=nnz_prolong,
+        n_int=nb - n_cbus,
     )
 
 

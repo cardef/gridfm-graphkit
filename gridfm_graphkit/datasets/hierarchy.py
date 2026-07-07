@@ -42,13 +42,31 @@ from torch_geometric.transforms import BaseTransform
 
 BASE_MVA = 100.0  # case base of y_bus_data.parquet / raw power columns
 MASS_ASSERT = 0.95
-K_POOL = (16, 32)
+# R006 (Amendment A1): retained-|P|-mass is the wrong fidelity proxy on
+# case2000 (96.6% mass at k=16 <-> ~2.6e-2 p.u. median reconstruction error,
+# dominating the unpool budget). Gate on reconstruction error directly:
+# median |P_sp V_b - P V_b| over sample scenarios must sit at/below the
+# HELM2-exact operator error scale (3.9e-4..1.3e-3 across grids, pilot
+# idea-stage/helm_unpool_results.json) and an order below the affine
+# linearization error on the M2 grids (>=1e-2), so the sparsification
+# artifact cannot dominate any unpool variant's budget.
+RECON_ASSERT = 1e-3  # p.u., median over interior buses x sample scenarios
+N_RECON_SCEN = 64  # scenarios sampled for the reconstruction gate
+K_POOL = (16, 32, 64, None)  # per-grid escalation; None = dense P
 Y_RED_TOL = 1e-3
 TARGET_BOUNDARY_FRAC = 0.27  # aim 25-30% per FINAL_PROPOSAL.md
 
 
 def hierarchy_cache_name(target_frac=TARGET_BOUNDARY_FRAC, tol=Y_RED_TOL):
     return f"hierarchy_b{target_frac:g}_tol{tol:g}.pt"
+
+
+def helm_runtime_name(target_frac=TARGET_BOUNDARY_FRAC, tol=Y_RED_TOL):
+    """Small per-grid file with the static operators the HELM2 unpool needs
+    at runtime (R021): interior admittance + index maps. Kept separate from
+    the main cache so the model can load it in its own process without
+    pulling the per-scenario tensors."""
+    return f"helm_runtime_b{target_frac:g}_tol{tol:g}.pt"
 
 
 def _load_raw(root):
@@ -92,13 +110,19 @@ def select_boundary(bus0, target_frac=TARGET_BOUNDARY_FRAC):
     return boundary, interior
 
 
-def build_operators(Y, boundary, interior, tol=Y_RED_TOL):
+def build_operators(Y, boundary, interior, tol=Y_RED_TOL, Vb_samples=None):
     """Core Kron-Schur operator computation for a fixed admittance matrix.
 
     Returns (ops, lu, stats): sparse operator tensors ready for HeteroData
     relations, the Yii LU factorization (for per-scenario V_aff solves), and
-    the M0 gate statistics. Raises AssertionError if the sparsified
-    prolongation retains < 95% of |P| mass (the declared stop condition).
+    the M0 gate statistics.
+
+    Sparsification gate (R006): k escalates through ``K_POOL`` until BOTH
+    the retained-|P|-mass assert (>=95%) and, when ``Vb_samples`` (complex
+    [S, n_boundary] true boundary voltages) is given, the reconstruction
+    assert (median |P_sp V_b - P V_b| <= RECON_ASSERT) hold. The final rung
+    is dense P (mass 1, reconstruction error 0), so the asserts fire only if
+    K_POOL is truncated. Raises AssertionError otherwise.
     """
     t0 = time.perf_counter()
     nb_c, nb_i = len(boundary), len(interior)
@@ -114,19 +138,39 @@ def build_operators(Y, boundary, interior, tol=Y_RED_TOL):
     absP = np.abs(P)
     total_mass = absP.sum()
     retained_mass, k_used, keep = None, None, None
+    recon_med, recon_p90 = None, None
+    escalation = []
     for k in K_POOL:
-        kk = min(k, nb_c)
-        thr_idx = np.argpartition(absP, -kk, axis=1)[:, -kk:]
-        keep_k = np.zeros_like(absP, dtype=bool)
-        np.put_along_axis(keep_k, thr_idx, True, axis=1)
+        kk = nb_c if k is None else min(k, nb_c)
+        if kk >= nb_c:
+            keep_k = np.ones_like(absP, dtype=bool)
+        else:
+            thr_idx = np.argpartition(absP, -kk, axis=1)[:, -kk:]
+            keep_k = np.zeros_like(absP, dtype=bool)
+            np.put_along_axis(keep_k, thr_idx, True, axis=1)
         m = absP[keep_k].sum() / total_mass
         retained_mass, k_used, keep = m, kk, keep_k
-        if m >= MASS_ASSERT:
+        step = {"k": int(kk), "mass": float(m)}
+        recon_ok = True
+        if Vb_samples is not None:
+            diff = np.abs(np.where(keep_k, 0, P) @ Vb_samples.T)
+            recon_med = float(np.median(diff))
+            recon_p90 = float(np.percentile(diff, 90))
+            step["recon_median"] = recon_med
+            step["recon_p90"] = recon_p90
+            recon_ok = recon_med <= RECON_ASSERT
+        escalation.append(step)
+        if m >= MASS_ASSERT and recon_ok:
             break
-    # HARD ASSERT (M0 stop condition): sparsified prolongation must keep >=95%
+    # HARD ASSERTS: mass (M0 stop condition) + reconstruction (R006). With
+    # dense P as the last K_POOL rung both pass by construction.
     assert retained_mass >= MASS_ASSERT, (
         f"P top-k sparsification retains {retained_mass:.4f} < "
         f"{MASS_ASSERT} of |P| mass at k={k_used}. STOP (M0 kill criterion)."
+    )
+    assert Vb_samples is None or recon_med <= RECON_ASSERT, (
+        f"P reconstruction error median {recon_med:.3e} > {RECON_ASSERT} "
+        f"p.u. at k={k_used}. STOP (R006 gate)."
     )
 
     ii, jj = np.nonzero(keep)  # ii: interior row, jj: boundary col
@@ -174,12 +218,27 @@ def build_operators(Y, boundary, interior, tol=Y_RED_TOL):
             dtype=torch.float,
         ),
     }
+    # static operators for the HELM2 runtime unpool (R021): Yii in
+    # interior-local indexing + the interior->global bus map
+    yii_coo = Yii.tocoo()
+    ops["yii_edge_index"] = torch.tensor(
+        np.stack([yii_coo.row, yii_coo.col]),
+        dtype=torch.long,
+    )
+    ops["yii_edge_attr"] = torch.tensor(
+        np.stack([yii_coo.data.real, yii_coo.data.imag], axis=1),
+        dtype=torch.float,
+    )
+    ops["interior_idx"] = torch.tensor(interior, dtype=torch.long)
     stats = {
         "n_bus": nb_c + nb_i,
         "n_boundary": nb_c,
         "boundary_frac": nb_c / (nb_c + nb_i),
         "k_used": int(k_used),
         "p_retained_mass": float(retained_mass),
+        "p_recon_err_median": recon_med,
+        "p_recon_err_p90": recon_p90,
+        "p_escalation": escalation,
         "coarse_offdiag_density": float(coarse_density),
         "coarse_edge_mass_kept": float(kept_edge_mass),
         "operator_time_s": time.perf_counter() - t0,
@@ -224,7 +283,19 @@ def build_grid_hierarchy(root, target_frac=TARGET_BOUNDARY_FRAC, tol=Y_RED_TOL):
     Y = _ybus_csc(y0, nb)
     boundary, interior = select_boundary(bus0, target_frac)
     nb_c = len(boundary)
-    ops, lu, op_stats = build_operators(Y, boundary, interior, tol)
+
+    # R006: true boundary voltages from sample scenarios for the
+    # reconstruction gate
+    bgrp_r006 = bus.groupby("scenario")
+    Vb_samples = []
+    for s in scenarios[: min(N_RECON_SCEN, len(scenarios))]:
+        bs = bgrp_r006.get_group(s).sort_values("bus")
+        vm = bs["Vm"].to_numpy()[boundary]
+        va = np.deg2rad(bs["Va"].to_numpy()[boundary])
+        Vb_samples.append(vm * np.exp(1j * va))
+    Vb_samples = np.stack(Vb_samples)
+
+    ops, lu, op_stats = build_operators(Y, boundary, interior, tol, Vb_samples)
     Ybi = Y[np.ix_(boundary, interior)].tocsc()
 
     # --- per-scenario V_aff and coarse injections ---
@@ -278,6 +349,15 @@ def build_grid_hierarchy(root, target_frac=TARGET_BOUNDARY_FRAC, tol=Y_RED_TOL):
     t_scen = time.perf_counter() - t1
 
     cache = dict(ops)
+    # HELM2 runtime operators (R021) live in their own small file, loaded by
+    # the model in its own process (worker/DDP-safe); not per-sample tensors.
+    helm_rt = {
+        "yii_edge_index": cache.pop("yii_edge_index"),
+        "yii_edge_attr": cache.pop("yii_edge_attr"),
+        "interior_idx": cache.pop("interior_idx"),
+        "boundary_idx": cache["boundary_idx"],
+        "n_bus": nb,
+    }
     cache["v_aff"] = torch.tensor(v_aff)
     cache["cbus_x"] = torch.tensor(cbus_x)
     stats = dict(op_stats)
@@ -293,6 +373,10 @@ def build_grid_hierarchy(root, target_frac=TARGET_BOUNDARY_FRAC, tol=Y_RED_TOL):
     out = osp.join(root, "processed", hierarchy_cache_name(target_frac, tol))
     os.makedirs(osp.dirname(out), exist_ok=True)
     torch.save(cache, out)
+    torch.save(
+        helm_rt,
+        osp.join(root, "processed", helm_runtime_name(target_frac, tol)),
+    )
     return stats
 
 
@@ -331,6 +415,7 @@ class AddHierarchy(BaseTransform):
         self._root = None
         self._cache = None
         self._seeds = None
+        self._helm_path = None
 
     def set_root(self, root):
         self._root = root
@@ -363,6 +448,14 @@ class AddHierarchy(BaseTransform):
             self._seeds = torch.stack(
                 [self._cache["boundary_idx"], torch.arange(n_c)],
             )
+            helm = osp.join(
+                self._root,
+                "processed",
+                helm_runtime_name(self.target_frac, self.tol),
+            )
+            # absent on caches built before R006/R021; the HELM2 unpool
+            # errors out with a rebuild hint, the affine unpool ignores it
+            self._helm_path = helm if osp.exists(helm) else ""
         return self._cache
 
     def forward(self, data):
@@ -376,4 +469,7 @@ class AddHierarchy(BaseTransform):
         data["cbus", "connects", "cbus"].edge_attr = c["coarse_edge_attr"]
         data["cbus", "prolong", "bus"].edge_index = c["prolong_edge_index"]
         data["cbus", "prolong", "bus"].edge_attr = c["prolong_edge_attr"]
+        # string attr -> PyG collates to list[str]; keys the model-side
+        # HELM2 runtime registry (empty string = runtime file not built)
+        data.helm_runtime_path = self._helm_path
         return data

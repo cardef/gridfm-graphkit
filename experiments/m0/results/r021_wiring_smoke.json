@@ -1,0 +1,90 @@
+{
+  "epochs": 300,
+  "phase_a": {
+    "affine_err_median": 0.007483774796128273,
+    "affine_err_p90": 0.01606389880180359,
+    "helm2_err_median": 8.119757694657892e-05,
+    "helm2_err_p90": 0.0002177749265683815,
+    "improvement_x": 92.16746520996094,
+    "canary_last_batch": 0.042319558560848236
+  },
+  "phase_b": [
+    {
+      "config": "KS_PF_case14_overfit_helm2.yaml",
+      "model": "GNS_hetero_hier",
+      "unpool": "helm2",
+      "n_samples": 58,
+      "loss_first": 1.2798351049423218,
+      "loss_last": 0.00012090470409020782,
+      "all_losses_finite": true,
+      "overall": {
+        "vm_rmse": 0.0023390647423582557,
+        "va_rmse": 0.008426271235009707
+      },
+      "load_buckets": [
+        {
+          "bucket": 0,
+          "n_samples": 20,
+          "mean_load": 3.1883819103240967,
+          "vm_rmse": 0.0019765368618263586,
+          "va_rmse": 0.009635272829630467
+        },
+        {
+          "bucket": 1,
+          "n_samples": 19,
+          "mean_load": 3.492924690246582,
+          "vm_rmse": 0.0015611217111261898,
+          "va_rmse": 0.0076980562809666345
+        },
+        {
+          "bucket": 2,
+          "n_samples": 19,
+          "mean_load": 3.888648509979248,
+          "vm_rmse": 0.003186254268803452,
+          "va_rmse": 0.00773034938981363
+        }
+      ],
+      "canary": {
+        "median": 0.04358682781457901,
+        "max": 0.18558913469314575,
+        "n": 1200
+      }
+    },
+    {
+      "config": "KS_PF_case14_overfit.yaml",
+      "model": "GNS_hetero_hier",
+      "unpool": "affine",
+      "n_samples": 58,
+      "loss_first": 1.2795580625534058,
+      "loss_last": 5.45029979548417e-05,
+      "all_losses_finite": true,
+      "overall": {
+        "vm_rmse": 0.0034230131593120145,
+        "va_rmse": 0.011172345147954302
+      },
+      "load_buckets": [
+        {
+          "bucket": 0,
+          "n_samples": 20,
+          "mean_load": 3.1883819103240967,
+          "vm_rmse": 0.002448566189748301,
+          "va_rmse": 0.006492096329313436
+        },
+        {
+          "bucket": 1,
+          "n_samples": 19,
+          "mean_load": 3.492924690246582,
+          "vm_rmse": 0.0033904666782136055,
+          "va_rmse": 0.008897120538725158
+        },
+        {
+          "bucket": 2,
+          "n_samples": 19,
+          "mean_load": 3.888648509979248,
+          "vm_rmse": 0.004238094994909443,
+          "va_rmse": 0.016047089396256736
+        }
+      ]
+    }
+  ]
+}

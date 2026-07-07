@@ -28,6 +28,7 @@ class GraphSizes:
     n_cbus: int = 0  # hierarchy only
     e_coarse: int = 0  # directed thresholded Y_red off-diagonal edges
     nnz_prolong: int = 0  # retained P entries incl. boundary identity
+    n_int: int = 0  # interior buses (HELM2 unpool solves, R021)
 
 
 def linear(n, d_in, d_out):
@@ -129,6 +130,13 @@ def gns_hetero_hier_flops(s: GraphSizes, cfg) -> int:
     f += mlp2(s.n_cbus, d, h, 2)
     # physical prolongation (complex mul + scatter) + trig
     f += 10 * s.nnz_prolong + 20 * s.n_cbus
+    if cfg.get("unpool", "affine") == "helm2":
+        # R021 unpool tail: conj(S_I) recovery (dense complex matmul) + two
+        # batched LU solves (fwd+bwd triangular substitution each) + the
+        # elementwise series weights; complex MAC = 8 real FLOPs
+        f += 8 * s.n_int * s.n_int  # cS = Yii v_aff
+        f += 2 * 8 * s.n_int * s.n_int  # lu_solve for c1, c2
+        f += 40 * s.n_int  # w0/w1/tail/canary elementwise
     # latent merge: two weighted scatters of h_c + MLP_out
     f += 6 * s.nnz_prolong * d
     f += linear(s.n_bus, 2 * d + 2, d)

@@ -20,6 +20,25 @@ electrically exact operators attached by ``AddHierarchy``:
 The physical channel {W (precomputed), v_aff, P_sp, Y_red} carries the
 exactness claims; the latent channel {MLP_in, coarse stack, MLP_out} claims
 none. The residual merge lets the fine path override the linear prior.
+
+R021 (``model.unpool: helm2``, default ``affine``): the affine unpool
+``V_hat = P_sp V_B + v_aff`` is the order-1 truncation (at flat voltage) of
+the boundary-conditioned HELM series (idea-stage/HELM_UNPOOL_NOTE.md); the
+helm2 unpool replaces ``v_aff`` with the order-2 tail ``c_1 + c_2``:
+
+    c_0 = P_sp V_B                      (existing scatter)
+    w_0 = 1/conj(c_0)
+    c_1 = Yii^-1 (conj(S_I) w_0)        (batched dense LU solve)
+    w_1 = -w_0 conj(c_1) w_0
+    c_2 = Yii^-1 (conj(S_I) w_1)        (second solve, same factors)
+
+``conj(S_I)`` is recovered exactly as ``Yii v_aff`` (no cache change). The
+static operators (Yii, interior index map) come from the per-grid HELM
+runtime file written by ``build_grid_hierarchy`` and are loaded lazily in
+the model's own process, keyed by the ``helm_runtime_path`` string that
+``AddHierarchy`` attaches per sample (worker/DDP-safe). The divergence
+canary median ``|c_2|/|c_1|`` of the last forward is kept in
+``self.helm_canary`` (kill criterion (b) of the pre-registered R021 arm).
 """
 
 import torch
@@ -49,6 +68,31 @@ COARSE_RELATION = ("cbus", "connects", "cbus")
 SEEDS_RELATION = ("bus", "seeds", "cbus")
 PROLONG_RELATION = ("cbus", "prolong", "bus")
 
+# |c_0| floor for the reciprocal-series weights w = 1/conj(c_0): the coarse
+# decoder can emit near-zero voltages early in training, and 1/|c_0| would
+# blow up gradients. Grid voltages are ~1 p.u. (measured min |c_0| with true
+# V_b: 0.909 across all grids, HELM pilot); below the floor the weight is
+# damped smoothly to 0 instead of exploding.
+HELM_C0_MIN = 0.5
+
+
+def helm2_tail(lu, pivots, yii, c0_int, v_aff_int):
+    """Order-1+2 HELM tail for a same-grid group of samples.
+
+    Args: LU factors + pivots of dense Yii [n_i, n_i] (complex), Yii itself,
+    ``c0_int``/``v_aff_int`` complex [B, n_i] (boundary-conditioned germ from
+    the prolongation scatter; affine term = Yii^-1 conj(S_I)).
+    Returns (tail [B, n_i] complex = c1 + c2, canary |c2|/|c1| flat tensor).
+    """
+    cs = yii @ v_aff_int.transpose(0, 1)  # conj(S_I), [n_i, B]
+    a2 = c0_int.abs().square().clamp_min(HELM_C0_MIN**2)
+    w0 = (c0_int / a2).transpose(0, 1)  # 1/conj(c0), floored
+    c1 = torch.linalg.lu_solve(lu, pivots, cs * w0)
+    w1 = -w0 * c1.conj() * w0
+    c2 = torch.linalg.lu_solve(lu, pivots, cs * w1)
+    canary = (c2.abs() / c1.abs().clamp_min(1e-12)).flatten()
+    return (c1 + c2).transpose(0, 1), canary
+
 
 @MODELS_REGISTRY.register("GNS_hetero_hier")
 class GNS_hetero_hier(nn.Module):
@@ -64,6 +108,11 @@ class GNS_hetero_hier(nn.Module):
         self.num_layers_fine_post = getattr(m, "num_layers_fine_post", 4)
         self.dropout = getattr(m, "dropout", 0.0)
         self.cbus_in_dim = getattr(m, "input_cbus_dim", 8)
+        self.unpool = getattr(m, "unpool", "affine")
+        if self.unpool not in ("affine", "helm2"):
+            raise ValueError(f"model.unpool must be affine|helm2, got {self.unpool}")
+        self._helm_rt = {}  # runtime-file path -> static HELM operators
+        self.helm_canary = None  # median |c2|/|c1| of the last helm2 forward
         self.task = args.task.task_name
         if self.task != "PowerFlow":
             raise NotImplementedError("GNS_hetero_hier supports PowerFlow only (M0)")
@@ -182,6 +231,67 @@ class GNS_hetero_hier(nn.Module):
         self.node_residuals_layer = ComputeNodeResiduals()
         self.physics_decoder = get_physics_decoder(args)
         self.layer_residuals = {}
+
+    def _helm_runtime(self, path, device):
+        """Load (once per process) the per-grid static HELM operators."""
+        rt = self._helm_rt.get(path)
+        if rt is None:
+            if not path:
+                raise RuntimeError(
+                    "unpool='helm2' requires the HELM runtime file next to the "
+                    "hierarchy cache; rebuild it (experiments/m0/"
+                    "r006_p_recon_gate.py or build_grid_hierarchy).",
+                )
+            d = torch.load(path, weights_only=True)
+            n_i = d["interior_idx"].numel()
+            yii = torch.zeros(n_i, n_i, dtype=torch.complex64)
+            idx = d["yii_edge_index"]
+            yii[idx[0], idx[1]] = torch.complex(
+                d["yii_edge_attr"][:, 0],
+                d["yii_edge_attr"][:, 1],
+            )
+            lu, pivots = torch.linalg.lu_factor(yii)
+            rt = {
+                "interior_idx": d["interior_idx"],
+                "yii": yii,
+                "lu": lu,
+                "pivots": pivots,
+            }
+            self._helm_rt[path] = rt
+        if rt["yii"].device != device:
+            rt = {k: v.to(device) for k, v in rt.items()}
+            self._helm_rt[path] = rt
+        return rt
+
+    def _helm2_unpool(self, batch, c0, v_aff_c, num_bus):
+        """HELM2 unpool over a (possibly multi-grid) batch, grouped by grid."""
+        paths = batch.helm_runtime_path
+        if isinstance(paths, str):
+            paths = [paths]
+        bus_store = batch["bus"]
+        ptr = getattr(bus_store, "ptr", None)
+        if ptr is None:
+            ptr = torch.tensor([0, num_bus], device=c0.device)
+        tail = torch.zeros_like(c0)
+        canaries = []
+        for path in dict.fromkeys(paths):  # unique, order-stable
+            rt = self._helm_runtime(path, c0.device)
+            sample_ids = torch.tensor(
+                [i for i, p in enumerate(paths) if p == path],
+                device=c0.device,
+            )
+            gidx = ptr[sample_ids].unsqueeze(1) + rt["interior_idx"].unsqueeze(0)
+            tail_g, canary = helm2_tail(
+                rt["lu"],
+                rt["pivots"],
+                rt["yii"],
+                c0[gidx],
+                v_aff_c[gidx],
+            )
+            tail = tail.index_put((gidx,), tail_g)
+            canaries.append(canary)
+        self.helm_canary = torch.cat(canaries).median().detach()
+        return c0 + tail
 
     def _fine_block(self, layer_range, h_bus, h_gen, ctx):
         """Run fine HGNS layers with the baseline's decode/physics loop."""
@@ -322,7 +432,7 @@ class GNS_hetero_hier(nn.Module):
         # --- coarse decoder ---
         vmva_c = self.mlp_cbus(h_c)  # [N_c, 2] -> (VM_c, VA_c)
 
-        # --- physical prolongation: V_hat = v_aff + P_sp V_B ---
+        # --- physical prolongation: c_0 = P_sp V_B (scatter) ---
         prol_src, prol_dst = edge_index_dict[PROLONG_RELATION]
         p_attr = edge_attr_dict[PROLONG_RELATION]  # [nnz, 2] (Re, Im)
         vm_c, va_c = vmva_c[:, 0], vmva_c[:, 1]
@@ -330,9 +440,23 @@ class GNS_hetero_hier(nn.Module):
         pr, pi = p_attr[:, 0], p_attr[:, 1]
         msg_r = pr * vb_r[prol_src] - pi * vb_i[prol_src]
         msg_i = pr * vb_i[prol_src] + pi * vb_r[prol_src]
-        v_hat = batch["bus"].v_aff.clone()
-        v_hat[:, 0] += scatter_add(msg_r, prol_dst, dim=0, dim_size=num_bus)
-        v_hat[:, 1] += scatter_add(msg_i, prol_dst, dim=0, dim_size=num_bus)
+        c0_r = scatter_add(msg_r, prol_dst, dim=0, dim_size=num_bus)
+        c0_i = scatter_add(msg_i, prol_dst, dim=0, dim_size=num_bus)
+        v_aff = batch["bus"].v_aff
+        if self.unpool == "affine":
+            # V_hat = c_0 + v_aff (order-1 HELM at flat voltage)
+            v_hat = v_aff.clone()
+            v_hat[:, 0] += c0_r
+            v_hat[:, 1] += c0_i
+        else:
+            # V_hat = c_0 + c_1 + c_2 (R021 helm2)
+            v_c = self._helm2_unpool(
+                batch,
+                torch.complex(c0_r, c0_i),
+                torch.complex(v_aff[:, 0], v_aff[:, 1]),
+                num_bus,
+            )
+            v_hat = torch.stack([v_c.real, v_c.imag], dim=1)
 
         # --- latent merge through the same sparsified P (both channels) ---
         m_r = scatter_add(
