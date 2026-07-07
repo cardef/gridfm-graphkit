@@ -3,10 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.data import Data
 
-try:
-    from torch_sparse import SparseTensor
-except ImportError:
-    SparseTensor = None
+from gridfm_graphkit.utils.scatter import dense_from_edge_index, dense_to_coo
 
 
 def add_node_attr(data: Data, value: Any, attr_name: Optional[str] = None) -> Data:
@@ -35,24 +32,13 @@ def add_full_rrwp(
     num_nodes = data.num_nodes
     edge_index, edge_weight = data.edge_index, data.edge_weight
 
-    if SparseTensor is None:
-        raise ImportError(
-            "torch-sparse is required for RRWP positional encodings. "
-            "Install it with: pip install torch-sparse",
-        )
-
-    adj = SparseTensor.from_edge_index(
-        edge_index,
-        edge_weight,
-        sparse_sizes=(num_nodes, num_nodes),
-    )
+    adj = dense_from_edge_index(edge_index, edge_weight, num_nodes)
 
     # Compute D^{-1} A:
     deg = adj.sum(dim=1)
     deg_inv = 1.0 / deg
     deg_inv[deg_inv == float("inf")] = 0
-    adj = adj * deg_inv.view(-1, 1)
-    adj = adj.to_dense()
+    adj = deg_inv.view(-1, 1) * adj
 
     pe_list = []
     i = 0
@@ -72,8 +58,7 @@ def add_full_rrwp(
 
     abs_pe = pe.diagonal().transpose(0, 1)  # n x k
 
-    rel_pe = SparseTensor.from_dense(pe, has_value=True)
-    rel_pe_row, rel_pe_col, rel_pe_val = rel_pe.coo()
+    rel_pe_row, rel_pe_col, rel_pe_val = dense_to_coo(pe)
     # rel_pe_idx = torch.stack([rel_pe_row, rel_pe_col], dim=0)
     rel_pe_idx = torch.stack([rel_pe_col, rel_pe_row], dim=0)
     # the framework of GRIT performing right-mul while adj is row-normalized,
@@ -134,24 +119,13 @@ def add_topk_rrwp(
     num_nodes = data.num_nodes
     edge_index, edge_weight = data.edge_index, data.edge_weight
 
-    if SparseTensor is None:
-        raise ImportError(
-            "torch-sparse is required for RRWP positional encodings. "
-            "Install it with: pip install torch-sparse",
-        )
-
-    adj = SparseTensor.from_edge_index(
-        edge_index,
-        edge_weight,
-        sparse_sizes=(num_nodes, num_nodes),
-    )
+    adj = dense_from_edge_index(edge_index, edge_weight, num_nodes)
 
     # Compute D^{-1} A:
     deg = adj.sum(dim=1)
     deg_inv = 1.0 / deg
     deg_inv[deg_inv == float("inf")] = 0
-    adj = adj * deg_inv.view(-1, 1)
-    adj = adj.to_dense()
+    adj = deg_inv.view(-1, 1) * adj
 
     pe_list = []
     i = 0
@@ -181,8 +155,7 @@ def add_topk_rrwp(
     # --- Top-K sparsification ---
     # If topk <= 0 or topk >= num_nodes, keep everything (full RRWP)
     if topk <= 0 or topk >= num_nodes:
-        rel_pe = SparseTensor.from_dense(pe, has_value=True)
-        rel_pe_row, rel_pe_col, rel_pe_val = rel_pe.coo()
+        rel_pe_row, rel_pe_col, rel_pe_val = dense_to_coo(pe)
         rel_pe_idx = torch.stack([rel_pe_col, rel_pe_row], dim=0)
     else:
         # Score each (i,j) pair by L2 norm of the k-step probability vector
@@ -214,8 +187,7 @@ def add_topk_rrwp(
         pe_sparse = pe.clone()
         pe_sparse[~keep_mask] = 0
 
-        rel_pe = SparseTensor.from_dense(pe_sparse, has_value=True)
-        rel_pe_row, rel_pe_col, rel_pe_val = rel_pe.coo()
+        rel_pe_row, rel_pe_col, rel_pe_val = dense_to_coo(pe_sparse)
         rel_pe_idx = torch.stack([rel_pe_col, rel_pe_row], dim=0)
 
     data = add_node_attr(data, abs_pe, attr_name=attr_name_abs)

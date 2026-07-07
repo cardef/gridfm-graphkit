@@ -3,7 +3,7 @@ from torch import nn
 from torch_geometric.nn import HeteroConv, TransformerConv
 from gridfm_graphkit.io.registries import MODELS_REGISTRY
 from gridfm_graphkit.io.param_handler import get_physics_decoder
-from torch_scatter import scatter_add
+from gridfm_graphkit.utils.scatter import scatter_add
 from gridfm_graphkit.models.utils import (
     ComputeBranchFlow,
     ComputeNodeInjection,

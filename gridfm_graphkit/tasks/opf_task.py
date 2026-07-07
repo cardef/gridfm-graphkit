@@ -37,7 +37,7 @@ from gridfm_graphkit.tasks.utils import (
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-from torch_scatter import scatter_add
+from gridfm_graphkit.utils.scatter import scatter_add
 from gridfm_graphkit.models.utils import (
     ComputeBranchFlow,
     ComputeNodeInjection,

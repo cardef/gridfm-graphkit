@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from abc import ABC, abstractmethod
 from gridfm_graphkit.io.registries import LOSS_REGISTRY
-from torch_scatter import scatter_add
+from gridfm_graphkit.utils.scatter import scatter_add
 from torch_geometric.utils import to_torch_coo_tensor
 
 from gridfm_graphkit.datasets.globals import (

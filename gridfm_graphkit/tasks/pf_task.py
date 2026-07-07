@@ -29,10 +29,7 @@ import torch
 import torch.distributed as dist
 import torch.nn.functional as F
 
-try:
-    from torch_scatter import scatter_add
-except ImportError:
-    scatter_add = None
+from gridfm_graphkit.utils.scatter import scatter_add
 
 from torch_geometric.nn import global_mean_pool
 from gridfm_graphkit.models.utils import (

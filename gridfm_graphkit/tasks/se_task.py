@@ -19,7 +19,7 @@ from gridfm_graphkit.io.registries import TASK_REGISTRY
 from gridfm_graphkit.tasks.utils import plot_correlation_by_node_type
 from pytorch_lightning.utilities import rank_zero_only
 import torch
-from torch_scatter import scatter_add
+from gridfm_graphkit.utils.scatter import scatter_add
 from lightning.pytorch.loggers import MLFlowLogger
 import os
 
