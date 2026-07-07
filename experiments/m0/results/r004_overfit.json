@@ -1,0 +1,8 @@
+{
+  "train_rmse_vm_pu": 0.0012877455972234088,
+  "train_rmse_va_rad": 0.003153361475124898,
+  "train_rmse_coarse_vmva": 0.003542075448398138,
+  "n_masked_vm": 120,
+  "n_masked_va": 156,
+  "checkpoint": "mlruns/634216427781382478/dd0a077b90b7493e87ab80d5cac7fb88/artifacts/model/best_model_state_dict.pt"
+}

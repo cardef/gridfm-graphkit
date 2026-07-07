@@ -1,0 +1,22 @@
+{
+  "case118_ieee": {
+    "n_scenarios": 1024,
+    "byte_identical_all_samples": true,
+    "disk_samples_per_s_w0": 778.2,
+    "mmap_samples_per_s_w0": 1752.4,
+    "speedup_w0": 2.252,
+    "disk_samples_per_s_w4": 2727.6,
+    "mmap_samples_per_s_w4": 4807.1,
+    "speedup_w4": 1.762
+  },
+  "case2000_goc": {
+    "n_scenarios": 64,
+    "byte_identical_all_samples": true,
+    "disk_samples_per_s_w0": 616.0,
+    "mmap_samples_per_s_w0": 1202.2,
+    "speedup_w0": 1.952,
+    "disk_samples_per_s_w4": 1764.8,
+    "mmap_samples_per_s_w4": 2708.3,
+    "speedup_w4": 1.535
+  }
+}

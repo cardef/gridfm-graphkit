@@ -1,0 +1,55 @@
+callbacks:
+  patience: 3000
+  tol: 0
+task:
+  task_name: PowerFlow
+data:
+  baseMVA: 100
+  mask_value: 0.0
+  normalization: HeteroDataMVANormalizer
+  networks:
+  - case14_ieee
+  scenarios:
+  - 16
+  test_ratio: 0.125
+  val_ratio: 0.125
+  workers: 0
+  split_by_load_scenario_idx: true
+  hierarchy:
+    enable: true
+model:
+  type: GNS_hetero_hier
+  attention_head: 4
+  edge_dim: 10
+  hidden_size: 32
+  input_bus_dim: 15
+  input_gen_dim: 6
+  input_cbus_dim: 8
+  output_bus_dim: 2
+  output_gen_dim: 1
+  num_layers_fine: 2
+  num_layers_coarse: 2
+  num_layers_fine_post: 2
+optimizer:
+  beta1: 0.9
+  beta2: 0.999
+  learning_rate: 0.001
+  lr_decay: 0.7
+  lr_patience: 300
+seed: 0
+training:
+  batch_size: 16
+  epochs: 3000
+  loss_weights:
+  - 1.0
+  - 0.2
+  losses:
+  - MaskedBusMSE
+  - CoarseVoltageMSE
+  loss_args:
+  - {}
+  - {}
+  accelerator: cpu
+  devices: auto
+  strategy: auto
+verbose: false
