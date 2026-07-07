@@ -21,6 +21,7 @@ from gridfm_graphkit.datasets.powergrid_hetero_dataset import (
     HeteroGridDatasetMMap,
 )
 
+from gridfm_graphkit.datasets.samplers import SizeBalancedSameGridBatchSampler
 from gridfm_graphkit.datasets.posenc_stats import ComputePosencStat
 from gridfm_graphkit.datasets.cached_transform import (
     CachedPosencTransform,
@@ -506,6 +507,21 @@ class LitGridHeteroDataModule(L.LightningDataModule):
             if dist.is_available() and dist.is_initialized()
             else "not distributed",
         )
+        if getattr(self.args.data, "same_grid_batches", False):
+            # E005: same-grid batches (one static shape per grid) with
+            # size-balanced per-epoch draws. DDP sharding happens inside the
+            # sampler; the CLI disables Lightning's sampler injection.
+            batch_sampler = SizeBalancedSameGridBatchSampler(
+                [len(d) for d in self.train_datasets],
+                batch_size=self.batch_size,
+                samples_per_grid=getattr(self.args.data, "samples_per_grid", None),
+                seed=self.args.seed,
+            )
+            return DataLoader(
+                self.train_dataset_multi,
+                batch_sampler=batch_sampler,
+                **self._dataloader_kwargs(),
+            )
         return DataLoader(
             self.train_dataset_multi,
             batch_size=self.batch_size,

@@ -305,14 +305,29 @@ class AddHierarchy(BaseTransform):
     and the per-scenario affine term ``bus.v_aff``.
 
     The cache file is resolved via :meth:`set_root`, which the datamodule
-    calls with the per-network data root before first use.
+    calls with the per-network data root before first use. ``set_root`` also
+    resolves per-network overrides from ``data.hierarchy.per_network``
+    (keyed by network directory name): the boundary target fraction is a
+    per-grid knob because REF+PV buses are unconditionally boundary, so
+    generator-dense grids have a floor the global target cannot reach
+    (case118: 54 gen buses -> 46% no matter the kV threshold)::
+
+        data:
+          hierarchy:
+            enable: true
+            target_frac: 0.27          # global default
+            per_network:
+              case118_ieee: {target_frac: 0.46}
     """
 
     def __init__(self, args):
         super().__init__()
         h = getattr(args.data, "hierarchy", None)
-        self.target_frac = getattr(h, "target_frac", TARGET_BOUNDARY_FRAC)
-        self.tol = getattr(h, "tol", Y_RED_TOL)
+        self._default_frac = getattr(h, "target_frac", TARGET_BOUNDARY_FRAC)
+        self._default_tol = getattr(h, "tol", Y_RED_TOL)
+        self._per_network = getattr(h, "per_network", None)
+        self.target_frac = self._default_frac
+        self.tol = self._default_tol
         self._root = None
         self._cache = None
         self._seeds = None
@@ -320,6 +335,10 @@ class AddHierarchy(BaseTransform):
     def set_root(self, root):
         self._root = root
         self._cache = None
+        network = osp.basename(osp.normpath(root))
+        override = getattr(self._per_network, network, None)
+        self.target_frac = getattr(override, "target_frac", self._default_frac)
+        self.tol = getattr(override, "tol", self._default_tol)
 
     def _load(self):
         if self._cache is None:

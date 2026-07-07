@@ -228,6 +228,10 @@ def main_cli(args):
     trainer_kwargs = {}
     if precision:
         trainer_kwargs["precision"] = precision
+    if getattr(config_args.data, "same_grid_batches", False):
+        # E005 batch sampler shards across DDP ranks itself; Lightning must
+        # not inject a DistributedSampler on top of it.
+        trainer_kwargs["use_distributed_sampler"] = False
     profiler = getattr(args, "profiler", None)
 
     report_performance = getattr(args, "report_performance", False)
@@ -263,7 +267,8 @@ def main_cli(args):
         max_epochs=config_args.training.epochs,
         callbacks=training_callbacks,
         deterministic=(
-            True if getattr(args, "deterministic", None) == "true"
+            True
+            if getattr(args, "deterministic", None) == "true"
             else (getattr(args, "deterministic", None) or False)
         ),
         **trainer_kwargs,
