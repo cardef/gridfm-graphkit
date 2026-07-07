@@ -178,11 +178,18 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                 else HeteroGridDatasetDisk
             )
 
+            task_transform = get_task_transforms(args=self.args)
+            # Root-aware transforms (e.g. AddHierarchy) resolve their
+            # per-network cache from the dataset root.
+            for t in getattr(task_transform, "transforms", []):
+                if hasattr(t, "set_root"):
+                    t.set_root(data_path_network)
+
             if not is_distributed or dist.get_rank() == 0:
                 dataset = dataset_cls(
                     root=data_path_network,
                     data_normalizer=data_normalizer,
-                    transform=get_task_transforms(args=self.args),
+                    transform=task_transform,
                 )
 
             # All ranks wait here until rank 0 processing is done
@@ -193,7 +200,7 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                 dataset = dataset_cls(
                     root=data_path_network,
                     data_normalizer=data_normalizer,
-                    transform=get_task_transforms(args=self.args),
+                    transform=task_transform,
                 )
 
             if ("posenc_RRWP" in self.args.data) and self.args.data.posenc_RRWP.enable:
