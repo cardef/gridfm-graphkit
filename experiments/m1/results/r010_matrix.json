@@ -1,0 +1,76 @@
+{
+  "case500_goc": {
+    "ks_flops": 14134275134,
+    "arms": {
+      "d8": {
+        "natural_h": 48,
+        "natural_flops": 10573889024,
+        "natural_ratio_over_ks": 0.7481026740851046,
+        "iso_h": 56,
+        "iso_ratio_over_ks": 1.0169348950498505,
+        "iso_within_window": true
+      },
+      "d16": {
+        "natural_h": 48,
+        "natural_flops": 22344457408,
+        "natural_ratio_over_ks": 1.5808704157916387,
+        "iso_h": 38,
+        "iso_ratio_over_ks": 0.993007253285862,
+        "iso_within_window": true
+      },
+      "d32": {
+        "natural_h": 48,
+        "natural_flops": 45885594176,
+        "natural_ratio_over_ks": 3.246405899204707,
+        "iso_h": 27,
+        "iso_ratio_over_ks": 1.0338112724896955,
+        "iso_within_window": true
+      },
+      "d48": {
+        "natural_h": 48,
+        "natural_flops": 69426730944,
+        "natural_ratio_over_ks": 4.911941382617775,
+        "iso_h": 22,
+        "iso_ratio_over_ks": 1.0419135897938578,
+        "iso_within_window": true
+      }
+    }
+  },
+  "case2000_goc": {
+    "ks_flops": 46059611720,
+    "arms": {
+      "d8": {
+        "natural_h": 48,
+        "natural_flops": 38836295040,
+        "natural_ratio_over_ks": 0.8431746076386595,
+        "iso_h": 52,
+        "iso_ratio_over_ks": 0.988824796979856,
+        "iso_within_window": true
+      },
+      "d16": {
+        "natural_h": 48,
+        "natural_flops": 81993232896,
+        "natural_ratio_over_ks": 1.7801546698752762,
+        "iso_h": 36,
+        "iso_ratio_over_ks": 1.004365756472773,
+        "iso_within_window": true
+      },
+      "d32": {
+        "natural_h": 48,
+        "natural_flops": 168307108608,
+        "natural_ratio_over_ks": 3.6541147943485095,
+        "iso_h": 25,
+        "iso_ratio_over_ks": 0.9993240601290939,
+        "iso_within_window": true
+      },
+      "d48": {
+        "natural_h": 48,
+        "natural_flops": 254620984320,
+        "natural_ratio_over_ks": 5.528074918821743,
+        "iso_h": 20,
+        "iso_ratio_over_ks": 0.9716033995260088,
+        "iso_within_window": true
+      }
+    }
+  }
+}

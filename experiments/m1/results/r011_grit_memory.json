@@ -1,0 +1,49 @@
+{
+  "model": "GRIT h496/8x7L, full attention, RRWP ksteps 21",
+  "cuda": false,
+  "grids": {
+    "case14_ieee": {
+      "n_bus": 14,
+      "rrwp_s_per_sample": 0.00465016599628143,
+      "rrwp_rel_nnz": 196,
+      "rrwp_rel_bytes": 16464,
+      "rrwp_dense_pairs": 196
+    },
+    "case30_ieee": {
+      "n_bus": 30,
+      "rrwp_s_per_sample": 0.0005015000060666353,
+      "rrwp_rel_nnz": 900,
+      "rrwp_rel_bytes": 75600,
+      "rrwp_dense_pairs": 900
+    },
+    "case57_ieee": {
+      "n_bus": 57,
+      "rrwp_s_per_sample": 0.0005346250254660845,
+      "rrwp_rel_nnz": 3249,
+      "rrwp_rel_bytes": 272916,
+      "rrwp_dense_pairs": 3249
+    },
+    "case118_ieee": {
+      "n_bus": 118,
+      "rrwp_s_per_sample": 0.0010198750242125243,
+      "rrwp_rel_nnz": 13924,
+      "rrwp_rel_bytes": 1169616,
+      "rrwp_dense_pairs": 13924
+    },
+    "case500_goc": {
+      "n_bus": 500,
+      "rrwp_s_per_sample": 0.01617729099234566,
+      "rrwp_rel_nnz": 249710,
+      "rrwp_rel_bytes": 20975640,
+      "rrwp_dense_pairs": 250000
+    },
+    "case2000_goc": {
+      "n_bus": 2000,
+      "rrwp_s_per_sample": 0.522214874974452,
+      "rrwp_rel_nnz": 2980246,
+      "rrwp_rel_bytes": 250340664,
+      "rrwp_dense_pairs": 4000000
+    }
+  },
+  "quadratic_fit": null
+}
