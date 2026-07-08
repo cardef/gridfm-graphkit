@@ -10,6 +10,27 @@ from typing import Optional, Callable
 from torch_geometric.data import HeteroData
 from gridfm_graphkit.datasets.globals import VA_H, PG_H
 
+# R007 (experiments/m0/r007_outlier_triage.py): a scenario where a zero-load
+# bus has |Vm| below this threshold is a degenerate fast-PF solution (the
+# bus collapsed to the V=0 branch, not a real power-flow solve) -- a data
+# artifact, not model signal. Confirmed on case2000_goc bus 1261 (Pd=Qd=0,
+# Vm~1e-8 in 32/64 sampled scenarios).
+DEGENERATE_VM_THRESHOLD = 0.1  # p.u.
+
+
+def _degenerate_scenarios(raw_dir: str) -> set:
+    """Scenario ids with a zero-load bus at |Vm| < DEGENERATE_VM_THRESHOLD."""
+    bus = pd.read_parquet(
+        osp.join(raw_dir, "bus_data.parquet"),
+        columns=["scenario", "Pd", "Qd", "Vm"],
+    )
+    dead = (
+        (bus["Pd"] == 0)
+        & (bus["Qd"] == 0)
+        & (bus["Vm"].abs() < DEGENERATE_VM_THRESHOLD)
+    )
+    return set(bus.loc[dead, "scenario"].tolist())
+
 
 class HeteroGridDatasetDisk(Dataset):
     """
@@ -43,6 +64,19 @@ class HeteroGridDatasetDisk(Dataset):
         load_scenarios_path = osp.join(self.processed_dir, "load_scenarios.pt")
         if osp.exists(load_scenarios_path):
             self.load_scenarios = torch.load(load_scenarios_path, weights_only=True)
+
+        # R007 filter: exclude degenerate scenarios via PyG's own `_indices`
+        # subsetting (not renumbering) -- processed files/consolidated store
+        # stay indexed by raw scenario id, so this composes safely with
+        # AddHierarchy's `v_aff`/`cbus_x` lookups (also raw-scenario-id
+        # keyed) and with the datamodule's train/val/test Subset splitting.
+        degenerate = _degenerate_scenarios(self.raw_dir)
+        if degenerate:
+            print(
+                f"R007 filter: dropping {len(degenerate)}/{self.len()} "
+                f"degenerate scenarios: {sorted(degenerate)}",
+            )
+            self._indices = [i for i in range(self.len()) if i not in degenerate]
 
     @property
     def raw_file_names(self):
