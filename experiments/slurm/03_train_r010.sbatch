@@ -19,7 +19,11 @@
 #SBATCH --output=experiments/slurm/logs/%x_%A_%a.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# NOTE: sbatch copies this script into /var/spool/slurmd/jobNNN/ before
+# running it, so BASH_SOURCE-based self-location resolves to the spool dir,
+# not the repo. Use SLURM_SUBMIT_DIR (the cwd sbatch was invoked from)
+# instead -- these scripts are always submitted from $REPO_ROOT.
+HERE="$SLURM_SUBMIT_DIR/experiments/slurm"
 source "$HERE/cluster.env"
 cd "$REPO_ROOT"
 source "$VENV_ACTIVATE"
@@ -42,5 +46,6 @@ gridfm_graphkit train \
   --data_path data \
   --exp_name m1_r010 \
   --run_name "$RUN_NAME" \
+  --log_dir "$REPO_ROOT/experiments/slurm/mlruns_m1" \
   --compile "$COMPILE_MODE"
 echo "=== $RUN_NAME done $(date) ==="

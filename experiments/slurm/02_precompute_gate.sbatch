@@ -6,12 +6,12 @@
 # data/<grid>/processed/ caches for accurate nnz_prolong — this is why
 # config-gen happens HERE and not earlier).
 #
-# KNOWN GAP (not scripted, because no code implements it yet): R007's
-# diagnosis is "flag scenarios where a zero-load bus has |V|<0.1 p.u." but
-# nothing in gridfm_graphkit or these experiment scripts actually drops
-# those scenarios — r007_outlier_triage.py only diagnoses and prints a
-# verdict. Read experiments/m0/results/r007_outlier_triage.json after this
-# job and decide/implement the filter before trusting case2000 results.
+# R007 filter status: implemented in gridfm_graphkit/datasets/powergrid_hetero_dataset.py
+# (DEGENERATE_VM_THRESHOLD, _degenerate_scenarios, wired into both
+# HeteroGridDatasetDisk/MMap.__init__ via PyG's _indices subsetting) —
+# commit 42fa4ed, predates this script. Verified 2026-07-08 (4/4 tests
+# green, tests/test_degenerate_scenario_filter.py). Fires automatically
+# whenever data/<grid>/raw is loaded, no separate step needed here.
 #
 # Ends by submitting 03_train_r010.sbatch itself, once the config count is
 # known (SLURM array sizes are static at submission time, but the R010
@@ -25,7 +25,11 @@
 #SBATCH --output=experiments/slurm/logs/%x_%j.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# NOTE: sbatch copies this script into /var/spool/slurmd/jobNNN/ before
+# running it, so BASH_SOURCE-based self-location resolves to the spool dir,
+# not the repo. Use SLURM_SUBMIT_DIR (the cwd sbatch was invoked from)
+# instead -- these scripts are always submitted from $REPO_ROOT.
+HERE="$SLURM_SUBMIT_DIR/experiments/slurm"
 source "$HERE/cluster.env"
 cd "$REPO_ROOT"
 source "$VENV_ACTIVATE"
@@ -37,5 +41,5 @@ python experiments/m1/r010_make_configs.py --seeds 0 1 2
 
 N=$(ls experiments/m1/configs/*.yaml | wc -l | tr -d ' ')
 echo "R010 config count: $N -> submitting training array 1-$N"
-sbatch --account="$SLURM_ACCOUNT" --partition="$PART_GPU" --gres="$GRES_GPU" \
+sbatch --account="$SLURM_ACCOUNT" --qos="$SLURM_QOS" --partition="$PART_GPU" --gres="$GRES_GPU" \
   --array="1-${N}%6" "$HERE/03_train_r010.sbatch"
