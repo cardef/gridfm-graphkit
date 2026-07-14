@@ -34,6 +34,15 @@ research-wiki
 idea-stage/
 papers/
 
+# New run outputs are Syncthing/MLflow-owned. Existing tracked result snapshots
+# remain historical evidence on this branch.
+experiments/**/logs/
+experiments/**/results/
+experiments/**/artifacts/
+experiments/**/checkpoints/
+.stfolder/
+.stversions/
+
 # Canonical research-refine outputs; superseded scratch history stays ignored.
 !refine-logs/
 refine-logs/*
