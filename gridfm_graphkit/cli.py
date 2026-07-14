@@ -205,7 +205,11 @@ def main_cli(args):
     model = get_task(config_args, litGrid.data_normalizers)
     if args.command != "train":
         print(f"Loading model weights from {args.model_path}")
-        state_dict = torch.load(args.model_path, map_location="cpu")
+        state_dict = torch.load(
+            args.model_path,
+            map_location="cpu",
+            weights_only=True,
+        )
         state_dict = _normalize_loaded_state_dict_keys(state_dict)
         model.load_state_dict(state_dict)
 
@@ -228,10 +232,6 @@ def main_cli(args):
     trainer_kwargs = {}
     if precision:
         trainer_kwargs["precision"] = precision
-    if getattr(config_args.data, "same_grid_batches", False):
-        # E005 batch sampler shards across DDP ranks itself; Lightning must
-        # not inject a DistributedSampler on top of it.
-        trainer_kwargs["use_distributed_sampler"] = False
     profiler = getattr(args, "profiler", None)
 
     report_performance = getattr(args, "report_performance", False)

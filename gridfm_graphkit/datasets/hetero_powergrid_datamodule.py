@@ -21,7 +21,6 @@ from gridfm_graphkit.datasets.powergrid_hetero_dataset import (
     HeteroGridDatasetMMap,
 )
 
-from gridfm_graphkit.datasets.samplers import SizeBalancedSameGridBatchSampler
 from gridfm_graphkit.datasets.posenc_stats import ComputePosencStat
 from gridfm_graphkit.datasets.cached_transform import (
     CachedPosencTransform,
@@ -179,18 +178,11 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                 else HeteroGridDatasetDisk
             )
 
-            task_transform = get_task_transforms(args=self.args)
-            # Root-aware transforms (e.g. AddHierarchy) resolve their
-            # per-network cache from the dataset root.
-            for t in getattr(task_transform, "transforms", []):
-                if hasattr(t, "set_root"):
-                    t.set_root(data_path_network)
-
             if not is_distributed or dist.get_rank() == 0:
                 dataset = dataset_cls(
                     root=data_path_network,
                     data_normalizer=data_normalizer,
-                    transform=task_transform,
+                    transform=get_task_transforms(args=self.args),
                 )
 
             # All ranks wait here until rank 0 processing is done
@@ -201,7 +193,7 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                 dataset = dataset_cls(
                     root=data_path_network,
                     data_normalizer=data_normalizer,
-                    transform=task_transform,
+                    transform=get_task_transforms(args=self.args),
                 )
 
             if ("posenc_RRWP" in self.args.data) and self.args.data.posenc_RRWP.enable:
@@ -507,21 +499,6 @@ class LitGridHeteroDataModule(L.LightningDataModule):
             if dist.is_available() and dist.is_initialized()
             else "not distributed",
         )
-        if getattr(self.args.data, "same_grid_batches", False):
-            # E005: same-grid batches (one static shape per grid) with
-            # size-balanced per-epoch draws. DDP sharding happens inside the
-            # sampler; the CLI disables Lightning's sampler injection.
-            batch_sampler = SizeBalancedSameGridBatchSampler(
-                [len(d) for d in self.train_datasets],
-                batch_size=self.batch_size,
-                samples_per_grid=getattr(self.args.data, "samples_per_grid", None),
-                seed=self.args.seed,
-            )
-            return DataLoader(
-                self.train_dataset_multi,
-                batch_sampler=batch_sampler,
-                **self._dataloader_kwargs(),
-            )
         return DataLoader(
             self.train_dataset_multi,
             batch_size=self.batch_size,

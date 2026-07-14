@@ -13,7 +13,7 @@ __pycache__/
 *.done
 .vscode
 gridfm_graphkit.egg-info
-mlruns*
+mlruns
 *.pt
 .DS_Store
 .julia
@@ -27,25 +27,26 @@ scripts/
 mlflow_opf_datakit/
 to_del/
 b12b6627956a448588674ce7cbc08cb4/
-.claude/
-.aris/
-research-wiki
-idea-stage/
-papers/
-
-# Canonical research-refine outputs; superseded scratch history stays ignored.
-!refine-logs/
-refine-logs/*
-!refine-logs/FINAL_PROPOSAL.md
-!refine-logs/EXPERIMENT_PLAN.md
-!refine-logs/EXPERIMENT_TRACKER.md
-!refine-logs/REVIEW_SUMMARY.md
-!refine-logs/NOVELTY_REPORT.md
-!refine-logs/REFINEMENT_REPORT.md
-!refine-logs/PIPELINE_SUMMARY.md
-!refine-logs/REFINE_STATE.json
 build/
 dist/
 
 # Machine-specific calibration baseline (each machine calibrates its own; see CONTRIBUTING.md)
 integrationtests/calibration_baseline.json
+
+# Agent runtime state. Portable repository policy stays in AGENTS.md/CLAUDE.md.
+.aris/
+.claude/
+.codex/
+
+# Syncthing/MLflow-owned high-churn artifacts.
+idea-stage/
+papers/
+refine-logs/
+research-wiki/
+mlruns*/
+/artifacts/
+/checkpoints/
+experiments/**/logs/
+experiments/**/results/
+.stfolder/
+.stversions/

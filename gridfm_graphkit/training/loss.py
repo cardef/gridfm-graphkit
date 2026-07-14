@@ -245,42 +245,6 @@ class MaskedReconstructionMSE(BaseLoss):
         return {"loss": loss, "Masked reconstruction MSE loss": loss.detach()}
 
 
-@LOSS_REGISTRY.register("CoarseVoltageMSE")
-class CoarseVoltageMSE(BaseLoss):
-    """Boundary-voltage supervision for the Kron-Schur coarse decoder.
-
-    MSE between the coarse decoder output (VM_c, VA_c) and the fine bus
-    labels restricted to boundary buses via the (bus, seeds, cbus) relation.
-    Requires a model that returns a "cbus" entry (GNS_hetero_hier) and data
-    processed with AddHierarchy.
-    """
-
-    def __init__(self, loss_args, args):
-        super().__init__()
-        self.reduction = "mean"
-
-    def forward(
-        self,
-        pred_dict,
-        target_dict,
-        edge_index=None,
-        edge_attr=None,
-        mask=None,
-        model=None,
-        x_dict=None,
-    ):
-        if "cbus" not in pred_dict:
-            raise KeyError(
-                "CoarseVoltageMSE needs a 'cbus' model output "
-                "(model.type: GNS_hetero_hier with data.hierarchy.enable).",
-            )
-        seed_bus, seed_cbus = edge_index[("bus", "seeds", "cbus")]
-        target = target_dict["bus"][seed_bus][:, [VM_H, VA_H]]
-        pred = pred_dict["cbus"][seed_cbus]
-        loss = F.mse_loss(pred, target, reduction=self.reduction)
-        return {"loss": loss, "Coarse voltage MSE loss": loss.detach()}
-
-
 @LOSS_REGISTRY.register("MSE")
 class MSELoss(BaseLoss):
     """Standard Mean Squared Error loss."""

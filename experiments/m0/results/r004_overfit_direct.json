@@ -1,7 +1,0 @@
-{
-  "final_train_rmse_vm_pu": 0.0012214553915689422,
-  "final_train_rmse_va_rad": 0.003348757406587727,
-  "epochs": 3000,
-  "train_time_s": 556.3427105419978,
-  "config": "KS_PF_case14_overfit.yaml (batch 64, cosine 1e-3->1e-5)"
-}

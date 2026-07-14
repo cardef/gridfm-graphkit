@@ -1,35 +1,41 @@
-# Sync layout
+# Branch and sync ownership
 
-This repository uses Git for source code and Syncthing for research artifacts.
-The saved Syncthing configuration on the Mac currently maps these repository
-directories to the paired devices:
+A fresh clone must build, test, and run without Syncthing or agent tooling.
 
-| Folder | Local path | Purpose |
-| --- | --- | --- |
-| `gridfm-idea-stage` | `idea-stage/` | Discovery and prototype notes |
-| `gridfm-papers` | `papers/` | Paper working artifacts |
-| `gridfm-refine-logs` | `refine-logs/` | Proposal/refinement records |
-| `gridfm-research-wiki` | `research-wiki/` | Durable research wiki |
-| `gridfm-mlruns` | `mlruns/` | Experiment tracking artifacts |
+## Git
 
-The corresponding portable Codex mappings are:
+Git owns every deployment input and durable code contract:
 
-| Folder | Mac source | Recommended HPC destination |
-| --- | --- | --- |
-| `codex-skills` | `~/.codex/skills/` | `~/sync/aris/codex/skills/` |
-| `codex-memories` | `~/.codex/memories/` | `~/sync/aris/codex/memories/` |
+- `main`: upstream-aligned package, tests, CI, and container configuration.
+- `research/*`: research implementations and canonical plans.
+- `exp/*`: short-lived code variants.
+- Annotated `run/*` tags: immutable pointers to executed revisions.
 
-The HPC destinations are a convention, not a claim about the remote device's
-current configuration. Accept the folders on the HPC device at those paths,
-or use another path consistently on that device.
+`AGENTS.md` and `CLAUDE.md` are tracked because they describe repository
+policy. Tool installations, transcripts, caches, and mutable memories are not
+repository policy.
 
-Do not sync the whole `~/.codex` directory. In particular, exclude credentials
-(`auth.json`, API-key-bearing configuration), SQLite databases and WAL/SHM
-files, live sessions, logs, caches, shell snapshots, and worktrees. These are
-machine-local state and can either leak secrets or corrupt when two clients
-write them concurrently.
+## Syncthing and MLflow
 
-Repository code must refer to artifact directories relative to the repository
-root or through an explicit environment variable. Absolute paths such as
-`/Users/carmine/Code/FM/gridfm-graphkit` are legacy-only and are not portable
-to the HPC checkout.
+Syncthing or MLflow may own ignored, high-churn state such as:
+
+- `idea-stage/`, `papers/`, `refine-logs/`, and `research-wiki/`;
+- `mlruns*/`, checkpoints, run logs, and result directories;
+- selected global agent memories under an explicit single-writer policy.
+
+Syncthing is replication, not version control. Never synchronize tracked files
+between worktrees, and never use a synchronized result directory as the sole
+record of which code ran. Each run manifest should record at least the Git SHA,
+configuration hash, data hash or immutable data identifier, environment lock or
+image digest, and output location.
+
+## Agent state
+
+Install skills from their source repository. Do not synchronize generated
+project-local symlink farms. Never synchronize an entire `~/.codex`,
+`~/.claude`, `.codex`, `.claude`, or `.aris` tree. Credentials, API-key-bearing
+configuration, databases and WAL/SHM files, sessions, logs, caches, shell
+snapshots, and worktrees are machine-local.
+
+Repository code must use relative paths or explicit environment variables;
+machine-specific absolute paths are not deployment configuration.
