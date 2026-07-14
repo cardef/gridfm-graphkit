@@ -35,6 +35,7 @@ MLFLOW_ALLOW_FILE_STORE=true pytest tests/
 pre-commit run --all-files
 bandit --severity-level high .
 python -m build
+python tools/check_syncthing_boundary.py --require-local-config
 ```
 
 Integration tests are slower and may require GPUs:

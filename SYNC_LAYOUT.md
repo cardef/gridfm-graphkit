@@ -29,6 +29,18 @@ record of which code ran. Each run manifest should record at least the Git SHA,
 configuration hash, data hash or immutable data identifier, environment lock or
 image digest, and output location.
 
+The allowed repo-local Syncthing roots are declared in `sync-layout.json`.
+`main` must track no files below those roots. Verify both the Git tree and the
+live machine configuration with:
+
+```bash
+python tools/check_syncthing_boundary.py --require-local-config
+```
+
+The check fails if a Syncthing root contains the repository, if an undeclared
+folder is synchronized inside it, if a declared mapping drifts, or if `main`
+starts tracking a file below a synchronized root. It runs in pre-commit and CI.
+
 ## Agent state
 
 Install skills from their source repository. Do not synchronize generated

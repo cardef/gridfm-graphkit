@@ -32,3 +32,11 @@ repos:
         # add "--fail-on-unaudited" to fail pre-commit for unaudited potential secrets
           args: [--baseline, .secrets.baseline, --use-all-plugins]
           exclude: '.*\.ipynb$'
+-   repo: local
+    hooks:
+    -   id: syncthing-boundary
+        name: Syncthing cannot overlap main
+        entry: python tools/check_syncthing_boundary.py
+        language: system
+        pass_filenames: false
+        always_run: true
