@@ -78,7 +78,9 @@ def validate_git_boundary(
     tracked = [PurePosixPath(line) for line in tree.stdout.splitlines() if line]
 
     for folder_id, relative in folders.items():
-        offenders = [path for path in tracked if path == relative or relative in path.parents]
+        offenders = [
+            path for path in tracked if path == relative or relative in path.parents
+        ]
         if offenders:
             preview = ", ".join(str(path) for path in offenders[:5])
             raise BoundaryError(
@@ -86,13 +88,22 @@ def validate_git_boundary(
             )
 
         probe = repo / Path(*relative.parts) / ".syncthing-boundary-probe"
-        ignored = _run_git(repo, "check-ignore", "--quiet", "--no-index", "--", str(probe))
+        ignored = _run_git(
+            repo,
+            "check-ignore",
+            "--quiet",
+            "--no-index",
+            "--",
+            str(probe),
+        )
         if ignored.returncode != 0:
             raise BoundaryError(f"Syncthing root is not ignored by Git: {relative}")
 
         if ci_tree:
             root = repo / Path(*relative.parts)
-            if root.exists() and any(path.is_file() or path.is_symlink() for path in root.rglob("*")):
+            if root.exists() and any(
+                path.is_file() or path.is_symlink() for path in root.rglob("*")
+            ):
                 raise BoundaryError(
                     f"CI checkout contains files inside Syncthing-only root: {relative}",
                 )
@@ -114,7 +125,9 @@ def validate_syncthing_config(
     try:
         raw_config = config_path.read_bytes()
     except OSError as exc:
-        raise BoundaryError(f"cannot parse Syncthing config {config_path}: {exc}") from exc
+        raise BoundaryError(
+            f"cannot parse Syncthing config {config_path}: {exc}",
+        ) from exc
     if len(raw_config) > MAX_CONFIG_BYTES:
         raise BoundaryError(f"Syncthing config exceeds {MAX_CONFIG_BYTES} bytes")
     upper_config = raw_config.upper()
@@ -124,7 +137,9 @@ def validate_syncthing_config(
         # DTD/entity declarations are rejected above before using stdlib XML.
         root = ET.fromstring(raw_config)  # nosec B314
     except ET.ParseError as exc:
-        raise BoundaryError(f"cannot parse Syncthing config {config_path}: {exc}") from exc
+        raise BoundaryError(
+            f"cannot parse Syncthing config {config_path}: {exc}",
+        ) from exc
 
     repo = repo.resolve()
     expected = {
@@ -153,7 +168,9 @@ def validate_syncthing_config(
             try:
                 relative = sync_root.relative_to(repo)
             except ValueError as exc:  # pragma: no cover - guarded above
-                raise BoundaryError(f"cannot resolve Syncthing root {sync_root}") from exc
+                raise BoundaryError(
+                    f"cannot resolve Syncthing root {sync_root}",
+                ) from exc
             declared = expected.get(folder_id)
             if declared is None:
                 raise BoundaryError(
@@ -185,7 +202,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--layout", type=Path, help="machine-readable layout file")
     parser.add_argument("--syncthing-config", type=Path, help="Syncthing config.xml")
-    parser.add_argument("--ref", default="main", help="Git tree to protect")
+    parser.add_argument(
+        "--ref",
+        default="HEAD",
+        help="Git tree to protect (defaults to the checked-out tree)",
+    )
     parser.add_argument(
         "--static-only",
         action="store_true",
