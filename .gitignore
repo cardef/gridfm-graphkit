@@ -43,3 +43,8 @@ refine-logs/*
 !refine-logs/REFINEMENT_REPORT.md
 !refine-logs/PIPELINE_SUMMARY.md
 !refine-logs/REFINE_STATE.json
+build/
+dist/
+
+# Machine-specific calibration baseline (each machine calibrates its own; see CONTRIBUTING.md)
+integrationtests/calibration_baseline.json
