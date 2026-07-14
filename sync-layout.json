@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "repo_local_folders": {
+    "gridfm-idea-stage": "idea-stage",
+    "gridfm-mlruns": "mlruns",
+    "gridfm-papers": "papers",
+    "gridfm-refine-logs": "refine-logs",
+    "gridfm-research-wiki": "research-wiki"
+  }
+}
