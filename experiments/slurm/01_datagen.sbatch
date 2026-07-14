@@ -13,7 +13,11 @@
 #SBATCH --output=experiments/slurm/logs/%x_%A_%a.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# NOTE: sbatch copies this script into /var/spool/slurmd/jobNNN/ before
+# running it, so BASH_SOURCE-based self-location resolves to the spool dir,
+# not the repo. Use SLURM_SUBMIT_DIR (the cwd sbatch was invoked from)
+# instead -- these scripts are always submitted from $REPO_ROOT.
+HERE="$SLURM_SUBMIT_DIR/experiments/slurm"
 source "$HERE/cluster.env"
 cd "$REPO_ROOT"
 source "$VENV_ACTIVATE"
@@ -28,6 +32,19 @@ GRID="${GRIDS[$SLURM_ARRAY_TASK_ID]}"
 #   sbatch --array=0-0 experiments/slurm/01_datagen.sbatch
 # then submit the full 0-6 array once that task's log shows precompilation
 # finished.
+
+# This node's system libstdc++ (Rocky Linux 8.10, GCC 8.5.0) only provides up
+# to GLIBCXX_3.4.25. Loading Julia (via PythonCall/juliacall) *embedded inside
+# this Python process* pulls in the system libstdc++ first (already resident
+# from Python/numpy's own C extensions), shadowing Julia's own bundled newer
+# copy -- libjulia-internal.so then fails with "GLIBCXX_3.4.26 not found".
+# Preloading Julia's bundled libstdc++ before Python starts fixes it (a
+# standalone `julia` binary doesn't hit this -- only the embedded-in-Python
+# path does). Verified 2026-07-08 on abacus-004.
+JULIA_STDCXX=$(ls -d "$HOME"/.julia/juliaup/julia-*/lib/julia/libstdc++.so.6 2>/dev/null | sort -V | tail -1)
+if [ -n "$JULIA_STDCXX" ]; then
+  export LD_PRELOAD="${JULIA_STDCXX}${LD_PRELOAD:+:$LD_PRELOAD}"
+fi
 
 echo "=== $GRID start $(date) (task $SLURM_ARRAY_TASK_ID) ==="
 gridfm_datakit generate "experiments/m1/datakit_configs/$GRID.yaml"

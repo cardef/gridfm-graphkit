@@ -1,6 +1,6 @@
 network:
-  name: Texas2k_case1_2016summerpeak
-  source: file
+  name: case2000_goc
+  source: pglib
   network_dir: ../gridfm-datakit/scripts/grids
 load:
   generator: agg_load_profile
@@ -20,7 +20,7 @@ admittance_perturbation:
   type: none
 settings:
   num_processes: 24
-  data_dir: data
+  data_dir: data/case2000_shards/s0
   large_chunk_size: 512
   overwrite: true
   mode: pf

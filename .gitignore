@@ -13,7 +13,7 @@ __pycache__/
 *.done
 .vscode
 gridfm_graphkit.egg-info
-mlruns
+mlruns*
 *.pt
 .DS_Store
 .julia

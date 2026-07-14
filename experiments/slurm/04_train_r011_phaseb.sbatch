@@ -11,7 +11,11 @@
 #SBATCH --output=experiments/slurm/logs/%x_%j.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# NOTE: sbatch copies this script into /var/spool/slurmd/jobNNN/ before
+# running it, so BASH_SOURCE-based self-location resolves to the spool dir,
+# not the repo. Use SLURM_SUBMIT_DIR (the cwd sbatch was invoked from)
+# instead -- these scripts are always submitted from $REPO_ROOT.
+HERE="$SLURM_SUBMIT_DIR/experiments/slurm"
 source "$HERE/cluster.env"
 cd "$REPO_ROOT"
 source "$VENV_ACTIVATE"
