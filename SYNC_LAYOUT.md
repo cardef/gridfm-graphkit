@@ -1,5 +1,8 @@
 # Artifact ownership and sync layout
 
+The operational Mac/Linux branch workflow is documented in
+[`GIT_SYNCTHING_WORKFLOW.md`](GIT_SYNCTHING_WORKFLOW.md).
+
 A fresh clone must build, test, and run without Syncthing or agent tooling.
 Git is the source of truth for every deployment input and repository contract.
 Syncthing is optional replication for high-churn research artifacts that are
