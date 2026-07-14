@@ -36,6 +36,7 @@ jobs:
       - name: Security Checks
         run: |
           bandit --severity-level high .
+          python tools/check_syncthing_boundary.py --ref main --static-only --ci-tree
 
   pytests:
       runs-on: ubuntu-latest
