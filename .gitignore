@@ -30,3 +30,16 @@ b12b6627956a448588674ce7cbc08cb4/
 .claude/
 .aris/
 research-wiki
+idea-stage/
+papers/
+
+# Canonical research-refine outputs; superseded scratch history stays ignored.
+!refine-logs/
+refine-logs/*
+!refine-logs/FINAL_PROPOSAL.md
+!refine-logs/EXPERIMENT_PLAN.md
+!refine-logs/EXPERIMENT_TRACKER.md
+!refine-logs/REVIEW_SUMMARY.md
+!refine-logs/REFINEMENT_REPORT.md
+!refine-logs/PIPELINE_SUMMARY.md
+!refine-logs/REFINE_STATE.json
