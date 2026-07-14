@@ -112,11 +112,11 @@ External plugins register additional components when imported through
 
 The current sources of truth are:
 
-- `refine-logs/FINAL_PROPOSAL.md` for the method and claim boundary.
-- `refine-logs/EXPERIMENT_PLAN.md` for constants, estimands, budgets, and run
+- `research/kron-schur/FINAL_PROPOSAL.md` for the method and claim boundary.
+- `research/kron-schur/EXPERIMENT_PLAN.md` for constants, estimands, budgets, and run
   rules.
-- `refine-logs/EXPERIMENT_TRACKER.md` for implementation and experiment gates.
-- `refine-logs/NOVELTY_REPORT.md` for the source-backed novelty boundary.
+- `research/kron-schur/EXPERIMENT_TRACKER.md` for implementation and experiment gates.
+- `research/kron-schur/NOVELTY_REPORT.md` for the source-backed novelty boundary.
 - `MANIFEST.md` for generated research artifacts.
 
 Proposal readiness is not implementation readiness. The tracker currently

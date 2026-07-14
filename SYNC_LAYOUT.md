@@ -9,13 +9,12 @@ explicitly excluded from Git.
 
 - Source, tests, packaging, CI, examples, and deployment configuration.
 - `AGENTS.md` and `CLAUDE.md`, because they are portable repository policy.
-- `MANIFEST.md` and the canonical research files allowlisted in `.gitignore`:
-  `FINAL_PROPOSAL.md`, `EXPERIMENT_PLAN.md`, `EXPERIMENT_TRACKER.md`,
-  `REVIEW_SUMMARY.md`, `NOVELTY_REPORT.md`, `REFINEMENT_REPORT.md`, and
-  `REFINE_STATE.json`.
+- `MANIFEST.md` and the canonical Kron-Schur research contract under
+  `research/kron-schur/`.
 
-These files must not be changed by Syncthing. `refine-logs/.stignore` excludes
-the canonical filenames from the `gridfm-refine-logs` sync root.
+No Git branch may track files below a Syncthing root. `refine-logs/` contains
+only timestamped logs and scratch artifacts; canonical files are kept in the
+Git-owned research directory.
 
 ## Syncthing-owned files
 

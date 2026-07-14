@@ -8,7 +8,7 @@
 
 **Implementation boundary:** `cardef/gridfm-graphkit`, fork commit `6c3b356b2dd3d761e880cd84e04835f55a7a5583`; upstream `gridfm/gridfm-graphkit` reference must be frozen at I001.
 
-**Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `8063430ccb337f9e78be1c71374299288a485418a7e101a9e70e1a58b4410678`.
+**Proposal source:** `research/kron-schur/FINAL_PROPOSAL.md`, SHA-256 `8063430ccb337f9e78be1c71374299288a485418a7e101a9e70e1a58b4410678`.
 **Current status:** proposal READY; implementation and all confirmatory runs BLOCKED.
 
 ## Claim Map

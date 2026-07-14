@@ -43,4 +43,3 @@ The components are LOW novelty. The controlled experimental combination is MEDIU
 ## Cleanup
 
 The final proposal, review summary, refinement report, novelty report, state, score history, and immutable reviewer traces retain the full decision record. The working round-5 proposal is removed after its proposal body is published canonically. Legacy experiment-result files remain because they are evidence from the earlier prototype, not intermediate proposals or plans. Historical timestamped final artifacts remain immutable.
-

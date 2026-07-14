@@ -62,4 +62,3 @@ Fable reopened the earlier READY result because the quotient control claimed an 
 ## Next Boundary
 
 No proposal-level issue remains. Implementation must still pass F0–F5 in the fork before the 20-run campaign. READY does not mean that code, experiments, or a manuscript already satisfy the proposal.
-

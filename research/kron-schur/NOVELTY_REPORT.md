@@ -1,8 +1,8 @@
 # Novelty Assessment: Electrical Hierarchies for Grid Foundation-Model Scalability
 
-**Search cutoff:** 2026-07-13  
-**External reviewer:** Fable 5 Max  
-**Overall score:** 7.0 / 10  
+**Search cutoff:** 2026-07-13
+**External reviewer:** Fable 5 Max
+**Overall score:** 7.0 / 10
 **Recommendation:** PROCEED WITH CAUTION
 
 ## Proposed Contribution
@@ -59,4 +59,3 @@ This remains an absence-of-evidence result. Before submission, repeat the sweep 
 ## Decision Rule
 
 Proceed to implementation only under the proposal's fail-closed protocol. The work earns a strong novelty claim only if Kron beats Flat, the released global-summary control, and the same-partition quotient control at the preregistered statistical and compute gates, with a non-contracting trend across diversity and size. Otherwise publish only the narrower result supported by the observed outcome.
-

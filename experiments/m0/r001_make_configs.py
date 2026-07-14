@@ -7,7 +7,7 @@
 Scenario counts are M0-scale (local Mac, ~1.5 GB free disk at run time --
 full-scale regeneration happens on the cluster before M1). Perturbations are
 OFF so the admittance matrix Y is fixed per grid, matching the frozen
-per-grid-operator design in refine-logs/FINAL_PROPOSAL.md.
+per-grid-operator design in research/kron-schur/FINAL_PROPOSAL.md.
 """
 
 import os

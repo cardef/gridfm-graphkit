@@ -302,4 +302,3 @@ Tables report topology provenance, parameter/FLOP matching, integrity gates, and
 ## Final Contribution Statement
 
 The most defensible contribution is not a new component. It is a controlled, falsifiable study of whether deterministic electrical hierarchy changes the compute-transfer scaling frontier of a domain-specific grid foundation model. The explicit `cardef/gridfm-graphkit` fork supplies a narrow implementation seam and reproducibility boundary. A positive result supports electrical hierarchy over matched local, global-summary, and generic-hierarchy alternatives within the tested regime. A negative result identifies the simpler mechanism or resource regime that dominates.
-
