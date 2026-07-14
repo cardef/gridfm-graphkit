@@ -29,6 +29,7 @@ to_del/
 b12b6627956a448588674ce7cbc08cb4/
 .claude/
 .aris/
+.codex/
 research-wiki
 idea-stage/
 papers/
@@ -36,6 +37,7 @@ papers/
 # Canonical research-refine outputs; superseded scratch history stays ignored.
 !refine-logs/
 refine-logs/*
+!refine-logs/.stignore
 !refine-logs/FINAL_PROPOSAL.md
 !refine-logs/EXPERIMENT_PLAN.md
 !refine-logs/EXPERIMENT_TRACKER.md

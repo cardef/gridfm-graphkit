@@ -1,7 +1,7 @@
 network:
   name: Texas2k_case1_2016summerpeak
   source: file
-  network_dir: /Users/carmine/Code/FM/gridfm-datakit/scripts/grids
+  network_dir: ../gridfm-datakit/scripts/grids
 load:
   generator: agg_load_profile
   agg_profile: default
@@ -20,7 +20,7 @@ admittance_perturbation:
   type: none
 settings:
   num_processes: 6
-  data_dir: /Users/carmine/Code/FM/gridfm-graphkit/data
+  data_dir: data
   large_chunk_size: 512
   overwrite: true
   mode: pf

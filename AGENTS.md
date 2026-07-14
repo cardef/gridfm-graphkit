@@ -6,9 +6,10 @@ agent memories are evidence snapshots, not current state by default.
 
 ## Environment
 
-The shared virtual environment is in the parent directory:
-`/Users/carmine/Code/FM/.venv`. It is Python 3.12, managed with `uv`, and has no
-`pip` executable. Activate it with:
+The development-checkout convention is a shared virtual environment at
+`../.venv`. It is Python 3.12, managed with `uv`, and has no `pip` executable.
+This relative layout is convenient, not a deployment requirement. Activate it
+with:
 
 ```bash
 source ../.venv/bin/activate
@@ -175,16 +176,18 @@ for commits (`git commit -s`). See `CONTRIBUTING.md`.
 
 ## ARIS Skills
 
-`.aris/installed-skills.txt` records 80 project-local Claude skill links under
-`.claude/skills/`. Those entries are symlinks into
-`/Users/carmine/Auto-claude-code-research-in-sleep`; never edit or delete files
-through the symlinks. Codex has corresponding Codex-native skills installed
-separately, so use the skills exposed in the current Codex session.
+A development checkout may have project-local Claude skill links under
+`.claude/skills/`, recorded by `.aris/installed-skills.txt`. These directories
+are optional, ignored runtime tooling and are never deployment dependencies.
+Never edit or delete a skill through a symlink. Codex has corresponding
+Codex-native skills installed separately, so use the skills exposed in the
+current Codex session.
 
-To install or reconcile project-local Codex skills explicitly, use the Codex
-platform rather than relying on auto-detection in this mixed Claude/Codex repo:
+To install or reconcile project-local Codex skills explicitly, set `ARIS_HOME`
+to an ARIS checkout and use the Codex platform rather than relying on
+auto-detection in this mixed Claude/Codex repo:
 
 ```bash
-bash /Users/carmine/Auto-claude-code-research-in-sleep/tools/install_aris.sh \
+bash "$ARIS_HOME/tools/install_aris.sh" \
   "$PWD" --platform codex
 ```
