@@ -22,8 +22,9 @@ This library is brought to you by the GridFM team to train, finetune and interac
 
 # Installation
 
-This research fork contains changes that are not in the upstream PyPI release.
-Install it from a checkout so the installed code matches this repository:
+This fork contains runtime and deployment changes that may not be in the
+upstream PyPI release. Install it from a checkout so the installed code matches
+this repository:
 
 ```bash
 git clone https://github.com/cardef/gridfm-graphkit.git

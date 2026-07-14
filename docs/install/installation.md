@@ -1,7 +1,7 @@
 # Installation
 
-The research fork must be installed from its checkout; the package published
-under `gridfm-graphkit` on PyPI may represent the upstream repository instead.
+Install this fork from its checkout; the package published under
+`gridfm-graphkit` on PyPI may represent the upstream repository instead.
 
 ```bash
 git clone https://github.com/cardef/gridfm-graphkit.git

@@ -4,7 +4,7 @@ FROM docker.io/nvidia/cuda:12.8.1-cudnn-devel-ubuntu22.04
 ARG PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu128
 
 LABEL org.opencontainers.image.source="https://github.com/cardef/gridfm-graphkit" \
-      org.opencontainers.image.description="gridfm-graphkit research fork" \
+      org.opencontainers.image.description="gridfm-graphkit" \
       org.opencontainers.image.version="0.8.1"
 
 ENV DEBIAN_FRONTEND=noninteractive \
