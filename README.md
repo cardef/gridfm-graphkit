@@ -22,28 +22,40 @@ This library is brought to you by the GridFM team to train, finetune and interac
 
 # Installation
 
-Create and activate a virtual environment (make sure you use the right python version = 3.10, 3.11 or 3.12. I highly recommend 3.12)
+This research fork contains changes that are not in the upstream PyPI release.
+Install it from a checkout so the installed code matches this repository:
+
 ```bash
+git clone https://github.com/cardef/gridfm-graphkit.git
+cd gridfm-graphkit
 python -m venv venv
 source venv/bin/activate
-```
-
-Install gridfm-graphkit from PyPI
-```bash
-pip install gridfm-graphkit
+python -m pip install --upgrade pip
+python -m pip install .
 ```
 
 `torch-scatter` / `torch-sparse` are **no longer required**: all scatter and
 sparse operations use native PyTorch (`gridfm_graphkit/utils/scatter.py`,
 parity-tested in `tests/test_native_scatter.py`).
 
-
-For documentation generation and unit testing, install with the optional `dev` and `test` extras:
+For editable development, documentation, and tests:
 
 ```bash
-pip install "gridfm-graphkit[dev,test]"
+python -m pip install -e ".[dev,test]"
 ```
 
+`pip install gridfm-graphkit` installs the upstream release, not necessarily
+the fork commit you are reading.
+
+## Container
+
+The container packages the same source tree and exposes the CLI as its
+entrypoint:
+
+```bash
+docker build -t gridfm-graphkit:0.8.1 .
+docker run --rm gridfm-graphkit:0.8.1 --help
+```
 
 # CLI commands
 
