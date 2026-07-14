@@ -48,7 +48,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel
-          pip install -e ".[test]"
+          pip install -e ".[test]" build
+
+      - name: Build and inspect distributions
+        run: |
+          python -m build
+          python -c 'import glob, zipfile; wheel = glob.glob("dist/*.whl")[0]; names = set(zipfile.ZipFile(wheel).namelist()); assert "gridfm_graphkit/utils/scatter.py" in names'
 
       - name: Unit tests
         env:
@@ -89,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: detect-secrets-artifacts
-          path: .secrets.new
+          path: security-outputs/
 
   codeql:
     name: CodeQL (Python)
@@ -145,7 +150,7 @@ jobs:
       - name: Install Bandit
         run: pip install bandit
       - name: Run Bandit
-        run: bandit -ll -ii -r gridfm-graphkit -f json -o bandit-report.json
+        run: bandit -ll -ii -r gridfm_graphkit -f json -o bandit-report.json
 
       - name: Upload artifact
         if: always()

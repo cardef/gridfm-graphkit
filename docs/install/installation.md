@@ -1,18 +1,15 @@
 # Installation
 
-The steps below mirror the [README](https://github.com/gridfm/gridfm-graphkit/blob/main/README.md#installation).
-
-Create and activate a virtual environment (make sure you use the right python version = 3.10, 3.11 or 3.12. I highly recommend 3.12)
+The research fork must be installed from its checkout; the package published
+under `gridfm-graphkit` on PyPI may represent the upstream repository instead.
 
 ```bash
+git clone https://github.com/cardef/gridfm-graphkit.git
+cd gridfm-graphkit
 python -m venv venv
 source venv/bin/activate
-```
-
-Install gridfm-graphkit from PyPI
-
-```bash
-pip install gridfm-graphkit
+python -m pip install --upgrade pip
+python -m pip install .
 ```
 
 `torch-scatter` / `torch-sparse` are **no longer required**: all scatter and
@@ -20,8 +17,8 @@ sparse operations use native PyTorch (`gridfm_graphkit/utils/scatter.py`,
 parity-tested in `tests/test_native_scatter.py`).
 
 
-For documentation generation and unit testing, install with the optional `dev` and `test` extras:
+For editable development, documentation, and unit testing:
 
 ```bash
-pip install "gridfm-graphkit[dev,test]"
+python -m pip install -e ".[dev,test]"
 ```
