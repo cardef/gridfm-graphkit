@@ -205,7 +205,11 @@ def main_cli(args):
     model = get_task(config_args, litGrid.data_normalizers)
     if args.command != "train":
         print(f"Loading model weights from {args.model_path}")
-        state_dict = torch.load(args.model_path, map_location="cpu")
+        state_dict = torch.load(
+            args.model_path,
+            map_location="cpu",
+            weights_only=True,
+        )
         state_dict = _normalize_loaded_state_dict_keys(state_dict)
         model.load_state_dict(state_dict)
 
@@ -263,7 +267,8 @@ def main_cli(args):
         max_epochs=config_args.training.epochs,
         callbacks=training_callbacks,
         deterministic=(
-            True if getattr(args, "deterministic", None) == "true"
+            True
+            if getattr(args, "deterministic", None) == "true"
             else (getattr(args, "deterministic", None) or False)
         ),
         **trainer_kwargs,
