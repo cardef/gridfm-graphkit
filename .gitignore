@@ -32,3 +32,21 @@ dist/
 
 # Machine-specific calibration baseline (each machine calibrates its own; see CONTRIBUTING.md)
 integrationtests/calibration_baseline.json
+
+# Agent runtime state. Portable repository policy stays in AGENTS.md/CLAUDE.md.
+.aris/
+.claude/
+.codex/
+
+# Syncthing/MLflow-owned high-churn artifacts.
+idea-stage/
+papers/
+refine-logs/
+research-wiki/
+mlruns*/
+/artifacts/
+/checkpoints/
+experiments/**/logs/
+experiments/**/results/
+.stfolder/
+.stversions/
