@@ -1,5 +1,8 @@
 # Branch and sync ownership
 
+The operational Mac/Linux branch workflow is documented in
+[`GIT_SYNCTHING_WORKFLOW.md`](GIT_SYNCTHING_WORKFLOW.md).
+
 A fresh clone must build, test, and run without Syncthing or agent tooling.
 
 ## Git
