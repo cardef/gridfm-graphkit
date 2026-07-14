@@ -40,6 +40,7 @@ refine-logs/*
 !refine-logs/EXPERIMENT_PLAN.md
 !refine-logs/EXPERIMENT_TRACKER.md
 !refine-logs/REVIEW_SUMMARY.md
+!refine-logs/NOVELTY_REPORT.md
 !refine-logs/REFINEMENT_REPORT.md
 !refine-logs/PIPELINE_SUMMARY.md
 !refine-logs/REFINE_STATE.json
