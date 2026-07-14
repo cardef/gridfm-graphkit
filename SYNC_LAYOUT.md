@@ -9,12 +9,24 @@ explicitly excluded from Git.
 
 - Source, tests, packaging, CI, examples, and deployment configuration.
 - `AGENTS.md` and `CLAUDE.md`, because they are portable repository policy.
-- `MANIFEST.md` and the canonical Kron-Schur research contract under
+- `MANIFEST.md` and the promoted Kron-Schur research snapshot under
   `research/kron-schur/`.
 
-No Git branch may track files below a Syncthing root. `refine-logs/` contains
-only timestamped logs and scratch artifacts; canonical files are kept in the
-Git-owned research directory.
+No Git branch may track files below a Syncthing root. ARIS continues to use
+`refine-logs/` as its working directory, including its expected canonical
+filenames; those files are ignored and synchronized. Promote a reviewed
+snapshot to Git with:
+
+```bash
+python tools/promote_kron_schur_contract.py
+git diff -- research/kron-schur/
+git add research/kron-schur/
+git commit -s -m "Update Kron-Schur research contract"
+```
+
+The promotion is intentionally one-way: ARIS writes the working copy, and Git
+records the reviewed snapshot. Do not edit the synchronized copy from Linux
+while ARIS is running on the Mac.
 
 ## Syncthing-owned files
 

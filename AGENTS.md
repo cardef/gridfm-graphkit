@@ -110,14 +110,22 @@ External plugins register additional components when imported through
 
 ## Active Kron-Schur Research Contract
 
-The current sources of truth are:
+The current research contract has two layers:
 
-- `research/kron-schur/FINAL_PROPOSAL.md` for the method and claim boundary.
-- `research/kron-schur/EXPERIMENT_PLAN.md` for constants, estimands, budgets, and run
+- ARIS working files in `refine-logs/FINAL_PROPOSAL.md` and
+  `refine-logs/EXPERIMENT_PLAN.md` remain the paths consumed by the research
+  skills and are synchronized as ignored artifacts.
+- The reviewed Git snapshot lives under `research/kron-schur/`.
+- `refine-logs/FINAL_PROPOSAL.md` defines the method and claim boundary.
+- `refine-logs/EXPERIMENT_PLAN.md` defines constants, estimands, budgets, and run
   rules.
-- `research/kron-schur/EXPERIMENT_TRACKER.md` for implementation and experiment gates.
-- `research/kron-schur/NOVELTY_REPORT.md` for the source-backed novelty boundary.
+- `refine-logs/EXPERIMENT_TRACKER.md` defines implementation and experiment gates.
+- `refine-logs/NOVELTY_REPORT.md` defines the source-backed novelty boundary.
 - `MANIFEST.md` for generated research artifacts.
+
+After an ARIS review gate, promote the working contract with
+`python tools/promote_kron_schur_contract.py` and commit the resulting Git
+snapshot. Linux/HPC runs must use the committed branch and record its SHA.
 
 Proposal readiness is not implementation readiness. The tracker currently
 blocks treatment runs until implementation items I001-I010 and freeze gate
