@@ -10,7 +10,10 @@ from collections import Counter
 import pytest
 import yaml
 
-from gridfm_graphkit.datasets.samplers import SizeBalancedSameGridBatchSampler
+from gridfm_graphkit.datasets.samplers import (
+    ProvenanceBalancedSameGridBatchSampler,
+    SizeBalancedSameGridBatchSampler,
+)
 
 # mimics the M0 local mixture shape: unequal per-grid train splits
 SIZES = [100, 40, 7]
@@ -113,6 +116,39 @@ def test_ddp_sharding_matches_strided_split(monkeypatch):
         assert len(s) == per_rank
         # disjoint + equal-length by construction of the strided split
         assert _batches(s) == full[rank::world][:per_rank]
+
+
+def test_provenance_sampler_equalizes_groups_then_cases():
+    sampler = ProvenanceBalancedSameGridBatchSampler(
+        dataset_sizes=[20, 20, 20],
+        provenance_groups=["group-a", "group-a", "group-b"],
+        batch_size=2,
+        samples_total=24,
+        seed=3,
+    )
+    batches = _batches(sampler)
+    case_counts = Counter(_grid_of(batch[0], sampler.offsets) for batch in batches)
+    group_counts = Counter(
+        sampler.provenance_groups[_grid_of(batch[0], sampler.offsets)]
+        for batch in batches
+    )
+    assert len(batches) == len(sampler) == 12
+    assert group_counts == {"group-a": 6, "group-b": 6}
+    assert abs(case_counts[0] - case_counts[1]) <= 1
+    assert all(
+        len({_grid_of(index, sampler.offsets) for index in batch}) == 1
+        for batch in batches
+    )
+
+
+def test_provenance_sampler_requires_exact_total():
+    with pytest.raises(ValueError, match="divisible"):
+        ProvenanceBalancedSameGridBatchSampler(
+            dataset_sizes=[10, 10],
+            provenance_groups=["a", "b"],
+            batch_size=4,
+            samples_total=10,
+        )
 
 
 def test_datamodule_integration(generate_processed_test_data):

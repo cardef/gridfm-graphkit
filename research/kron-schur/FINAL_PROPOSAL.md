@@ -120,6 +120,8 @@ D_B R = U^T D_I = A^T.
 
 Thus prolongation `U` and restriction `R` preserve constants and are adjoint under the induced fine/coarse masses. This is a conservative pair for real latent messages. It is deliberately not presented as a complex Galerkin projection: AC `Y` is generally complex and non-Hermitian, and the learned hidden states are real. Electrical specificity enters through the harmonic-map support and coefficients, `Re/Im/magnitude/phase` edge attributes, and the Schur coarse graph. The edge-conditioned message function can use those signed complex attributes without introducing complex hidden states.
 
+For the fixed confirmatory adapter, cross-level transport uses the support and magnitudes through the conservative `U/R` pair; the stored four-channel cross-level coefficient is reported for schema parity but is not injected through a second learned edge function. Signed `[Re, Im, magnitude, phase]` conditioning is consumed by the coarse processor. This keeps constant preservation exact and keeps `phi_down` and `phi_up` as the only adapter-specific trainable modules.
+
 The adapter computes
 
 ```text

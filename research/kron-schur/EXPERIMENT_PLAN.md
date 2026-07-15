@@ -4,12 +4,12 @@
 
 **Method thesis:** A sparse, parameter-free electrical hierarchy should provide more useful nonlocal communication than matched local, typewise-global-summary, and same-partition generic-hierarchy alternatives.
 
-**Date:** 2026-07-14
+**Date:** 2026-07-15
 
-**Implementation boundary:** `cardef/gridfm-graphkit`, fork commit `6c3b356b2dd3d761e880cd84e04835f55a7a5583`; upstream `gridfm/gridfm-graphkit` reference must be frozen at I001.
+**Implementation boundary:** `cardef/gridfm-graphkit`, bridge baseline `fac90c875d1decb42ef14817aca41c4d77a28412`; upstream `gridfm/gridfm-graphkit` reference `b3d663b62179222c1ebec00ee29f67ea50e68c0b`; merge base `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. I001 must still be regenerated from the clean commit that contains the bridge implementation.
 
-**Proposal source:** `research/kron-schur/FINAL_PROPOSAL.md`, SHA-256 `8063430ccb337f9e78be1c71374299288a485418a7e101a9e70e1a58b4410678`.
-**Current status:** proposal READY; implementation and all confirmatory runs BLOCKED.
+**Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `18f55dff62c0f52dbef68b11bea5cf10d090f41bd7ea94f614639d590ef70282`; synchronized reviewed snapshot at `research/kron-schur/FINAL_PROPOSAL.md`.
+**Current status:** proposal READY; bridge implementation is CPU-unit-tested; clean provenance, real data inventory, source-only calibration/profiling, and R014 remain BLOCKED. All confirmatory runs remain BLOCKED.
 
 ## Claim Map
 
@@ -28,6 +28,18 @@
 | Any hierarchy or cheap global mixer would work equally well. | Same-partition Quotient and released GridSFM-style typewise Global controls. |
 | Target information leaked into preprocessing or model selection. | Target outputs are unreadable to normalization, partitioning, geometry, checkpointing, and hyperparameter code; violations invalidate the zero-shot block. |
 | The current M0/M1 prototype already validates the claim. | M0/M1 code, configurations, caches, and results remain legacy evidence and cannot satisfy an I- or R-gate. |
+
+### Reconciled legacy evidence (2026-07-15)
+
+The migrated M1 payload is useful as failure evidence, not as a partial confirmatory campaign:
+
+- MLflow experiment `702378410004452588` contains 30 run records: 11 `FINISHED` and 19 stale `RUNNING`; six stale records contain partial metrics and thirteen contain none.
+- All 11 finished records are Flat/case2000 depth-16 or depth-32 variants. No Kron, Quotient, Global, case500, multi-topology, or held-out-topology comparison completed.
+- The 11 finished records sum to 238.675 one-GPU elapsed hours. Several `FINISHED` depth-32 endpoints are numerically divergent, so MLflow lifecycle status is not a scientific success criterion.
+- Forty first-wave SLURM logs fail before training with `Invalid experiment ID: '.stfolder'`; the Syncthing marker was inside the MLflow file-store root. Other logs record cancellation, host OOM kills, and Triton resource failures.
+- The executed Git SHA is absent, per-run parameters are not logged, fitted per-grid normalizer artifacts are present, and the legacy objective/configuration violates the communication-only contract.
+
+Consequences: legacy outcomes may size resource guards and regression tests, but they consume zero confirmatory budget, satisfy no I/R/E item, and cannot select a treatment, loss, checkpoint, geometry policy, or target set. The final runner must isolate the MLflow store below the Syncthing root and fail its preflight before reserving a GPU.
 
 ## Paper Storyline
 
@@ -194,7 +206,7 @@ All 20 runs are mandatory once R014 passes. Operational launch order may priorit
 
 | Milestone | Goal | Runs / artifacts | Decision gate | Cost / turnaround | Principal risk |
 |---|---|---|---|---|---|
-| **M0 — repository and protocol** | Establish the fork/upstream boundary and immutable schemas. | I001, R001–R002 | Repository, topology, data, and provenance contracts are explicit. | CPU only; 2–3 days | stale prototype assumptions leak into the new path |
+| **M0 — repository and protocol** | Establish the fork/upstream boundary, reconcile prior runs, and validate artifact-store isolation. | I001, R001–R002; legacy audit; MLflow child-store preflight | Repository, topology, data, provenance, and output-store contracts are explicit. | CPU only; 2–3 days | stale prototype assumptions or Syncthing markers leak into the new path |
 | **M1 — geometry domain** | Implement label-blind partition, Kron, Quotient, conservative transport, and registry. | I002–I006; R003–R004 | Algebra, coverage, determinism, permutation, and resource tests pass. | CPU; about 1 week | dense `P` or Schur fill exceeds host limits |
 | **M2 — common communication seam** | Make communication the sole learned treatment. | I007; continuous import denial | Flat compatibility and all four cores share one slot and output schema. | CPU plus tiny synthetic GPU smoke; about 1 week | legacy `GNS_hetero_hier` reuse |
 | **M3 — portable data and accounting** | Make multi-topology PF evaluation zero-shot-safe and comparable. | I008–I010; R005 | `baseMVA`, masks, aggregation, FLOPs, checkpointing, and batching tests pass. | CPU; about 1 week | fitted per-grid normalization or inconsistent metric units |
@@ -246,7 +258,7 @@ None.
 
 ## Artifact Contract
 
-Every run or gate writes one machine-readable record beneath a new confirmatory namespace such as `experiments/fm_scaling/`; legacy M0/M1 paths are read-only evidence. Each record contains:
+Every run or gate writes one machine-readable record beneath the new confirmatory namespace `experiments/fm_scaling/`; legacy M0/M1 paths are read-only evidence. Mutable outputs live below `mlruns/fm-scaling/`, with the MLflow file store fixed at `mlruns/fm-scaling/mlflow-store/`, scheduler logs at `mlruns/fm-scaling/slurm-logs/`, and compact gate/run records at `mlruns/fm-scaling/result-summaries/`. MLflow must never scan repository-level `mlruns/`, because Syncthing owns `mlruns/.stfolder`. Each record contains:
 
 - run/gate ID and status;
 - fork commit, upstream reference, merge base, and worktree state;
@@ -255,7 +267,9 @@ Every run or gate writes one machine-readable record beneath a new confirmatory 
 - wall time, GPU-hours, accelerator/host peaks, and failure reason;
 - checkpoint and evaluation artifact hashes.
 
-Campaign launch consumes an explicit run manifest. Wildcard YAML discovery is forbidden.
+Campaign launch consumes an explicit run manifest. Wildcard YAML discovery is forbidden. Before any GPU reservation, the runner verifies that the MLflow store is a strict child of the Syncthing root, contains no `.stfolder`, can create/search a disposable experiment, and is not the legacy experiment store. Failure blocks the job and writes a machine-readable failure record.
+
+The implemented runner also requires per-network hashed split tensors. Source cases alone may enter the balanced training sampler; every frozen target has empty train/validation splits and a complete test split. Training stops at the first batch crossing common `C`, persists weights at the first crossings of `C/4`, `C/2`, and `C`, and then evaluates every frozen target scenario from each saved checkpoint. The locked analyzer rejects a run matrix with any missing launch record, checkpoint, target topology, seed, or scenario.
 
 ## Stop / Go Rules
 
@@ -275,6 +289,7 @@ Campaign launch consumes an explicit run manifest. Wildcard YAML discovery is fo
 | Large-grid build fails. | Coverage, conditioning, host-memory, or time gate fails. | Keep failure in denominator and report the operating boundary; do not tune targets or add levels. |
 | Parameter/FLOP matching is approximate. | Parameter gap exceeds 2% or counter parity fails. | Deterministic width/`q` matching; block R014; report exact parameters and profiler cross-check. |
 | Existing prototype contaminates results. | Forbidden module import or legacy artifact path appears. | F2-onward `MetaPathFinder` subprocess denial and clean-clone run. |
+| Syncthing metadata contaminates MLflow discovery. | The configured MLflow store equals the Syncthing root, contains `.stfolder`, or fails a create/search smoke. | Fixed child store `mlruns/fm-scaling/mlflow-store/`; CPU preflight before `sbatch`; no wildcard experiment discovery. |
 | Budget tail risk. | Sum of profiled upper bounds plus reserve exceeds 230 hours. | Lower common `C` only if above the frozen learning horizon; otherwise classify as pilot. |
 | Fast-moving prior art. | A later work occupies the controlled study. | Repeat the primary-source novelty sweep before submission; do not add treatments mid-campaign. |
 
@@ -301,4 +316,5 @@ Campaign launch consumes an explicit run manifest. Wildcard YAML discovery is fo
 - [ ] Frontier primitives are explicitly outside the claim.
 - [ ] Target labels never affect preprocessing, geometry, tuning, or checkpoint selection.
 - [ ] Failures remain in the denominator.
+- [ ] MLflow child-store preflight passes before any GPU allocation.
 - [ ] Nice-to-have few-shot work cannot delay or rescue the core evidence.

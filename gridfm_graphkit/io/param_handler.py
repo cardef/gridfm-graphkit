@@ -10,8 +10,31 @@ from gridfm_graphkit.io.registries import (
 )
 
 import argparse
+import importlib
 from torch_geometric.transforms import Compose
 from gridfm_graphkit.tasks.base_task import BaseTask
+
+
+_BUILTIN_MODELS = {
+    "GNS_heterogeneous": "gridfm_graphkit.models.gnn_heterogeneous_gns",
+    "GNS_hetero_hier": "gridfm_graphkit.models.gnn_hetero_hier",
+    "GRIT": "gridfm_graphkit.models.grit_transformer",
+    "FMScalingPF": "gridfm_graphkit.fm_scaling.model",
+}
+_BUILTIN_TASKS = {
+    "PowerFlow": "gridfm_graphkit.tasks.pf_task",
+    "FMScalingPowerFlow": "gridfm_graphkit.fm_scaling.task",
+    "OptimalPowerFlow": "gridfm_graphkit.tasks.opf_task",
+    "StateEstimation": "gridfm_graphkit.tasks.se_task",
+}
+
+
+def _ensure_registered(registry, name: str, module: str | None) -> None:
+    """Import the exact built-in module only when a registry lookup needs it."""
+    if name in registry:
+        return
+    if module is not None:
+        importlib.import_module(module)
 
 
 class NestedNamespace(argparse.Namespace):
@@ -74,6 +97,13 @@ def load_normalizer(args):
     """
     method = args.data.normalization
 
+    normalizer_module = (
+        "gridfm_graphkit.fm_scaling.data"
+        if method == "CaseDeclaredMVANormalizer"
+        else "gridfm_graphkit.datasets.normalizers"
+    )
+    _ensure_registered(NORMALIZERS_REGISTRY, method, normalizer_module)
+
     try:
         return NORMALIZERS_REGISTRY.create(
             method,
@@ -98,6 +128,12 @@ def get_loss_function(args):
     """
     loss_functions = []
     for loss_name, loss_args in zip(args.training.losses, args.training.loss_args):
+        if loss_name in {"GraphBalancedMaskedVMVA", "GraphBalancedPBE"}:
+            _ensure_registered(
+                LOSS_REGISTRY,
+                loss_name,
+                "gridfm_graphkit.fm_scaling.loss",
+            )
         try:
             loss_functions.append(LOSS_REGISTRY.create(loss_name, loss_args, args))
         except KeyError:
@@ -121,6 +157,8 @@ def load_model(args) -> torch.nn.Module:
     """
     model_type = args.model.type
 
+    _ensure_registered(MODELS_REGISTRY, model_type, _BUILTIN_MODELS.get(model_type))
+
     try:
         return MODELS_REGISTRY.create(model_type, args)
     except KeyError:
@@ -134,6 +172,13 @@ def get_task_transforms(args) -> Compose:
 
     task_transforms = args.task.task_name
 
+    transform_module = (
+        "gridfm_graphkit.fm_scaling.data"
+        if task_transforms == "FMScalingPowerFlow"
+        else "gridfm_graphkit.datasets.task_transforms"
+    )
+    _ensure_registered(TRANSFORM_REGISTRY, task_transforms, transform_module)
+
     try:
         return TRANSFORM_REGISTRY.create(task_transforms, args)
     except KeyError:
@@ -146,6 +191,8 @@ def get_task(args, data_normalizers) -> BaseTask:
     """
     task = args.task.task_name
 
+    _ensure_registered(TASK_REGISTRY, task, _BUILTIN_TASKS.get(task))
+
     try:
         return TASK_REGISTRY.create(task, args, data_normalizers)
     except KeyError:
@@ -157,6 +204,12 @@ def get_physics_decoder(args) -> torch.nn.Module:
     Load the task module
     """
     task = args.task.task_name
+
+    _ensure_registered(
+        PHYSICS_DECODER_REGISTRY,
+        task,
+        "gridfm_graphkit.models.utils",
+    )
 
     try:
         return PHYSICS_DECODER_REGISTRY.create(task)

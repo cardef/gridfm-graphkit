@@ -151,7 +151,20 @@ def get_training_callbacks(args):
         save_top_k=0,
     )
 
-    return [early_stop_callback, save_best_model_callback, checkpoint_callback]
+    callbacks = [save_best_model_callback, checkpoint_callback]
+    if not getattr(args.data, "confirmatory", False):
+        callbacks.insert(0, early_stop_callback)
+    flop_thresholds = getattr(args.training, "flop_checkpoints", None)
+    if flop_thresholds is not None:
+        from gridfm_graphkit.fm_scaling.accounting import CumulativeFlopCheckpoint
+
+        callbacks.append(
+            CumulativeFlopCheckpoint(
+                [int(value) for value in flop_thresholds],
+                str(args.training.flop_checkpoint_dir),
+            ),
+        )
+    return callbacks
 
 
 def main_cli(args):
@@ -175,6 +188,18 @@ def main_cli(args):
         base_config = yaml.safe_load(f)
 
     config_args = NestedNamespace(**base_config)
+
+    evaluation_checkpoint = getattr(args, "evaluation_checkpoint", None)
+    evaluation_output = getattr(args, "evaluation_output", None)
+    if evaluation_checkpoint is not None:
+        config_args.evaluation.checkpoint = evaluation_checkpoint
+    if evaluation_output is not None:
+        config_args.evaluation.output_path = evaluation_output
+    if getattr(args, "evaluation_targets", False):
+        config_args.data.networks = list(config_args.data.target_networks)
+        config_args.data.scenarios = list(config_args.data.target_scenarios)
+        config_args.data.train_networks = []
+        config_args.data.evaluation_only = True
 
     L.seed_everything(config_args.seed, workers=True)
 
@@ -205,7 +230,7 @@ def main_cli(args):
     model = get_task(config_args, litGrid.data_normalizers)
     if args.command != "train":
         print(f"Loading model weights from {args.model_path}")
-        state_dict = torch.load(args.model_path, map_location="cpu")
+        state_dict = torch.load(args.model_path, map_location="cpu", weights_only=True)
         state_dict = _normalize_loaded_state_dict_keys(state_dict)
         model.load_state_dict(state_dict)
 
@@ -311,7 +336,7 @@ def main_cli(args):
                     f"[performance] last epoch it/s : {epoch_timer.last_epoch_iters_per_sec:.2f}",
                 )
 
-    if args.command != "predict":
+    if args.command != "predict" and not getattr(args, "train_only", False):
         # Reuse the fit trainer when coming from train/finetune so that
         # torch.compile kernel caches are already warm (avoids a second
         # AUTOTUNE pass on the first test batch).

@@ -80,7 +80,7 @@ def set_env():
         else:
             raise RuntimeError(
                 "Unable to compute NODE_RANK from LSF metadata: "
-                f"HOSTNAME='{current_host}', HOST_LIST={HOST_LIST}"
+                f"HOSTNAME='{current_host}', HOST_LIST={HOST_LIST}",
             )
 
     os.environ["NODE_RANK"] = str(
@@ -163,6 +163,11 @@ def main():
     train_parser.add_argument("--run_name", type=str, default="run")
     train_parser.add_argument("--log_dir", type=str, default="mlruns")
     train_parser.add_argument("--data_path", type=str, default="data")
+    train_parser.add_argument(
+        "--train_only",
+        action="store_true",
+        help="Skip automatic test evaluation after training.",
+    )
     train_parser.add_argument("--compile", **_compile_kwargs)
     train_parser.add_argument("--bfloat16", **_bfloat16_kwargs)
     train_parser.add_argument("--tf32", **_tf32_kwargs)
@@ -281,6 +286,24 @@ def main():
     evaluate_parser.add_argument("--run_name", type=str, default="run")
     evaluate_parser.add_argument("--log_dir", type=str, default="mlruns")
     evaluate_parser.add_argument("--data_path", type=str, default="data")
+    evaluate_parser.add_argument(
+        "--evaluation_checkpoint",
+        type=str,
+        default=None,
+        choices=["C/4", "C/2", "C"],
+        help="Override the frozen evaluation checkpoint label.",
+    )
+    evaluate_parser.add_argument(
+        "--evaluation_output",
+        type=str,
+        default=None,
+        help="Override the per-scenario evaluation artifact path.",
+    )
+    evaluate_parser.add_argument(
+        "--evaluation_targets",
+        action="store_true",
+        help="Replace source networks with the frozen target-only network list.",
+    )
     evaluate_parser.add_argument(
         "--batch_size",
         type=int,

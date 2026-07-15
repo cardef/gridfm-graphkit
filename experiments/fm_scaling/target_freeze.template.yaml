@@ -1,0 +1,2 @@
+schema_version: fm-scaling-target-freeze-v1
+inventory_sha256: REPLACE_WITH_PRE_GENERATION_INVENTORY_SHA256  # pragma: allowlist secret

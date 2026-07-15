@@ -86,3 +86,29 @@
 | 2026-07-14 09:17 | /experiment-plan | refine-logs/EXPERIMENT_PLAN.md | implementation | latest canonical experiment plan; exact copy of timestamped version |
 | 2026-07-14 09:17 | /experiment-plan | refine-logs/EXPERIMENT_TRACKER_20260714_091715.md | implementation | timestamped implementation, freeze, campaign, and analysis gate ledger |
 | 2026-07-14 09:17 | /experiment-plan | refine-logs/EXPERIMENT_TRACKER.md | implementation | latest canonical tracker; I001-I010 and R014 block all treatment runs |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_PLAN_20260715_131451.md | implementation | timestamped plan reconciled against the migrated legacy M1 campaign and its failure modes |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_PLAN.md | implementation | latest plan; bridge active at CPU-only M0 and all confirmatory runs blocked |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_TRACKER_20260715_131451.md | implementation | timestamped tracker with legacy evidence audit and exact current blockers |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_TRACKER.md | implementation | latest tracker; I001 blocked on clean reproducible graphkit/datakit provenance |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_RESULTS_20260715_131451.md | implementation | timestamped bridge reconciliation plus preserved historical M0 evidence |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_RESULTS.md | implementation | latest results; zero confirmatory runs and audited legacy M1 failures |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_CODE_REVIEW_20260715_131451.md | implementation | timestamped same-family provisional predeployment review and fixes |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/EXPERIMENT_CODE_REVIEW.md | implementation | latest predeployment review summary |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/I001_PREFLIGHT_20260715_131451.json | implementation | timestamped machine-readable BLOCKED provenance sanity record |
+| 2026-07-15 13:33 | /experiment-bridge | refine-logs/I001_PREFLIGHT.json | implementation | latest I001 preflight record; blocked by graphkit/datakit reproducibility state |
+| 2026-07-15 13:33 | /experiment-bridge | experiments/fm_scaling/preflight.py | implementation | fail-closed exact repository, environment, and MLflow child-store preflight |
+| 2026-07-15 13:33 | /experiment-bridge | experiments/fm_scaling/README.md | implementation | confirmatory namespace and immutable output-store contract |
+| 2026-07-15 13:33 | /experiment-bridge | tests/test_fm_scaling_preflight.py | implementation | provenance, store-isolation, cleanup, and failure-record regression tests |
+| 2026-07-15 13:33 | /experiment-bridge | research/kron-schur/runs/legacy-m1-r010-audit-20260715.json | implementation | machine-readable audit of 30 legacy MLflow records and 75 R010 logs |
+| 2026-07-15 13:33 | /experiment-bridge | research/kron-schur/EXPERIMENT_PLAN.md | implementation | promoted reviewed Git snapshot of the reconciled plan |
+| 2026-07-15 13:33 | /experiment-bridge | research/kron-schur/EXPERIMENT_TRACKER.md | implementation | promoted reviewed Git snapshot of the reconciled tracker |
+| 2026-07-15 13:33 | /experiment-bridge | .aris/traces/experiment-bridge/2026-07-15_run01/ | implementation | full same-family provisional review and rereview traces |
+| 2026-07-15 17:23 | /experiment-bridge | refine-logs/FINAL_PROPOSAL_20260715_172327.md | implementation | timestamped clarification of conservative cross-level transport and signed coarse-edge conditioning |
+| 2026-07-15 17:23 | /experiment-bridge | refine-logs/EXPERIMENT_PLAN_20260715_172327.md | implementation | timestamped final executable communication-only experiment contract |
+| 2026-07-15 17:23 | /experiment-bridge | refine-logs/EXPERIMENT_TRACKER_20260715_172327.md | implementation | timestamped tracker; code review PASS while I001, I010, R014, and treatment runs remain blocked |
+| 2026-07-15 17:23 | /experiment-bridge | refine-logs/EXPERIMENT_RESULTS_20260715_172327.md | implementation | timestamped bridge implementation and performed-evidence status; zero confirmatory treatment runs |
+| 2026-07-15 17:23 | /experiment-bridge | refine-logs/EXPERIMENT_CODE_REVIEW_20260715_172327.md | implementation | independent full review and blocker-fix record ending in code-readiness PASS |
+| 2026-07-15 17:23 | /experiment-bridge | refine-logs/I001_PREFLIGHT_20260715_172327.json | implementation | timestamped live BLOCKED provenance record for the nested datakit worktree and dirty trees |
+| 2026-07-15 17:23 | /experiment-bridge | experiments/fm_scaling/ | implementation | complete data, geometry, calibration, campaign, phase-separated launch/evaluation, and locked-analysis tooling |
+| 2026-07-15 17:23 | /experiment-bridge | gridfm_graphkit/fm_scaling/ | implementation | immutable contracts, builders, four communication cores, portable task/data path, accounting, and analysis core |
+| 2026-07-15 17:23 | /experiment-bridge | .aris/traces/experiment-bridge/2026-07-15_run02/ | implementation | full independent review, rereview, and final PASS trace |

@@ -1,0 +1,51 @@
+# Fill only from source-only calibration and gate evidence. make_campaign.py
+# rejects incomplete source sets, missing gate records, and unhashed artifacts.
+fork_commit: REPLACE_WITH_CLEAN_FORK_COMMIT
+upstream_commit: b3d663b62179222c1ebec00ee29f67ea50e68c0b  # pragma: allowlist secret
+merge_base: b3d663b62179222c1ebec00ee29f67ea50e68c0b  # pragma: allowlist secret
+topology_manifest: experiments/fm_scaling/frozen/topology_manifest.yaml
+geometry_bundle: experiments/fm_scaling/frozen/geometry.pt
+geometry_report: experiments/fm_scaling/frozen/geometry-report.json
+gate_directory: experiments/fm_scaling/frozen/gates
+data_root: data
+split_directory: experiments/fm_scaling/frozen/splits
+split_manifest: experiments/fm_scaling/frozen/split_manifest.yaml
+
+source_sets:
+  G8: []
+  G16: []
+  G32: []
+target_networks: []
+available_scenarios: {}
+samples_total: 0
+data_workers: 8
+consolidated: true
+
+model:
+  l_pre: 2
+  l_post: 2
+  flat_blocks: 1
+  widths:
+    flat: 0
+    global: 0
+    kron: 0
+    quotient: 0
+
+loss_weights: []
+flop_checkpoints: []
+metric_scales:
+  vm_pu: 0.0
+  va_rad: 0.0
+
+callbacks:
+  patience: 100
+  tol: 0.0
+optimizer:
+  beta1: 0.9
+  beta2: 0.999
+  learning_rate: 0.0005
+  lr_decay: 0.7
+  lr_patience: 5
+training:
+  batch_size: 1
+  epochs: 1

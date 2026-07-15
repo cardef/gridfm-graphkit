@@ -1,5 +1,3 @@
-from gridfm_graphkit.datasets.normalizers import Normalizer
-
 import os.path as osp
 import os
 import torch
@@ -51,13 +49,15 @@ class HeteroGridDatasetDisk(Dataset):
     def __init__(
         self,
         root: str,
-        data_normalizer: Normalizer,
+        data_normalizer,
         transform: Optional[Callable] = None,
         pre_transform: Optional[Callable] = None,
         pre_filter: Optional[Callable] = None,
+        filter_degenerate: bool = True,
     ):
         self.data_normalizer = data_normalizer
         self.length = None
+        self.filter_degenerate = bool(filter_degenerate)
 
         super().__init__(root, transform, pre_transform, pre_filter)
 
@@ -70,7 +70,9 @@ class HeteroGridDatasetDisk(Dataset):
         # stay indexed by raw scenario id, so this composes safely with
         # AddHierarchy's `v_aff`/`cbus_x` lookups (also raw-scenario-id
         # keyed) and with the datamodule's train/val/test Subset splitting.
-        degenerate = _degenerate_scenarios(self.raw_dir)
+        degenerate = (
+            _degenerate_scenarios(self.raw_dir) if self.filter_degenerate else set()
+        )
         if degenerate:
             print(
                 f"R007 filter: dropping {len(degenerate)}/{self.len()} "

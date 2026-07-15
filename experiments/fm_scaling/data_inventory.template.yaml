@@ -1,0 +1,10 @@
+schema_version: fm-scaling-data-inventory-v1
+datakit_commit: REPLACE_WITH_FULL_CLEAN_SIBLING_FORK_COMMIT
+cases:
+  - network: REPLACE_SOURCE_NETWORK
+    topology_key: REPLACE_STABLE_TOPOLOGY_KEY
+    source: pglib
+    provenance_group: REPLACE_PROVENANCE_GROUP
+    split: source
+    scenarios: 0
+    seed: 0

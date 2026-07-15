@@ -11,7 +11,6 @@ from gridfm_graphkit.datasets.masking import (
     AddRandomHeteroMask,
     SimulateMeasurements,
 )
-from gridfm_graphkit.datasets.hierarchy import AddHierarchy
 from gridfm_graphkit.io.registries import TRANSFORM_REGISTRY
 
 
@@ -36,7 +35,14 @@ class PowerFlowTransforms(Compose):
         # Kron-Schur hierarchy (attaches cbus/coarse relations); the
         # datamodule resolves the per-network cache via set_root().
         if getattr(getattr(args.data, "hierarchy", None), "enable", False):
+            from gridfm_graphkit.datasets.hierarchy import AddHierarchy
+
             transforms.append(AddHierarchy(args=args))
+
+        if getattr(args.data, "confirmatory", False):
+            from gridfm_graphkit.fm_scaling.data import AttachTopologyKey
+
+            transforms.append(AttachTopologyKey(args=args))
 
         # Pass the list of transforms to Compose
         super().__init__(transforms)

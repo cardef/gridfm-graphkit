@@ -1,17 +1,7 @@
-from gridfm_graphkit.models.gnn_heterogeneous_gns import GNS_heterogeneous
-from gridfm_graphkit.models.gnn_hetero_hier import GNS_hetero_hier
-from gridfm_graphkit.models.grit_transformer import GritHeteroAdapter
-from gridfm_graphkit.models.utils import (
-    PhysicsDecoderOPF,
-    PhysicsDecoderPF,
-    PhysicsDecoderSE,
-)
+"""Model implementations.
 
-__all__ = [
-    "GNS_heterogeneous",
-    "GNS_hetero_hier",
-    "GritHeteroAdapter",
-    "PhysicsDecoderOPF",
-    "PhysicsDecoderPF",
-    "PhysicsDecoderSE",
-]
+Modules are intentionally not imported here. Registry construction is lazy so
+that the confirmatory path can deny legacy hierarchy imports.
+"""
+
+__all__: list[str] = []

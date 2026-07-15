@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "artifact_id": "legacy-m1-r010-audit-20260715",
+  "classification": "legacy_prototype_evidence",
+  "claim_eligibility": "not_confirmatory",
+  "audit_date": "2026-07-15",
+  "source_manifest": {
+    "path": "research/kron-schur/runs/legacy-m1-r010-20260715.json",
+    "sha256": "132be98b921d6cdf1a8d762d89bc4223790096288995ab7729791f8c8b24d3c4"
+  },
+  "mlflow": {
+    "experiment_id": "702378410004452588",
+    "records": 30,
+    "finished": 11,
+    "running_stale": 19,
+    "running_stale_with_metrics": 6,
+    "running_stale_without_metrics": 13,
+    "finished_at_epoch_199": 7,
+    "finished_before_epoch_199": 4,
+    "finished_one_gpu_elapsed_hours": 238.675,
+    "elapsed_hours_basis": "sum(end_time-start_time) for FINISHED records; each SLURM task requested one A40 GPU",
+    "finished_scope": {
+      "model": "legacy Flat GNS only",
+      "topology": "case2000_goc only",
+      "depths": [
+        16,
+        32
+      ],
+      "kron_finished": 0,
+      "quotient_finished": 0,
+      "global_finished": 0,
+      "case500_finished": 0,
+      "multi_topology_finished": 0,
+      "held_out_topology_evaluations": 0
+    },
+    "provenance_limitations": [
+      "executed Git SHA absent",
+      "per-run parameters absent from MLflow",
+      "nineteen lifecycle states stale",
+      "fitted per-grid normalizer artifacts present"
+    ]
+  },
+  "slurm_logs": {
+    "r010_log_files": 75,
+    "invalid_stfolder_logs": 40,
+    "cancelled_logs": 18,
+    "oom_kill_logs": 7,
+    "triton_resource_error_logs": 17,
+    "primary_pretraining_failure": "mlflow.exceptions.MlflowException: Invalid experiment ID: '.stfolder'"
+  },
+  "bridge_decision": {
+    "confirmatory_runs_completed": 0,
+    "implementation_or_readiness_gates_satisfied": [],
+    "allowed_uses": [
+      "resource-guard design",
+      "failure-regression tests",
+      "legacy engineering diagnosis"
+    ],
+    "forbidden_uses": [
+      "treatment selection",
+      "loss selection",
+      "checkpoint selection",
+      "geometry-policy selection",
+      "target selection",
+      "claim support"
+    ],
+    "required_change": "Use a manifest-bound child MLflow store below mlruns/fm-scaling and keep R014 blocked."
+  }
+}

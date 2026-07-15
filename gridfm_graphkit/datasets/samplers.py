@@ -121,3 +121,94 @@ class SizeBalancedSameGridBatchSampler(Sampler[List[int]]):
         _, world = self._world()
         total = len(self.dataset_sizes) * self.batches_per_grid
         return total // world if world > 1 else total
+
+
+class ProvenanceBalancedSameGridBatchSampler(Sampler[List[int]]):
+    """Equalize provenance groups, then cases, while keeping one grid per batch.
+
+    ``samples_total`` is exact and must be divisible by both ``batch_size`` and
+    the number of provenance groups. Cases inside a group receive batch counts
+    differing by at most one. Smaller datasets cycle through deterministic
+    reshuffled permutations without duplicating a sample before full coverage.
+    """
+
+    def __init__(
+        self,
+        dataset_sizes: List[int],
+        provenance_groups: List[str],
+        batch_size: int,
+        samples_total: int,
+        seed: int = 0,
+    ):
+        if len(dataset_sizes) != len(provenance_groups) or not dataset_sizes:
+            raise ValueError("dataset_sizes and provenance_groups must align")
+        if min(dataset_sizes) < 1 or batch_size < 1:
+            raise ValueError("datasets and batch size must be nonempty")
+        self.dataset_sizes = list(dataset_sizes)
+        self.provenance_groups = list(provenance_groups)
+        self.batch_size = int(batch_size)
+        self.samples_total = int(samples_total)
+        self.seed = int(seed)
+        self._epoch = 0
+        self.offsets = [0]
+        for size in self.dataset_sizes:
+            self.offsets.append(self.offsets[-1] + size)
+        self.groups: dict[str, list[int]] = {}
+        for case, group in enumerate(self.provenance_groups):
+            self.groups.setdefault(group, []).append(case)
+        denominator = self.batch_size * len(self.groups)
+        if self.samples_total % denominator:
+            raise ValueError(
+                "samples_total must be divisible by batch_size * provenance groups",
+            )
+        self.batches_per_group = self.samples_total // denominator
+
+    @staticmethod
+    def _world():
+        if dist.is_available() and dist.is_initialized():
+            return dist.get_rank(), dist.get_world_size()
+        return 0, 1
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch = int(epoch)
+
+    def __iter__(self) -> Iterator[List[int]]:
+        generator = torch.Generator()
+        generator.manual_seed(self.seed * 1_000_003 + self._epoch)
+        case_pools: dict[int, list[int]] = {
+            case: [] for case in range(len(self.dataset_sizes))
+        }
+
+        def draw(case: int) -> list[int]:
+            pool = case_pools[case]
+            while len(pool) < self.batch_size:
+                permutation = (
+                    torch.randperm(self.dataset_sizes[case], generator=generator)
+                    + self.offsets[case]
+                ).tolist()
+                pool.extend(permutation)
+            batch = pool[: self.batch_size]
+            del pool[: self.batch_size]
+            return batch
+
+        batches = []
+        for group in sorted(self.groups):
+            cases = self.groups[group]
+            order = torch.randperm(len(cases), generator=generator).tolist()
+            ordered_cases = [cases[index] for index in order]
+            for batch_index in range(self.batches_per_group):
+                batches.append(draw(ordered_cases[batch_index % len(ordered_cases)]))
+        order = torch.randperm(len(batches), generator=generator).tolist()
+        batches = [batches[index] for index in order]
+
+        rank, world = self._world()
+        if world > 1:
+            per_rank = len(batches) // world
+            batches = batches[rank::world][:per_rank]
+        self._epoch += 1
+        return iter(batches)
+
+    def __len__(self) -> int:
+        total = self.samples_total // self.batch_size
+        _, world = self._world()
+        return total // world if world > 1 else total

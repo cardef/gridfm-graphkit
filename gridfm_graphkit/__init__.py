@@ -1,9 +1,9 @@
-import gridfm_graphkit.datasets
-import gridfm_graphkit.tasks.base_task
-import gridfm_graphkit.models.gnn_heterogeneous_gns
-import gridfm_graphkit.models.gnn_hetero_hier
-import gridfm_graphkit.tasks.reconstruction_tasks
+"""GridFM GraphKit.
 
-__all__ = [
-    "gridfm_graphkit",
-]
+Built-in components are loaded lazily by :mod:`gridfm_graphkit.io.param_handler`.
+Keeping package import side-effect free is required by the confirmatory
+FM-scaling entry point: importing the package must not silently import the
+legacy hierarchy or fitted per-grid normalizers.
+"""
+
+__all__: list[str] = []

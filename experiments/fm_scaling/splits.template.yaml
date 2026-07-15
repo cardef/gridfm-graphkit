@@ -1,0 +1,6 @@
+schema_version: fm-scaling-splits-v1
+splits:
+  REPLACE_NETWORK:
+    train: []
+    val: []
+    test: []

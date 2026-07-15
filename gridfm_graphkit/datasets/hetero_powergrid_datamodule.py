@@ -21,7 +21,10 @@ from gridfm_graphkit.datasets.powergrid_hetero_dataset import (
     HeteroGridDatasetMMap,
 )
 
-from gridfm_graphkit.datasets.samplers import SizeBalancedSameGridBatchSampler
+from gridfm_graphkit.datasets.samplers import (
+    ProvenanceBalancedSameGridBatchSampler,
+    SizeBalancedSameGridBatchSampler,
+)
 from gridfm_graphkit.datasets.posenc_stats import ComputePosencStat
 from gridfm_graphkit.datasets.cached_transform import (
     CachedPosencTransform,
@@ -130,6 +133,7 @@ class LitGridHeteroDataModule(L.LightningDataModule):
         self.train_datasets = []
         self.val_datasets = []
         self.test_datasets = []
+        self.training_dataset_indices = []
         self.train_scenario_ids: List[List[int]] = []
         self.val_scenario_ids: List[List[int]] = []
         self.test_scenario_ids: List[List[int]] = []
@@ -166,6 +170,8 @@ class LitGridHeteroDataModule(L.LightningDataModule):
 
         for i, network in enumerate(self.args.data.networks):
             data_normalizer = load_normalizer(args=self.args)
+            if hasattr(data_normalizer, "set_network"):
+                data_normalizer.set_network(network)
             self.data_normalizers.append(data_normalizer)
 
             # Create torch dataset (normalizer is NOT yet fitted)
@@ -191,6 +197,11 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                     root=data_path_network,
                     data_normalizer=data_normalizer,
                     transform=task_transform,
+                    filter_degenerate=not getattr(
+                        self.args.data,
+                        "confirmatory",
+                        False,
+                    ),
                 )
 
             # All ranks wait here until rank 0 processing is done
@@ -202,6 +213,11 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                     root=data_path_network,
                     data_normalizer=data_normalizer,
                     transform=task_transform,
+                    filter_degenerate=not getattr(
+                        self.args.data,
+                        "confirmatory",
+                        False,
+                    ),
                 )
 
             if ("posenc_RRWP" in self.args.data) and self.args.data.posenc_RRWP.enable:
@@ -268,10 +284,16 @@ class LitGridHeteroDataModule(L.LightningDataModule):
                         cache_dir=self.dataset_wrapper_cache_dir,
                     )
 
+                network_split_dir = self.split_from_existing_files / network
+                split_dir = (
+                    network_split_dir
+                    if network_split_dir.is_dir()
+                    else self.split_from_existing_files
+                )
                 (train_dataset, val_dataset, test_dataset), subset_indices = (
                     split_from_existing_files(
                         dataset,
-                        self.split_from_existing_files,
+                        split_dir,
                     )
                 )
                 train_scenario_ids = subset_indices["train"]
@@ -378,8 +400,34 @@ class LitGridHeteroDataModule(L.LightningDataModule):
             self.val_scenario_ids.append(val_scenario_ids)
             self.test_scenario_ids.append(test_scenario_ids)
 
-        self.train_dataset_multi = ConcatDataset(self.train_datasets)
-        self.val_dataset_multi = ConcatDataset(self.val_datasets)
+            train_networks = set(
+                getattr(self.args.data, "train_networks", self.args.data.networks),
+            )
+            if network in train_networks:
+                self.training_dataset_indices.append(i)
+
+        evaluation_only = getattr(self.args.data, "evaluation_only", False)
+        unknown_train = set(
+            getattr(self.args.data, "train_networks", self.args.data.networks),
+        ) - set(self.args.data.networks)
+        if unknown_train:
+            raise ValueError(
+                f"train_networks are absent from data.networks: {unknown_train}",
+            )
+        if not self.training_dataset_indices and not evaluation_only:
+            raise ValueError("at least one training network is required")
+        self.training_datasets = [
+            self.train_datasets[index] for index in self.training_dataset_indices
+        ]
+        self.training_val_datasets = [
+            self.val_datasets[index] for index in self.training_dataset_indices
+        ]
+        self.train_dataset_multi = (
+            None if evaluation_only else ConcatDataset(self.training_datasets)
+        )
+        self.val_dataset_multi = (
+            None if evaluation_only else ConcatDataset(self.training_val_datasets)
+        )
         self._is_setup_done = True
 
         # Save scenario splits (rank 0 only in DDP)
@@ -511,12 +559,26 @@ class LitGridHeteroDataModule(L.LightningDataModule):
             # E005: same-grid batches (one static shape per grid) with
             # size-balanced per-epoch draws. DDP sharding happens inside the
             # sampler; the CLI disables Lightning's sampler injection.
-            batch_sampler = SizeBalancedSameGridBatchSampler(
-                [len(d) for d in self.train_datasets],
-                batch_size=self.batch_size,
-                samples_per_grid=getattr(self.args.data, "samples_per_grid", None),
-                seed=self.args.seed,
-            )
+            provenance_groups = getattr(self.args.data, "provenance_groups", None)
+            if provenance_groups is not None:
+                batch_sampler = ProvenanceBalancedSameGridBatchSampler(
+                    [len(d) for d in self.training_datasets],
+                    provenance_groups=list(provenance_groups),
+                    batch_size=self.batch_size,
+                    samples_total=int(self.args.data.samples_total),
+                    seed=self.args.seed,
+                )
+            else:
+                batch_sampler = SizeBalancedSameGridBatchSampler(
+                    [len(d) for d in self.training_datasets],
+                    batch_size=self.batch_size,
+                    samples_per_grid=getattr(
+                        self.args.data,
+                        "samples_per_grid",
+                        None,
+                    ),
+                    seed=self.args.seed,
+                )
             return DataLoader(
                 self.train_dataset_multi,
                 batch_sampler=batch_sampler,

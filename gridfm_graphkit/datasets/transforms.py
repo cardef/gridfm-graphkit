@@ -12,7 +12,6 @@ from gridfm_graphkit.datasets.globals import (
     YFT_TF_I,
     YFT_TF_R,
 )
-from gridfm_graphkit.datasets.normalizers import HeteroDataMVANormalizer
 
 
 class RemoveInactiveGenerators(BaseTransform):
@@ -100,6 +99,8 @@ class LoadGridParamsFromPath(BaseTransform):
 
     def __init__(self, args):
         super().__init__()
+        from gridfm_graphkit.datasets.normalizers import HeteroDataMVANormalizer
+
         self.grid_path = args.task.grid_path
         self.grid_data = HeteroData.from_dict(
             torch.load(self.grid_path, weights_only=True),
