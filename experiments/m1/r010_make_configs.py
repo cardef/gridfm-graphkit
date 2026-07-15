@@ -171,7 +171,7 @@ if __name__ == "__main__":
     import os
 
     cfg_dir = osp.join(HERE, "configs")
-    res_dir = osp.join(HERE, "results")
+    res_dir = os.environ.get("GRIDFM_RESULTS_ROOT", osp.join(HERE, "results"))
     os.makedirs(cfg_dir, exist_ok=True)
     os.makedirs(res_dir, exist_ok=True)
 

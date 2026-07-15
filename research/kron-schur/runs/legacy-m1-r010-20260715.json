@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "artifact_id": "legacy-m1-r010-20260715",
+  "classification": "legacy_prototype_evidence",
+  "claim_eligibility": "not_confirmatory",
+  "migration_date": "2026-07-15",
+  "repository": {
+    "branch": "research/kron-schur",
+    "head_at_import": "281dd7cf926509ce0b6bd471efaa96e3edadc1d6",
+    "origin_main_at_import": "e7910032a8e3d07e8ff58f318cbc9ffb5ef84458",
+    "merge_base_at_import": "c792fa0feb9f6f62cbbb370f4451d31af81b87e8",
+    "executed_git_sha": null,
+    "executed_git_sha_status": "not_recorded_in_mlflow_metadata_or_slurm_logs"
+  },
+  "source": {
+    "gpfs_repository": "/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO/HierarchicalFM/gridfm-graphkit",
+    "mlflow_experiment_path": "experiments/slurm/mlruns_m1/702378410004452588",
+    "slurm_log_path": "experiments/slurm/logs",
+    "active_slurm_jobs_at_migration": 0
+  },
+  "destination": {
+    "syncthing_folder_id": "gridfm-mlruns",
+    "mlflow_experiment_path": "mlruns/702378410004452588",
+    "legacy_support_path": "mlruns/_legacy/m1-r010-20260715"
+  },
+  "mlflow": {
+    "experiment_id": "702378410004452588",
+    "experiment_name": "m1_r010",
+    "run_count": 30,
+    "status_counts": {
+      "FINISHED": 11,
+      "RUNNING_STALE": 19
+    },
+    "git_commit_tag_present": false,
+    "note": "No jobs were active during migration; RUNNING states are stale legacy metadata."
+  },
+  "integrity": {
+    "algorithm": "sha256_of_lexicographically_sorted_sha256sum_records",
+    "mlflow_tree": {
+      "files": 2056,
+      "bytes": 5675591800,
+      "sha256": "246a675f1b35f733abefabcc7c4753c0bd9870913fe78dcd5f66097330c8f63b"
+    },
+    "slurm_logs": {
+      "files": 95,
+      "bytes": 800533477,
+      "sha256": "b70ec44cfb243a75f5eb937d7368c4b9e126eda4cfc1fd4d12c6eb6a11e356a8"
+    },
+    "m0_result_summaries": {
+      "bytes": 46362,
+      "sha256": "fa1f3228e54a6dd8f6b7997573941b2ab37f29b9a9c75e7933246c8639a006ad"
+    },
+    "m1_result_summaries": {
+      "bytes": 3355,
+      "sha256": "3e64234d3854f59c651c56e8a8a84b2497a113345d089b26f50d77b9fafaaf63"
+    },
+    "m1_config_snapshot": {
+      "files": 54,
+      "bytes": 46575,
+      "sha256": "8041f4350c2f63b5cd4a3e1b5e1aec46dc7912485bbe7cf33c6948df47798ab8"
+    }
+  },
+  "limitations": [
+    "The executed Git revision cannot be recovered from the available metadata.",
+    "The experiment predates the current Kron-Schur confirmatory contract.",
+    "The payload may support engineering diagnosis but not confirmatory claims."
+  ]
+}

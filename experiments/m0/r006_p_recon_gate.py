@@ -94,8 +94,9 @@ if __name__ == "__main__":
             f"p90={stats['vhat_abs_err_p90']:.3e}",
         )
 
-    os.makedirs(osp.join(HERE, "results"), exist_ok=True)
-    out = osp.join(HERE, "results", "r006_p_recon_gate.json")
+    results_root = os.environ.get("GRIDFM_RESULTS_ROOT", osp.join(HERE, "results"))
+    os.makedirs(results_root, exist_ok=True)
+    out = osp.join(results_root, "r006_p_recon_gate.json")
     with open(out, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nwrote {out}")

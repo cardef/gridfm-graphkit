@@ -11,6 +11,8 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/cluster.env"
+cd "$REPO_ROOT"
+mkdir -p "$SLURM_LOG_ROOT"
 
 COMMON=(--account="$SLURM_ACCOUNT" --qos="$SLURM_QOS")
 

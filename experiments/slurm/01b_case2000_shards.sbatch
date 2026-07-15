@@ -11,7 +11,7 @@
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=96G
 #SBATCH --time=24:00:00
-#SBATCH --output=experiments/slurm/logs/%x_%A_%a.out
+#SBATCH --output=mlruns/slurm-logs/%x_%A_%a.out
 
 set -euo pipefail
 HERE="$SLURM_SUBMIT_DIR/experiments/slurm"

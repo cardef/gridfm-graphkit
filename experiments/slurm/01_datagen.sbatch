@@ -10,7 +10,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=experiments/slurm/logs/%x_%A_%a.out
+#SBATCH --output=mlruns/slurm-logs/%x_%A_%a.out
 
 set -euo pipefail
 # NOTE: sbatch copies this script into /var/spool/slurmd/jobNNN/ before

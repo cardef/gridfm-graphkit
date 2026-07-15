@@ -29,6 +29,7 @@ Usage:  ../.venv/bin/python experiments/m0/r007_outlier_triage.py
 """
 
 import json
+import os
 import os.path as osp
 import sys
 
@@ -184,7 +185,9 @@ def main():
     else:
         out["verdict"] = "mixed/inconclusive -- inspect top_offenders"
 
-    path = osp.join(HERE, "results", "r007_outlier_triage.json")
+    results_root = os.environ.get("GRIDFM_RESULTS_ROOT", osp.join(HERE, "results"))
+    os.makedirs(results_root, exist_ok=True)
+    path = osp.join(results_root, "r007_outlier_triage.json")
     with open(path, "w") as f:
         json.dump(out, f, indent=2)
     print(json.dumps(out, indent=2))

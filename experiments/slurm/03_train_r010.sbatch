@@ -16,7 +16,7 @@
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=64G
 #SBATCH --time=48:00:00
-#SBATCH --output=experiments/slurm/logs/%x_%A_%a.out
+#SBATCH --output=mlruns/slurm-logs/%x_%A_%a.out
 
 set -euo pipefail
 # NOTE: sbatch copies this script into /var/spool/slurmd/jobNNN/ before
@@ -46,6 +46,6 @@ gridfm_graphkit train \
   --data_path data \
   --exp_name m1_r010 \
   --run_name "$RUN_NAME" \
-  --log_dir "$REPO_ROOT/experiments/slurm/mlruns_m1" \
+  --log_dir "$MLRUNS_ROOT" \
   --compile "$COMPILE_MODE"
 echo "=== $RUN_NAME done $(date) ==="

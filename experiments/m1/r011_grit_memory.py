@@ -305,8 +305,9 @@ if __name__ == "__main__":
         results["quadratic_fit"] = None
         print("quadratic fit skipped (need >=3 CUDA bs=1 points)")
 
-    os.makedirs(osp.join(HERE, "results"), exist_ok=True)
-    out = osp.join(HERE, "results", "r011_grit_memory.json")
+    results_root = os.environ.get("GRIDFM_RESULTS_ROOT", osp.join(HERE, "results"))
+    os.makedirs(results_root, exist_ok=True)
+    out = osp.join(results_root, "r011_grit_memory.json")
     with open(out, "w") as f:
         json.dump(results, f, indent=2)
     print(f"wrote {out}")
