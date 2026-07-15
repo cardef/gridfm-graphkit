@@ -88,7 +88,7 @@ def check_cpu_compatibility(
         )
         clone_imported = import_probe.returncode == 0 and Path(
             import_probe.stdout.strip(),
-        ).is_relative_to(clone)
+        ).resolve().is_relative_to(clone.resolve())
         tests = subprocess.run(
             [
                 sys.executable,
