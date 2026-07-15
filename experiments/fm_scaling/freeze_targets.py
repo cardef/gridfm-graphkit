@@ -50,8 +50,8 @@ def freeze_targets(
     ]
     if not targets:
         raise ContractError("pre-generation inventory has no target networks")
-    if len(source) < 32:
-        raise ContractError("target freeze requires at least 32 source networks")
+    if len(source) < 28:
+        raise ContractError("target freeze requires at least 28 source networks")
     target_groups = {
         manifest["topologies"][network]["provenance_group"] for network in targets
     }

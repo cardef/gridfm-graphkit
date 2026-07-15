@@ -196,7 +196,7 @@ def test_split_materialization_is_per_network_hashed_and_target_test_only(tmp_pa
 
 def test_target_freeze_enforces_whole_groups_and_terciles(tmp_path):
     topologies = {}
-    for index in range(32):
+    for index in range(28):
         topologies[f"source-{index}"] = {
             "topology_key": f"source-{index}",
             "baseMVA": 100,

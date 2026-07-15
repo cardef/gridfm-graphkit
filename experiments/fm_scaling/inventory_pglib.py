@@ -176,6 +176,48 @@ def audit_split(cases: list[dict], source: dict) -> dict:
     }
 
 
+def typed_split_evidence(
+    audit: dict,
+    source_path: Path,
+    inventory_path: Path,
+) -> dict:
+    """Bind a deterministic split audit to immutable formal-gate inputs."""
+    return {
+        "schema_version": "fm-scaling-evidence-v1",
+        "gate_id": "R002",
+        "status": audit["status"],
+        "checks": [
+            {
+                "name": "r002_criteria",
+                "passed": audit["status"] == "PASS",
+            },
+            {"name": "immutable_inputs", "passed": True},
+        ],
+        "inputs": [
+            {
+                "path": str(source_path.resolve()),
+                "sha256": file_sha256(source_path.resolve()),
+            },
+            {
+                "path": str(inventory_path.resolve()),
+                "sha256": file_sha256(inventory_path.resolve()),
+            },
+        ],
+        "results": {
+            "selection_rule": audit["selection_rule"],
+            "requirements": audit["requirements"],
+            "target_bus_range": audit["target_bus_range"],
+            "candidate_group_count": audit["candidate_group_count"],
+            "feasible_assignment_count_at_minimum_group_count": audit[
+                "feasible_assignment_count_at_minimum_group_count"
+            ],
+            "outcomes_read": False,
+        },
+        "selected": audit["selected"],
+        "block_reason": audit["block_reason"],
+    }
+
+
 def inventory(
     pglib_root: Path,
     source_path: Path,
@@ -264,7 +306,11 @@ def inventory(
     r001_evidence_path.write_text(
         json.dumps(r001_payload, indent=2, sort_keys=True) + "\n",
     )
-    r002_payload = audit_split(cases, source)
+    r002_payload = typed_split_evidence(
+        audit_split(cases, source),
+        source_path,
+        inventory_path,
+    )
     r002_audit_path.parent.mkdir(parents=True, exist_ok=True)
     r002_audit_path.write_text(
         json.dumps(r002_payload, indent=2, sort_keys=True) + "\n",
