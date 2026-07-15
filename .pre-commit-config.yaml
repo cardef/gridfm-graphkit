@@ -31,7 +31,9 @@ repos:
         # when "--baseline" with "--use-all-plugins", pre-commit scan with all available plugins
         # add "--fail-on-unaudited" to fail pre-commit for unaudited potential secrets
           args: [--baseline, .secrets.baseline, --use-all-plugins]
-          exclude: '.*\.ipynb$'
+          # This generated inventory contains only public content hashes pinned
+          # to the PGLib source revision; scanning them as credentials is noise.
+          exclude: '.*\.ipynb$|^experiments/fm_scaling/frozen/pglib_candidate_inventory\.json$'
 -   repo: local
     hooks:
     -   id: syncthing-boundary

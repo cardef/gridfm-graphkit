@@ -1,0 +1,14 @@
+schema_version: fm-scaling-pglib-source-v1
+remote: https://github.com/power-grid-lib/pglib-opf.git
+commit: dc6be4b2f85ca0e776952ec22cbd4c22396ea5a3  # pragma: allowlist secret
+case_glob: pglib_opf_case*.m
+grouping_rule: conservative_suffix_family_v1
+target_bus_range:
+  minimum: 500
+  maximum: 13659
+requirements:
+  source_count: 32
+  target_count: 12
+  target_group_count: 6
+  extrapolative_target_count: 4
+  extrapolative_target_group_count: 2

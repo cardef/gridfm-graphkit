@@ -1,0 +1,693 @@
+{
+  "bus_count_range": [
+    3,
+    78484
+  ],
+  "case_count": 66,
+  "cases": [
+    {
+      "baseMVA": 100.0,
+      "bus_count": 3,
+      "encoded_bus_count": 3,
+      "integrity_status": "PASS",
+      "network": "case3_lmbd",
+      "provenance_group": "lmbd",
+      "raw_sha256": "168f73f389aa8abd7707fae04d26ee2046ef3622e8ea2f6661a89d815e9c637d",
+      "topology_key": "pglib-v23:case3_lmbd"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 5,
+      "encoded_bus_count": 5,
+      "integrity_status": "PASS",
+      "network": "case5_pjm",
+      "provenance_group": "pjm",
+      "raw_sha256": "cadf7501a15c2d508820493cef6acc85757274197e74c40bcec4fc4ecf619e6f",
+      "topology_key": "pglib-v23:case5_pjm"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 14,
+      "encoded_bus_count": 14,
+      "integrity_status": "PASS",
+      "network": "case14_ieee",
+      "provenance_group": "ieee",
+      "raw_sha256": "bd5c568621de65e4b0922317010868bc7fa94173807faa10ea8fdbbe77c28106",
+      "topology_key": "pglib-v23:case14_ieee"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 24,
+      "encoded_bus_count": 24,
+      "integrity_status": "PASS",
+      "network": "case24_ieee_rts",
+      "provenance_group": "ieee",
+      "raw_sha256": "5d4fc2d4a1a282f700c51747e592f5a5ac15fa6d5eadb7df7ae937bbe3063374",
+      "topology_key": "pglib-v23:case24_ieee_rts"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 30,
+      "encoded_bus_count": 30,
+      "integrity_status": "PASS",
+      "network": "case30_as",
+      "provenance_group": "as",
+      "raw_sha256": "46dc01a6e4528eafe417e32f2e548d7d1585e0d6de566a62544f43a481e5e9c3",
+      "topology_key": "pglib-v23:case30_as"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 30,
+      "encoded_bus_count": 30,
+      "integrity_status": "PASS",
+      "network": "case30_ieee",
+      "provenance_group": "ieee",
+      "raw_sha256": "cae3290639d989731d32428aacf30c0b918bc91db73bc54791f3aa62d3f76c70",
+      "topology_key": "pglib-v23:case30_ieee"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 39,
+      "encoded_bus_count": 39,
+      "integrity_status": "PASS",
+      "network": "case39_epri",
+      "provenance_group": "epri",
+      "raw_sha256": "83a1a6ec49c9a0533b51e928f6bd95b93aea745a620e5123bedcd88f716c286b",
+      "topology_key": "pglib-v23:case39_epri"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 57,
+      "encoded_bus_count": 57,
+      "integrity_status": "PASS",
+      "network": "case57_ieee",
+      "provenance_group": "ieee",
+      "raw_sha256": "aa3b48f7cbaade2afd69cb3790ef72be981db8494dcef9277bee460f754bdb22",
+      "topology_key": "pglib-v23:case57_ieee"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 60,
+      "encoded_bus_count": 60,
+      "integrity_status": "PASS",
+      "network": "case60_c",
+      "provenance_group": "c",
+      "raw_sha256": "037a3b165bb75c336fd98f61562a3a80f925f74c5390545a19fbcb591f658d94",
+      "topology_key": "pglib-v23:case60_c"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 73,
+      "encoded_bus_count": 73,
+      "integrity_status": "PASS",
+      "network": "case73_ieee_rts",
+      "provenance_group": "ieee",
+      "raw_sha256": "fe8f15a2391e2c92138b712d146b04c038f0727e8e9220e1c6065507ea12a22c",
+      "topology_key": "pglib-v23:case73_ieee_rts"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 89,
+      "encoded_bus_count": 89,
+      "integrity_status": "PASS",
+      "network": "case89_pegase",
+      "provenance_group": "pegase",
+      "raw_sha256": "0c2ca484db566e587df8565141dbbf053c275e9246968391cc2f560fb4e995ca",
+      "topology_key": "pglib-v23:case89_pegase"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 118,
+      "encoded_bus_count": 118,
+      "integrity_status": "PASS",
+      "network": "case118_ieee",
+      "provenance_group": "ieee",
+      "raw_sha256": "b1af0833849040c04babc3700631cff0d9afa66b79c5d3e13ae79bdf516cec78",
+      "topology_key": "pglib-v23:case118_ieee"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 162,
+      "encoded_bus_count": 162,
+      "integrity_status": "PASS",
+      "network": "case162_ieee_dtc",
+      "provenance_group": "ieee",
+      "raw_sha256": "2671de68c1fed8177bedaa3b5425c2588e0958d68bbede94a3f235788aab3052",
+      "topology_key": "pglib-v23:case162_ieee_dtc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 179,
+      "encoded_bus_count": 179,
+      "integrity_status": "PASS",
+      "network": "case179_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "c65eb2650de2849675778bccdfb15b48bc7fb5156207d10411746560a5da8a13",
+      "topology_key": "pglib-v23:case179_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 197,
+      "encoded_bus_count": 197,
+      "integrity_status": "PASS",
+      "network": "case197_snem",
+      "provenance_group": "snem",
+      "raw_sha256": "599c83008f4736553b973060d030f1f1b3f40bcc093497a1639a2c84e6a5bfee",
+      "topology_key": "pglib-v23:case197_snem"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 200,
+      "encoded_bus_count": 200,
+      "integrity_status": "PASS",
+      "network": "case200_activ",
+      "provenance_group": "activ",
+      "raw_sha256": "676e6f54a3b6726b199b531e7758ad8bf75ba2b076ea3fee86dc3f5cf5846f6b",
+      "topology_key": "pglib-v23:case200_activ"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 240,
+      "encoded_bus_count": 240,
+      "integrity_status": "PASS",
+      "network": "case240_pserc",
+      "provenance_group": "pserc",
+      "raw_sha256": "57ea179d628ea6e94d9c78a62d842c01165afd515c09dca1c2fa2f2f3360f4cf",
+      "topology_key": "pglib-v23:case240_pserc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 300,
+      "encoded_bus_count": 300,
+      "integrity_status": "PASS",
+      "network": "case300_ieee",
+      "provenance_group": "ieee",
+      "raw_sha256": "7ecf056d5942135765200ad7ae8791c28f0d35fb1dc888ba2c32dfc950f3c2f5",
+      "topology_key": "pglib-v23:case300_ieee"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 500,
+      "encoded_bus_count": 500,
+      "integrity_status": "PASS",
+      "network": "case500_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "36c298d571605019ef16c17dd74680adca1386d91ed47d69a0d909aebc90a1b6",
+      "topology_key": "pglib-v23:case500_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 588,
+      "encoded_bus_count": 588,
+      "integrity_status": "PASS",
+      "network": "case588_sdet",
+      "provenance_group": "sdet",
+      "raw_sha256": "6bb56e78edbb351a6959e8b90acccb99ba671471f33406722a92c0d0d069d6ff",
+      "topology_key": "pglib-v23:case588_sdet"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 793,
+      "encoded_bus_count": 793,
+      "integrity_status": "PASS",
+      "network": "case793_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "bd4eee7cdbc22f5ea1fdb2b5756a46c0d2b2e871a19df8b6169008435025992f",
+      "topology_key": "pglib-v23:case793_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 1354,
+      "encoded_bus_count": 1354,
+      "integrity_status": "PASS",
+      "network": "case1354_pegase",
+      "provenance_group": "pegase",
+      "raw_sha256": "cd6d27dff4a56684f1e4f82cfa346b36d84c4e90733228aa88331cd550e17652",
+      "topology_key": "pglib-v23:case1354_pegase"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 1803,
+      "encoded_bus_count": 1803,
+      "integrity_status": "PASS",
+      "network": "case1803_snem",
+      "provenance_group": "snem",
+      "raw_sha256": "10bc2bbb3d0634642a2ebb998bf4aed3b11e23b6a1ad131935a8f997c18d5eac",
+      "topology_key": "pglib-v23:case1803_snem"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 1888,
+      "encoded_bus_count": 1888,
+      "integrity_status": "PASS",
+      "network": "case1888_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "f4bc237298ed7c2e9291070f3c3a0983319565c12b801114a1e29641d0b5bff0",
+      "topology_key": "pglib-v23:case1888_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 1951,
+      "encoded_bus_count": 1951,
+      "integrity_status": "PASS",
+      "network": "case1951_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "a8f85eee92219d87816e464f0e8259103ef41ee06f9c8b91f75707418c10e07d",
+      "topology_key": "pglib-v23:case1951_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2000,
+      "encoded_bus_count": 2000,
+      "integrity_status": "PASS",
+      "network": "case2000_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "af6cec27709da1f952c330e92b4eb07e0bc1673d3dc0c2e70c7d6c96a38cca6b",
+      "topology_key": "pglib-v23:case2000_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2312,
+      "encoded_bus_count": 2312,
+      "integrity_status": "PASS",
+      "network": "case2312_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "78fb54258f8912692997c3c7925437aeaf4d11451fd33a03249e384bd55fc5aa",
+      "topology_key": "pglib-v23:case2312_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2383,
+      "encoded_bus_count": 2383,
+      "integrity_status": "PASS",
+      "network": "case2383wp_k",
+      "provenance_group": "k",
+      "raw_sha256": "b3721a381ed2dc29616ed7318a07b0ebd3d5914205f222aa8c6a05c99f9ff70e",
+      "topology_key": "pglib-v23:case2383wp_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2736,
+      "encoded_bus_count": 2736,
+      "integrity_status": "PASS",
+      "network": "case2736sp_k",
+      "provenance_group": "k",
+      "raw_sha256": "1a7c244ccf832979e682cc9cda5827d21e4358ce0136369d0a8fa33ee82190c6",
+      "topology_key": "pglib-v23:case2736sp_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2737,
+      "encoded_bus_count": 2737,
+      "integrity_status": "PASS",
+      "network": "case2737sop_k",
+      "provenance_group": "k",
+      "raw_sha256": "f2d0f0437abe57862850f05db5c9fac1ea184da6024315ff72ff1f3d2d5ed4fb",
+      "topology_key": "pglib-v23:case2737sop_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2742,
+      "encoded_bus_count": 2742,
+      "integrity_status": "PASS",
+      "network": "case2742_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "3eb4f62f03e6a0e22cd5fc11af789585730c81efabac756b802a262f80a0d83c",
+      "topology_key": "pglib-v23:case2742_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2746,
+      "encoded_bus_count": 2746,
+      "integrity_status": "PASS",
+      "network": "case2746wop_k",
+      "provenance_group": "k",
+      "raw_sha256": "81890d6b2aeaae0310909529edd9584405210534ab6387e1a4e4bb9c31e5f160",
+      "topology_key": "pglib-v23:case2746wop_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2746,
+      "encoded_bus_count": 2746,
+      "integrity_status": "PASS",
+      "network": "case2746wp_k",
+      "provenance_group": "k",
+      "raw_sha256": "22b8a8fa6ad2302e3ecc344724ebdce3a5e6eaade29fd6e7a60e94d5518f84cb",
+      "topology_key": "pglib-v23:case2746wp_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2848,
+      "encoded_bus_count": 2848,
+      "integrity_status": "PASS",
+      "network": "case2848_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "9d1ec26a6aef3e47bc23707a6c81db8d0528ff6ad90068b2f92df3d6e76ef591",
+      "topology_key": "pglib-v23:case2848_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2853,
+      "encoded_bus_count": 2853,
+      "integrity_status": "PASS",
+      "network": "case2853_sdet",
+      "provenance_group": "sdet",
+      "raw_sha256": "5f4300939c61dd0bf412bee77318e86b64d4a685b0222e4654fcab97bb82db30",
+      "topology_key": "pglib-v23:case2853_sdet"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2868,
+      "encoded_bus_count": 2868,
+      "integrity_status": "PASS",
+      "network": "case2868_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "52f6e1465a40a5fe7e163439bdd9144ecea55a7863afa6f21242d45147b8d466",
+      "topology_key": "pglib-v23:case2868_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 2869,
+      "encoded_bus_count": 2869,
+      "integrity_status": "PASS",
+      "network": "case2869_pegase",
+      "provenance_group": "pegase",
+      "raw_sha256": "6c8e80fba6fc2fa78d65fce64cf4801425b01a0aa093661caf581b6551d4a7ac",
+      "topology_key": "pglib-v23:case2869_pegase"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 3012,
+      "encoded_bus_count": 3012,
+      "integrity_status": "PASS",
+      "network": "case3012wp_k",
+      "provenance_group": "k",
+      "raw_sha256": "a419e8f5a0ba9c472c0ed6f36081d1e59039422fa4f55a4f2928194a23206b6e",
+      "topology_key": "pglib-v23:case3012wp_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 3022,
+      "encoded_bus_count": 3022,
+      "integrity_status": "PASS",
+      "network": "case3022_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "71ecb75ad9cf66806cd19c44eef6c07bf04624626e59e29723d25ce3b6ee375c",
+      "topology_key": "pglib-v23:case3022_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 3120,
+      "encoded_bus_count": 3120,
+      "integrity_status": "PASS",
+      "network": "case3120sp_k",
+      "provenance_group": "k",
+      "raw_sha256": "8e59aa29b4086948ab5cf1a2eb2194c97c433ee818efcff13ed5710c7a7d47f8",
+      "topology_key": "pglib-v23:case3120sp_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 3374,
+      "encoded_bus_count": 3375,
+      "integrity_status": "WARN_ENCODED_BUS_COUNT_MISMATCH",
+      "network": "case3375wp_k",
+      "provenance_group": "k",
+      "raw_sha256": "86da8d30be1d3908649ad6c170db867579ecaf53a03c2d0b89b41ce043d92a4a",
+      "topology_key": "pglib-v23:case3375wp_k"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 3970,
+      "encoded_bus_count": 3970,
+      "integrity_status": "PASS",
+      "network": "case3970_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "31fd5ba846060ff8f55882cb62969aaec433d328ced1d889408622019207f410",
+      "topology_key": "pglib-v23:case3970_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 4020,
+      "encoded_bus_count": 4020,
+      "integrity_status": "PASS",
+      "network": "case4020_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "6dea3966c5b1632d87327b8c31abbd4e249febbb908cf2d1654a6d3b2882cf79",
+      "topology_key": "pglib-v23:case4020_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 4601,
+      "encoded_bus_count": 4601,
+      "integrity_status": "PASS",
+      "network": "case4601_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "ea5aa0212fc1d7312ccb44205da700d647666120c4ecbe0b33896d2c0450f91b",
+      "topology_key": "pglib-v23:case4601_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 4619,
+      "encoded_bus_count": 4619,
+      "integrity_status": "PASS",
+      "network": "case4619_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "fe65eab03e8919c5bad9d52b91f4f9b0c3b824658ec06d6f52f8f340cbb3e654",
+      "topology_key": "pglib-v23:case4619_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 4661,
+      "encoded_bus_count": 4661,
+      "integrity_status": "PASS",
+      "network": "case4661_sdet",
+      "provenance_group": "sdet",
+      "raw_sha256": "d24d1f61bdd2c7b9ecde796a88cbfcf178247e04dc7048ae0e043ec893a70c84",
+      "topology_key": "pglib-v23:case4661_sdet"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 4837,
+      "encoded_bus_count": 4837,
+      "integrity_status": "PASS",
+      "network": "case4837_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "ebab27403ce8e8ca4805763b5b34a080ea0a1043dd7f588ee2f3b783602ec402",
+      "topology_key": "pglib-v23:case4837_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 4917,
+      "encoded_bus_count": 4917,
+      "integrity_status": "PASS",
+      "network": "case4917_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "6c3541b1dbab6ceee74a053b6c974b63c30120148ab58e6a341b5a923cd90611",
+      "topology_key": "pglib-v23:case4917_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 5658,
+      "encoded_bus_count": 5658,
+      "integrity_status": "PASS",
+      "network": "case5658_epigrids",
+      "provenance_group": "epigrids",
+      "raw_sha256": "391206901084891e4f2c3df1ed2053154195258f9adc2475679adefb4261e97a",
+      "topology_key": "pglib-v23:case5658_epigrids"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 6468,
+      "encoded_bus_count": 6468,
+      "integrity_status": "PASS",
+      "network": "case6468_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "b10fbfb66104bc8592e9546d4c7370497fe249406c8915fe53b3a01b1f2dc631",
+      "topology_key": "pglib-v23:case6468_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 6470,
+      "encoded_bus_count": 6470,
+      "integrity_status": "PASS",
+      "network": "case6470_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "7aa5946a62279c9c24a82d4b06002e40cf202c8a7b878f913e3a44f7445c4fff",
+      "topology_key": "pglib-v23:case6470_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 6495,
+      "encoded_bus_count": 6495,
+      "integrity_status": "PASS",
+      "network": "case6495_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "c24cb44481a5a2ff657ac6b040cd9b82cb7f503d980258ab27b37a98b208995e",
+      "topology_key": "pglib-v23:case6495_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 6515,
+      "encoded_bus_count": 6515,
+      "integrity_status": "PASS",
+      "network": "case6515_rte",
+      "provenance_group": "rte",
+      "raw_sha256": "13719af32751f64cab5f859472271a75b820b61c0c19bf62e1bbd6473fa51685",
+      "topology_key": "pglib-v23:case6515_rte"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 7336,
+      "encoded_bus_count": 7336,
+      "integrity_status": "PASS",
+      "network": "case7336_epigrids",
+      "provenance_group": "epigrids",
+      "raw_sha256": "d0a4b4ca5c438544f1e73fafc32331f388f73a7806a0835ff74b3102023075d5",
+      "topology_key": "pglib-v23:case7336_epigrids"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 8387,
+      "encoded_bus_count": 8387,
+      "integrity_status": "PASS",
+      "network": "case8387_pegase",
+      "provenance_group": "pegase",
+      "raw_sha256": "b49ec5bbde46dfd6c5b2b2abb8146326bcb5234dd7578945198f11e6a886ee06",
+      "topology_key": "pglib-v23:case8387_pegase"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 9241,
+      "encoded_bus_count": 9241,
+      "integrity_status": "PASS",
+      "network": "case9241_pegase",
+      "provenance_group": "pegase",
+      "raw_sha256": "d55833986cc4e3e417cad93458f39810e1ed6a54aaa2a979200b0232f271474d",
+      "topology_key": "pglib-v23:case9241_pegase"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 9591,
+      "encoded_bus_count": 9591,
+      "integrity_status": "PASS",
+      "network": "case9591_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "ff834cb9cb70532c262860ddcca6c7f50d000cb44d7ed0998ba321b4077caac6",
+      "topology_key": "pglib-v23:case9591_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 10000,
+      "encoded_bus_count": 10000,
+      "integrity_status": "PASS",
+      "network": "case10000_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "8387f73e8c135938c60e41538dfbb6b4cb58d37738553fb8a36c1e1647a66e7b",
+      "topology_key": "pglib-v23:case10000_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 10192,
+      "encoded_bus_count": 10192,
+      "integrity_status": "PASS",
+      "network": "case10192_epigrids",
+      "provenance_group": "epigrids",
+      "raw_sha256": "10282ea24585b537c34fab0906da1d5d7f709f84a68b478d5f2cec832eeb43d7",
+      "topology_key": "pglib-v23:case10192_epigrids"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 10480,
+      "encoded_bus_count": 10480,
+      "integrity_status": "PASS",
+      "network": "case10480_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "03b99c3f95b56f394f442d0d6e9573ac1ac7fcae12f29e15981eeca7a6279f29",
+      "topology_key": "pglib-v23:case10480_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 13659,
+      "encoded_bus_count": 13659,
+      "integrity_status": "PASS",
+      "network": "case13659_pegase",
+      "provenance_group": "pegase",
+      "raw_sha256": "778ccf66f026798392340ce24967b7b1262ecc9d7524643edcd489dbdf573831",
+      "topology_key": "pglib-v23:case13659_pegase"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 19402,
+      "encoded_bus_count": 19402,
+      "integrity_status": "PASS",
+      "network": "case19402_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "53b6ade9dc83e81abb890b526138e0066b40e33a5f8e05f6966ef05861ba9284",
+      "topology_key": "pglib-v23:case19402_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 20758,
+      "encoded_bus_count": 20758,
+      "integrity_status": "PASS",
+      "network": "case20758_epigrids",
+      "provenance_group": "epigrids",
+      "raw_sha256": "07d33b87954baf465239c96c81d3b60c1ca6293f95a6a7ec84bf93d78634c70f",
+      "topology_key": "pglib-v23:case20758_epigrids"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 24464,
+      "encoded_bus_count": 24464,
+      "integrity_status": "PASS",
+      "network": "case24464_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "a508250f87a1a3651d95046d95b48015849d3668d7cd9358a218e1ed543042d0",
+      "topology_key": "pglib-v23:case24464_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 30000,
+      "encoded_bus_count": 30000,
+      "integrity_status": "PASS",
+      "network": "case30000_goc",
+      "provenance_group": "goc",
+      "raw_sha256": "30e100ad8f2d25291223d5bc130407a4b5b603dcadb60f0fa0b0a0ce795c872a",
+      "topology_key": "pglib-v23:case30000_goc"
+    },
+    {
+      "baseMVA": 100.0,
+      "bus_count": 78484,
+      "encoded_bus_count": 78484,
+      "integrity_status": "PASS",
+      "network": "case78484_epigrids",
+      "provenance_group": "epigrids",
+      "raw_sha256": "b9d8f673e4e409747f67ccb9989a38609d8327f800e8d18caf3eb4575eb3a7f2",
+      "topology_key": "pglib-v23:case78484_epigrids"
+    }
+  ],
+  "eligible_case_count": 65,
+  "provenance_group_counts": {
+    "activ": 1,
+    "as": 1,
+    "c": 1,
+    "epigrids": 5,
+    "epri": 1,
+    "goc": 19,
+    "ieee": 8,
+    "k": 8,
+    "lmbd": 1,
+    "pegase": 6,
+    "pjm": 1,
+    "pserc": 1,
+    "rte": 8,
+    "sdet": 3,
+    "snem": 2
+  },
+  "schema_version": "fm-scaling-pglib-inventory-v1",
+  "source": {
+    "commit": "dc6be4b2f85ca0e776952ec22cbd4c22396ea5a3",
+    "grouping_rule": "conservative_suffix_family_v1",
+    "remote": "https://github.com/power-grid-lib/pglib-opf.git"
+  }
+}
