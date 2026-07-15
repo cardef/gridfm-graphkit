@@ -112,3 +112,13 @@
 | 2026-07-15 17:23 | /experiment-bridge | experiments/fm_scaling/ | implementation | complete data, geometry, calibration, campaign, phase-separated launch/evaluation, and locked-analysis tooling |
 | 2026-07-15 17:23 | /experiment-bridge | gridfm_graphkit/fm_scaling/ | implementation | immutable contracts, builders, four communication cores, portable task/data path, accounting, and analysis core |
 | 2026-07-15 17:23 | /experiment-bridge | .aris/traces/experiment-bridge/2026-07-15_run02/ | implementation | full independent review, rereview, and final PASS trace |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/FINAL_PROPOSAL_20260716_005451.md | implementation | label-blind feasibility amendment replaces G32 with G28 while preserving six held-out groups and size extrapolation; targeted re-review pending |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/FINAL_PROPOSAL.md | implementation | latest amended proposal; G28 is the largest feasible pinned-PGLib source level under the frozen split rules |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/EXPERIMENT_PLAN_20260716_005451.md | implementation | timestamped G8/G16/G28 claim-driven experiment contract |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/EXPERIMENT_PLAN.md | implementation | latest G28 plan with formal R002 PASS and downstream data/calibration blockers |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/EXPERIMENT_TRACKER_20260716_005451.md | implementation | timestamped G28 gate ledger at evidence commit c690d6d |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/EXPERIMENT_TRACKER.md | implementation | latest tracker; I001-I009 and R001-R002 PASS under G28 |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/REVIEW_SUMMARY_20260716_005451.md | implementation | records that the 9.05 READY verdict applies to the pre-amendment G32 contract |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/REFINEMENT_REPORT_20260716_005451.md | implementation | records the label-blind reason for the G28 amendment |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/NOVELTY_REPORT_20260716_005451.md | implementation | aligns the conditional diversity finding with G28 |
+| 2026-07-16 00:54 | /experiment-plan | refine-logs/REFINE_STATE_20260716_005451.json | implementation | marks the amended contract as targeted-review pending |
