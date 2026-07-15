@@ -21,14 +21,18 @@ merges, or tags.
 Git must not track files below a Syncthing root. The boundary is checked by
 `tools/check_syncthing_boundary.py` in pre-commit and CI.
 
-## Mac and Linux roles
+## Mac, workstation, and HPC roles
 
 - Mac: research coordination, ARIS runs, contract review, branch integration.
-- Linux/HPC: checkout of the committed revision and expensive runs.
-- Both machines: bidirectional Syncthing for research artifacts.
+- Linux workstation: bidirectional Syncthing peer and the local artifact
+  workspace used to bridge files to and from GPFS.
+- HPC/GPFS: checkout of the committed revision and expensive runs; GPFS is not
+  directly managed by Syncthing in the current deployment.
 
-Both machines may write synchronized files, but they must not edit the same
-logical file concurrently. Run ARIS refinement on one machine at a time.
+Mac and workstation may write synchronized files, but they must not edit the
+same logical file concurrently. Run ARIS refinement on one machine at a time.
+Use the explicit one-way routes in `SYNC_LAYOUT.md` to bridge artifacts
+between the workstation and GPFS.
 
 ## Start a research line
 
@@ -82,9 +86,12 @@ For an immutable checkout, detach at the recorded SHA:
 git switch --detach <git-sha>
 ```
 
-Write logs, checkpoints, and results under the synchronized artifact roots,
-normally `mlruns/`. The run manifest must record the Git SHA, configuration
-hash, data identifier/hash, environment or image digest, and output location.
+Write logs, checkpoints, and results under the GPFS checkout's `mlruns/`
+artifact root. The run manifest must record the Git SHA, configuration hash,
+data identifier/hash, environment or image digest, and output location. After
+the run stops writing, copy `mlruns/` GPFS → workstation with the preview,
+copy, and checksum-verification sequence in `SYNC_LAYOUT.md`; Syncthing then
+replicates the workstation copy to the Mac.
 
 ## Fixes discovered on Linux
 

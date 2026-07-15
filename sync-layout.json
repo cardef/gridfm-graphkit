@@ -6,5 +6,36 @@
     "gridfm-papers": "papers",
     "gridfm-refine-logs": "refine-logs",
     "gridfm-research-wiki": "research-wiki"
+  },
+  "ownership": {
+    "git_roots": [
+      "experiments"
+    ],
+    "syncthing_roots": [
+      "idea-stage",
+      "mlruns",
+      "papers",
+      "refine-logs",
+      "research-wiki"
+    ]
+  },
+  "gpfs_bridge": {
+    "type": "explicit_rsync",
+    "gpfs_repo_env": "GRIDFM_GPFS_REPO",
+    "syncthing_repo_env": "GRIDFM_SYNCTHING_REPO",
+    "allow_delete": false,
+    "verification": "rsync_checksum_dry_run",
+    "single_writer": true,
+    "routes": {
+      "workstation_to_gpfs": [
+        "idea-stage",
+        "papers",
+        "refine-logs",
+        "research-wiki"
+      ],
+      "gpfs_to_workstation": [
+        "mlruns"
+      ]
+    }
   }
 }
