@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 import torch
 
+from experiments.fm_scaling.select_geometry import evaluate_candidates
 from gridfm_graphkit.fm_scaling.contracts import (
     ComplexCOO,
     ContractError,
@@ -17,6 +18,8 @@ from gridfm_graphkit.fm_scaling.contracts import (
 from gridfm_graphkit.fm_scaling.geometry import (
     KronGeometryBuilder,
     QuotientGeometryBuilder,
+    projected_sparse_message_flops,
+    select_geometry_candidate,
 )
 from gridfm_graphkit.fm_scaling.partition import DeterministicPartitioner
 from gridfm_graphkit.fm_scaling.registry import (
@@ -84,6 +87,72 @@ def budget(kappa=20.0):
 def builders():
     partitioner = DeterministicPartitioner(fixed_backend)
     return KronGeometryBuilder(partitioner), QuotientGeometryBuilder(partitioner)
+
+
+def _selection_candidate(
+    policy_hash,
+    residual,
+    cross_nnz,
+    coarse_nnz,
+    coarse_nodes,
+):
+    measurement = {
+        "residual": residual,
+        "cross_nnz": cross_nnz,
+        "coarse_nnz": coarse_nnz,
+        "coarse_nodes": coarse_nodes,
+    }
+    measurement["projected_sparse_message_flops"] = projected_sparse_message_flops(
+        measurement,
+        _flop_model(),
+    )
+    return {
+        "policy_hash": policy_hash,
+        "status": "PASS",
+        "measurements": [measurement],
+    }
+
+
+def _flop_model():
+    return {"per_cross_nnz": 4, "per_coarse_nnz": 2, "per_coarse_node": 1}
+
+
+def test_geometry_selection_uses_five_percent_residual_band_then_sparse_flops():
+    best_but_expensive = _selection_candidate("a", 1.0, 100, 50, 20)
+    within_band_and_cheaper = _selection_candidate("b", 1.04, 10, 5, 20)
+    outside_band = _selection_candidate("c", 1.051, 1, 1, 2)
+
+    selected, best, limit = select_geometry_candidate(
+        [best_but_expensive, within_band_and_cheaper, outside_band],
+        _flop_model(),
+    )
+
+    assert selected["policy_hash"] == "b"
+    assert best == pytest.approx(1.0)
+    assert limit == pytest.approx(1.05)
+
+
+def test_geometry_selection_rejects_inconsistent_projected_flops():
+    candidate = _selection_candidate("a", 0.1, 3, 2, 2)
+    candidate["measurements"][0]["projected_sparse_message_flops"] += 1
+
+    with pytest.raises(ContractError, match="inconsistent projected FLOPs"):
+        select_geometry_candidate([candidate], _flop_model())
+
+
+def test_geometry_selection_requires_explicit_projected_flop_model():
+    candidate = _selection_candidate("a", 0.1, 3, 2, 2)
+
+    with pytest.raises(ContractError, match="projected FLOP model requires exactly"):
+        select_geometry_candidate([candidate], {})
+
+
+def test_geometry_selection_rejects_unversioned_candidate_input(tmp_path):
+    candidates = tmp_path / "candidates.yaml"
+    candidates.write_text("schema_version: wrong\ncandidates: []\n")
+
+    with pytest.raises(ContractError, match="wrong schema"):
+        evaluate_candidates(tmp_path / "missing.yaml", tmp_path, candidates)
 
 
 def _row_sums(operator):

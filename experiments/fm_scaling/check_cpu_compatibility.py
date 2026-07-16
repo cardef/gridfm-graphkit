@@ -134,7 +134,7 @@ def check_cpu_compatibility(
         {
             "name": "largest_grid_host_and_accelerator_peaks",
             "passed": False,
-            "reason": "R002 topology split and admissible generated data are absent",
+            "reason": "admissible generated data and largest-grid measurements are absent",
         },
     ]
     passed = all(check["passed"] for check in checks)

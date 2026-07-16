@@ -1,5 +1,61 @@
 # Experiment Results and Bridge Status
 
+## 2026-07-16 maximal local-CPU pass
+
+**Confirmatory status:** 0/20 E-runs authorized; 0/20 completed. R014 remains
+BLOCKED. No efficacy result exists.
+
+The local CPU environment was rebound to clean GraphKit commit `4a293b2` and
+clean editable Datakit commit `b0d55d0`. Environment spec `f5f0604c` passed
+imports, the seeded matrix witness, and an independent agent replay of the
+documented command with checksum `882.053564644979`.
+
+Fresh clean-commit evidence under
+`mlruns/fm-scaling/result-summaries/evidence/` records:
+
+- I001 PASS at `I001-preflight-4a293b2-b0d55d0.json`;
+- I002--I009 PASS at `I002-4a293b2.json` through `I009-4a293b2.json`, with
+  49 selected tests in total;
+- R001 PASS at `R001-pglib-v23-4a293b2.json` and R002 PASS at
+  `R002-split-audit-4a293b2.json` from the clean pinned PGLib v23 checkout;
+- I010 remains BLOCKED at `I010-cpu-4a293b2.json`: upstream identity, the
+  MLflow child-store smoke, clean-clone import, and Flat schema/FLOP checks
+  pass; a reviewed upstream-Flat checkpoint, CUDA compile/FLOP parity, and
+  largest-grid host/accelerator measurements remain absent.
+
+Repository-wide CPU verification on the final hardened worktree passed
+134/134 unit tests in 191.65 s. The focused FM-scaling subset passes 35/35;
+focused pre-commit hooks pass. The documented Bandit command was found to scan
+zero files because it omitted recursion. After changing it to `bandit -r` and
+removing two `shell=True` integration-tool call sites, the effective scan
+covered 22,053 lines and found zero high-severity issues. Integration-test
+collection succeeds (2 tests); the training integration tests were not run
+because they download 10,000-scenario archives, modify example configs, and
+require a machine-specific calibration baseline.
+
+The CPU pass also found that the old R003 selector contradicted the proposal:
+it minimized residual first instead of choosing the least projected sparse
+message work inside the 5%-of-best worst-residual band. The worktree now
+implements the residual-band rule and requires the hashed candidate artifact
+to provide an explicit cross-edge/coarse-edge/coarse-node FLOP model. There is
+no hidden default. The evidence validator independently recomputes the choice.
+
+No final data generation or R003/R004 evidence was produced. Four
+load-bearing inputs are not frozen anywhere in the canonical contract:
+
+1. exact `S_total` and hence per-topology scenario counts;
+2. the whole-provenance-group source-training/source-development split;
+3. the at-most-12 geometry candidate table and its explicit projected-FLOP
+   model;
+4. the deterministic width/Flat-`q` capacity-search domain.
+
+Guessing any of these would violate the plan's unbounded-choice stop rule.
+Only 15 GiB of local disk was free during this pass, so generating an
+unfrozen 55-topology payload would also be operationally unsafe. Once these
+four inputs are reviewed and frozen, CPU can render/generate/audit the data,
+run R003/R004, build geometry, and materialize split artifacts. GPU-only I010,
+M4 calibration/profiling, S001, and R014 remain outside this host's capability.
+
 ## 2026-07-15 implementation completion
 
 **Confirmatory status:** 0/20 E-runs authorized; 0/20 completed. R014 remains BLOCKED. No efficacy result exists.

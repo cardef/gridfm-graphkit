@@ -53,7 +53,7 @@ MLFLOW_ALLOW_FILE_STORE=true pytest tests/
 MLFLOW_ALLOW_FILE_STORE=true pytest tests/test_losses.py::test_pbe_loss_zero_with_real_data
 MLFLOW_ALLOW_FILE_STORE=true pytest integrationtests/test_base_set.py
 pre-commit run --all-files
-bandit --severity-level high .
+bandit -r --severity-level high .
 ```
 
 Integration tests are slow and may require cluster GPUs. CI runs unit tests

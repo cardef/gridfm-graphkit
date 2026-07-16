@@ -1,0 +1,9 @@
+# Replace every zero/empty placeholder from a reviewed source-only design.
+# select_geometry.py rejects this template until the cost model and 1--12
+# GeometryBudget policies are explicit.
+schema_version: fm-scaling-geometry-candidates-v1
+projected_flop_model:
+  per_cross_nnz: 0
+  per_coarse_nnz: 0
+  per_coarse_node: 0
+candidates: []

@@ -1,10 +1,12 @@
-import urllib.request
-import yaml
+import shlex
 import subprocess
+import urllib.request
+
+import yaml
 
 
 def execute_and_live_output(cmd) -> None:
-    subprocess.run(cmd, text=True, shell=True, check=True)
+    subprocess.run(shlex.split(cmd), text=True, check=True)
 
 
 def _base_config() -> dict:

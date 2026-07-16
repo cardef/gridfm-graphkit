@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Protocol
+from typing import Mapping, Protocol
 
 import numpy as np
 
@@ -31,6 +31,87 @@ class GeometryBuilder(Protocol):
         budget: GeometryBudget,
     ) -> HierarchyGeometry:
         pass
+
+
+def projected_sparse_message_flops(
+    measurement: Mapping[str, object],
+    flop_model: Mapping[str, object],
+) -> int:
+    """Apply an explicit, hashed geometry-cost model without hidden defaults."""
+    fields = {"per_cross_nnz", "per_coarse_nnz", "per_coarse_node"}
+    if set(flop_model) != fields:
+        raise ContractError(f"projected FLOP model requires exactly {sorted(fields)}")
+    coefficients = {name: int(flop_model[name]) for name in fields}
+    if any(value < 0 for value in coefficients.values()) or not any(
+        coefficients.values(),
+    ):
+        raise ContractError(
+            "projected FLOP coefficients must be nonnegative and nonzero",
+        )
+    counts = {
+        "per_cross_nnz": int(measurement["cross_nnz"]),
+        "per_coarse_nnz": int(measurement["coarse_nnz"]),
+        "per_coarse_node": int(measurement["coarse_nodes"]),
+    }
+    if any(value < 0 for value in counts.values()) or counts["per_coarse_node"] == 0:
+        raise ContractError("geometry support and coarse-node counts are invalid")
+    return sum(coefficients[name] * counts[name] for name in fields)
+
+
+def select_geometry_candidate(
+    candidates: list[Mapping[str, object]],
+    flop_model: Mapping[str, object],
+) -> tuple[Mapping[str, object], float, float]:
+    """Apply the proposal's residual-band then sparse-work selection rule."""
+    feasible = [
+        candidate for candidate in candidates if candidate.get("status") == "PASS"
+    ]
+    if not feasible:
+        raise ContractError("no geometry policy covers all source-development cases")
+
+    def measurements(candidate: Mapping[str, object]) -> list[Mapping[str, object]]:
+        values = candidate.get("measurements")
+        if not isinstance(values, list) or not values:
+            raise ContractError("feasible geometry candidate lacks measurements")
+        if not all(isinstance(value, Mapping) for value in values):
+            raise ContractError("geometry candidate has malformed measurements")
+        return values
+
+    def worst_residual(candidate: Mapping[str, object]) -> float:
+        value = max(float(item["residual"]) for item in measurements(candidate))
+        if not math.isfinite(value) or value < 0:
+            raise ContractError("geometry candidate has invalid residual")
+        return value
+
+    best_residual = min(worst_residual(candidate) for candidate in feasible)
+    residual_limit = 1.05 * best_residual
+    eligible = [
+        candidate
+        for candidate in feasible
+        if worst_residual(candidate) <= residual_limit
+    ]
+
+    def selection_key(candidate: Mapping[str, object]) -> tuple[int, int, int, str]:
+        total_flops = 0
+        total_nnz = 0
+        total_coarse_nodes = 0
+        for item in measurements(candidate):
+            projected = projected_sparse_message_flops(item, flop_model)
+            if int(item["projected_sparse_message_flops"]) != projected:
+                raise ContractError(
+                    "geometry candidate has inconsistent projected FLOPs",
+                )
+            total_flops += projected
+            total_nnz += int(item["cross_nnz"]) + int(item["coarse_nnz"])
+            total_coarse_nodes += int(item["coarse_nodes"])
+        return (
+            total_flops,
+            total_nnz,
+            total_coarse_nodes,
+            str(candidate["policy_hash"]),
+        )
+
+    return min(eligible, key=selection_key), best_residual, residual_limit
 
 
 def _dense_y_bus(topology: GridTopology) -> np.ndarray:

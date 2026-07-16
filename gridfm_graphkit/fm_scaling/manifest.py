@@ -15,6 +15,7 @@ import yaml
 
 from gridfm_graphkit.fm_scaling.contracts import ContractError, GeometryBudget
 from gridfm_graphkit.fm_scaling.data import load_topology_manifest
+from gridfm_graphkit.fm_scaling.geometry import select_geometry_candidate
 from gridfm_graphkit.fm_scaling.registry import load_geometry_bundle
 from gridfm_graphkit.fm_scaling.splits import validate_materialized_splits
 from gridfm_graphkit.fm_scaling.topology import load_grid_topology, raw_data_sha256
@@ -176,32 +177,33 @@ def validate_gate_evidence(path: Path, gate_id: str) -> dict:
             ]
             if len(matching) != 1:
                 raise ContractError("R003 selected policy is not a feasible candidate")
-            feasible = [
-                candidate
-                for candidate in candidates
-                if candidate.get("status") == "PASS"
-            ]
+            candidate_input = yaml.safe_load(resolved_inputs[1].read_text())
+            if candidate_input.get("schema_version") != (
+                "fm-scaling-geometry-candidates-v1"
+            ):
+                raise ContractError("R003 candidate input has the wrong schema")
+            flop_model = candidate_input.get("projected_flop_model")
+            if not isinstance(flop_model, dict):
+                raise ContractError("R003 candidate input lacks projected FLOP model")
             try:
-                deterministic = min(
-                    feasible,
-                    key=lambda candidate: (
-                        max(item["residual"] for item in candidate["measurements"]),
-                        max(
-                            item["condition_number"]
-                            for item in candidate["measurements"]
-                        ),
-                        sum(
-                            item["cross_nnz"] + item["coarse_nnz"]
-                            for item in candidate["measurements"]
-                        ),
-                        candidate["policy_hash"],
-                    ),
+                deterministic, best_residual, residual_limit = (
+                    select_geometry_candidate(candidates, flop_model)
                 )
-            except (KeyError, TypeError, ValueError) as error:
+            except (ContractError, KeyError, TypeError, ValueError) as error:
                 raise ContractError("R003 candidate table is incomplete") from error
             if deterministic.get("policy_hash") != selected_hash:
                 raise ContractError("R003 selected policy violates the frozen rule")
-            candidate_input = yaml.safe_load(resolved_inputs[1].read_text())
+            if payload.get("selection_rule") != (
+                "min_projected_sparse_message_flops_within_1.05_best_worst_"
+                "residual_then_nnz_coarse_nodes_policy_hash"
+            ):
+                raise ContractError("R003 evidence uses the wrong selection rule")
+            if (
+                results.get("best_feasible_worst_residual") != best_residual
+                or results.get("residual_eligibility_limit") != residual_limit
+                or results.get("projected_flop_model") != flop_model
+            ):
+                raise ContractError("R003 residual eligibility band is not derived")
             if selected_policy not in candidate_input.get("candidates", []):
                 raise ContractError(
                     "R003 selected policy is absent from candidate input",
