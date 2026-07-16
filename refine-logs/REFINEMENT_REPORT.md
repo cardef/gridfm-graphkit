@@ -6,7 +6,7 @@ Review the actual canonical proposal, make the implementation as general and sim
 
 ## Result
 
-The canonical proposal now specifies a controlled test of deterministic Kron–Schur communication inside one parameter-shared multi-topology model. Fable 5 Max assigned **9.05 / 10, READY** to the pre-amendment G32 contract. The label-blind G28 feasibility amendment still requires targeted re-review. Novelty is **7.0 / 10, PROCEED WITH CAUTION**. No confirmatory empirical result is claimed.
+The canonical proposal now specifies a controlled test of deterministic Kron–Schur communication inside one parameter-shared multi-topology model. Fable 5 Max assigned **9.05 / 10, READY** to the pre-amendment G32 contract; a separate cross-family external re-review assigned **9.05 / 10, READY** to the current G28 contract and restored proposal-level reviewed status. Novelty is **7.0 / 10, PROCEED WITH CAUTION**. No confirmatory empirical result is claimed.
 
 ## Principal Refinements
 
@@ -31,8 +31,16 @@ The canonical proposal now specifies a controlled test of deterministic Kron–S
 | Round-5 re-review | Fable 5 Max | 8.6875, NOT READY; novelty 7.0 | [response](../.aris/traces/novelty-check/2026-07-13_run02/003-fable5-max-round5-rereview.response.md) |
 | Structural final gate | Fable 5 Max | 8.9375, NOT READY; all structural gates passed | [response](../.aris/traces/novelty-check/2026-07-13_run02/004-fable5-max-round5-final-gate.response.md) |
 | Disclosure audit | Fable 5 Max | 9.05, READY; novelty 7.0 | [response](../.aris/traces/novelty-check/2026-07-13_run02/005-fable5-max-round5-sentence-audit.response.md) |
+| G28 feasibility-amendment re-review | Claude via `claude-review` | 9.05, READY; no proposal-level blocker | [verdict](../.aris/traces/research-review/2026-07-16_run01/002-g28-verdict-followup.response.md), [addendum](../.aris/traces/research-review/2026-07-16_run01/003-g28-maximality-addendum.response.md) |
 
 All Fable calls used session `f5411f61-3db6-4c81-87e1-0020d7fcbc5c`, model route `claude-fable-5`, maximum reasoning effort, calibration none, and read-only repository access. Earlier AGY/Antigravity rounds are consolidated in `REVIEW_ARCHIVE.md` and summarized in `score-history.md`.
+
+The G28 re-review used cross-family `claude-review` thread
+`3cd19e69-999a-4814-a4dc-a0f0d059650d`. Its first turn produced no verdict
+and is retained as a failed trace; the bounded follow-up produced the review,
+and the final addendum accepted the pre-amendment G32 BLOCKED records plus the
+deterministic 28--32 maximality check. No treatment result was supplied or
+credited.
 
 ## Novelty Boundary
 

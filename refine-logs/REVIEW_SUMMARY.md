@@ -2,15 +2,15 @@
 
 ## Outcome
 
-- **Last external verdict:** READY for the pre-amendment `G8/G16/G32` contract
-- **Current amendment status:** `G8/G16/G28`; targeted external re-review pending
+- **Final external verdict:** READY for the current `G8/G16/G28` contract
+- **Current amendment status:** externally re-reviewed; reviewed status restored
 - **Final weighted score:** 9.05 / 10
-- **Reviewer of record:** Fable 5 Max
-- **Model route:** `claude-fable-5`
-- **Reasoning effort:** max
-- **Session:** `f5411f61-3db6-4c81-87e1-0020d7fcbc5c`
+- **Reviewer of record:** Claude cross-family external re-review
+- **Model route:** `claude-review`
+- **Reasoning effort:** high-rigor
+- **Session:** `3cd19e69-999a-4814-a4dc-a0f0d059650d`
 - **Calibration:** none
-- **Readiness scope:** the 9.05 score applies to the pre-amendment proposal only; implementation and submission remain unverified
+- **Readiness scope:** current G28 proposal only; implementation and submission remain unverified
 - **Novelty verdict:** 7.0 / 10 — PROCEED WITH CAUTION
 
 ## Review Evolution
@@ -24,8 +24,17 @@
 | 5 | Fable 5 Max re-review | 8.6875 | NOT READY |
 | 5a | Fable 5 Max structural gate | 8.9375 | NOT READY |
 | 5b | Fable 5 Max disclosure audit | 9.05 | READY |
+| 6 | Claude cross-family G28 amendment re-review | 9.05 | READY |
 
 Fable reopened the earlier READY result because the quotient control claimed an impossible equality of nonzero counts and the six-group design lacked a power/MDE specification. The final candidate removes the impossible equality, narrows Claim 2 accordingly, and makes insufficient power a pre-campaign block.
+
+The G28 re-review separately tested whether the feasibility amendment changed
+the estimand, causal control, statistical design, or claim boundary. It found no
+proposal-level blocker. The outcome-blind audit reads topology metadata only;
+the existing G32 BLOCKED records and a deterministic 28--32 enumeration confirm
+that G28 is the largest feasible integer source count under the frozen
+constraints. The full review is in `G28_EXTERNAL_REREVIEW.md`; raw interaction
+traces are under `.aris/traces/research-review/2026-07-16_run01/`.
 
 ## Final Dimension Scores
 
@@ -52,14 +61,17 @@ Fable reopened the earlier READY result because the quotient control claimed an 
 8. Geometry policy, loss weights, widths, and local depth are selected by bounded source-only rules before treatment runs.
 9. The forbidden-import `MetaPathFinder` test runs from the first F2 commit onward.
 10. Component novelty is not claimed. The defensible contribution is the controlled scaling study and, conditionally, its empirical finding.
+11. The reviewed diversity endpoint is G28. The G8/G16/G28 matrix supports only the preregistered endpoint and non-contraction claims, not a universal scaling exponent.
 
 ## Residual Risks
 
 - The power design assumes hierarchy-arm group dispersion does not exceed Flat-HGNS and paired arm errors are nonnegatively correlated. Violating this can under-provision groups; it cannot invalidate the exact test, but it can cause an honest failed gate.
+- Exactly six held-out provenance groups leave no R008 power slack. If six groups do not provide at least 80% source-only design power, the campaign blocks.
+- Size and provenance are partly entangled because the largest extrapolative targets concentrate in three held-out groups. Group-balanced analysis protects the treatment contrast but not a provenance-free size interpretation.
 - Dense Kron construction may fail host-memory or build-time limits on the largest targets. Such failures remain in the denominator.
 - Novelty depends on a clean Kron-over-quotient result with non-contracting size behavior. A quotient tie reduces the result to generic hierarchy.
 - The 2026 GridFM literature is moving quickly; adjacent learned-AMG, effective-resistance, and Ward/Kron-equivalent work requires another primary-source sweep before submission.
 
 ## Next Boundary
 
-The label-blind 2026-07-16 feasibility audit replaced `G32` with `G28` while preserving the 20-run matrix, six-group inference, target-size envelope, and size-extrapolation claim. This amendment requires a targeted proposal re-review before reviewed status can be restored. Implementation must still pass F0–F5 in the fork before the campaign.
+The label-blind 2026-07-16 feasibility audit replaced `G32` with `G28` while preserving the 20-run matrix, six-group inference, target-size envelope, and size-extrapolation claim. Cross-family external re-review assigned **9.05 / 10, READY** and restored proposal-level reviewed status for G28. This does not authorize treatment: implementation must still pass F0--F5 and R014 before the campaign.

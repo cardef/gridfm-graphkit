@@ -9,7 +9,7 @@
 **Implementation boundary:** `cardef/gridfm-graphkit`, current evidence commit `c690d6d6fd6e71187f0f4659c8daf52becbba69a`; upstream `gridfm/gridfm-graphkit` reference `b3d663b62179222c1ebec00ee29f67ea50e68c0b`; merge base `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. I001–I009 and R001–R002 have typed hashed PASS records at the current evidence commit.
 
 **Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `1f0aa148ac2a973b60d9c472e896a1394c48047ac566e801ae38dd7d388bbde1`.
-**Current status:** the proposal is amended from `G32` to `G28` after a label-blind feasibility audit; targeted external re-review is pending. The pinned PGLib inventory yields one deterministic minimum-group assignment with 28 sources, 27 targets across six held-out groups, source maximum 4,917 buses, and 10 size-extrapolative targets; R002 formally PASS. I010, R003–R014, and all confirmatory runs remain BLOCKED until their prerequisites pass under the amended committed contract.
+**Current status:** the proposal is amended from `G32` to `G28` after a label-blind feasibility audit and has passed cross-family external re-review at **9.05 / 10, READY** for proposal scope. The pinned PGLib inventory yields one deterministic minimum-group assignment with 28 sources, 27 targets across six held-out groups, source maximum 4,917 buses, and 10 size-extrapolative targets; R002 formally PASS. I010, R003–R014, and all confirmatory runs remain BLOCKED until their prerequisites pass under the amended committed contract.
 
 ## Claim Map
 

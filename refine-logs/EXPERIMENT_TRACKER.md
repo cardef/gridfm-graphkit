@@ -6,6 +6,9 @@
 
 **Campaign status:** BLOCKED until I001–I010 and R014 are PASS.
 
+**Proposal review:** PASS for the G8/G16/G28 contract; cross-family external
+re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
+
 **Status vocabulary:** `TODO`, `RUNNING`, `PASS`, `FAIL`, `BLOCKED`, `SKIPPED`.
 **Legacy rule:** existing M0/M1 artifacts cannot change a status below.
 
@@ -95,12 +98,11 @@
 | Legacy M0 summaries | CPU wiring, profiling, overfit, reconstruction, mmap, and prototype hierarchy checks completed | engineering hints only; no status change |
 | Legacy M1 MLflow experiment `702378410004452588` | 30 records: 11 finished, 19 stale; only Flat/case2000 finished; 238.675 one-GPU elapsed hours across finished records | not confirmatory; no I/R/E credit |
 | Legacy M1 SLURM logs | 40 `.stfolder`/MLflow discovery failures plus cancellation, OOM, and Triton resource failures | adds fail-closed store smoke to I010 |
-| Current local backend | CPU only; no CUDA or MPS; executable evidence is frozen at `c690d6d`; branch HEAD `6f519be` adds only the amendment manifest; editable Datakit is clean at `b0d55d0` | I001–I009 and R001–R002 have typed hashed PASS records at one executable commit; I010 remains blocked and no treatment launch is authorized |
+| Current local backend | CPU only; no CUDA or MPS; executable gate evidence is frozen at `c690d6d`; G28 review used clean branch HEAD `5e16b1f`; editable Datakit `main` is clean at `b0d55d0` | I001–I009 and R001–R002 have typed hashed PASS records; proposal review is READY, but I010 remains blocked and no treatment launch is authorized |
 
-1. **Targeted review:** review the canonical G28 amendment before restoring reviewed status; the previous 9.05 score applies to G32.
-2. **Data generation:** generate and audit static-topology PF data from the R002-selected members; target outcomes remain unreadable to selection code.
-3. **R003/R004:** run the bounded source-only geometry and capacity calibrations and write typed gate records.
-4. **I010:** add a reviewed upstream-flat checkpoint fixture, then run CUDA compile/FLOP parity and largest-grid host/accelerator peaks on a GPU node after admissible data exist.
-5. **R014:** only after every required I/R/C/P/S record is hashed PASS, materialize the explicit E001–E020 campaign and launch by manifest ID.
+1. **Data generation:** generate and audit static-topology PF data from the R002-selected members; target outcomes remain unreadable to selection code.
+2. **R003/R004:** run the bounded source-only geometry and capacity calibrations and write typed gate records.
+3. **I010:** add a reviewed upstream-flat checkpoint fixture, then run CUDA compile/FLOP parity and largest-grid host/accelerator peaks on a GPU node after admissible data exist.
+4. **R014:** only after every required I/R/C/P/S record is hashed PASS, materialize the explicit E001–E020 campaign and launch by manifest ID.
 
 No GPU treatment job is authorized.
