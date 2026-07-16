@@ -1,22 +1,19 @@
 {
   "version": 1,
   "repo_local_folders": {
-    "gridfm-idea-stage": "idea-stage",
     "gridfm-mlruns": "mlruns",
-    "gridfm-papers": "papers",
-    "gridfm-refine-logs": "refine-logs",
-    "gridfm-research-wiki": "research-wiki"
+    "gridfm-papers": "papers"
   },
   "ownership": {
     "git_roots": [
-      "experiments"
-    ],
-    "syncthing_roots": [
+      "experiments",
       "idea-stage",
-      "mlruns",
-      "papers",
       "refine-logs",
       "research-wiki"
+    ],
+    "syncthing_roots": [
+      "mlruns",
+      "papers"
     ]
   },
   "gpfs_bridge": {
@@ -28,10 +25,7 @@
     "single_writer": true,
     "routes": {
       "workstation_to_gpfs": [
-        "idea-stage",
-        "papers",
-        "refine-logs",
-        "research-wiki"
+        "papers"
       ],
       "gpfs_to_workstation": [
         "mlruns"

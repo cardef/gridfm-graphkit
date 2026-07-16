@@ -50,6 +50,39 @@ def load_layout(path: Path) -> dict[str, PurePosixPath]:
                 raise BoundaryError(
                     f"overlapping roots: {folder_id}={root} and {other_id}={other}",
                 )
+
+    raw_ownership = data.get("ownership")
+    if not isinstance(raw_ownership, dict):
+        raise BoundaryError(f"{path} must declare ownership")
+
+    ownership: dict[str, list[PurePosixPath]] = {}
+    for owner in ("git_roots", "syncthing_roots"):
+        raw_roots = raw_ownership.get(owner)
+        if not isinstance(raw_roots, list) or not all(
+            isinstance(root, str) for root in raw_roots
+        ):
+            raise BoundaryError(f"{path} ownership.{owner} must be a path list")
+        parsed = [PurePosixPath(root) for root in raw_roots]
+        if any(root.is_absolute() or ".." in root.parts for root in parsed):
+            raise BoundaryError(f"{path} ownership.{owner} contains an unsafe path")
+        ownership[owner] = parsed
+
+    declared_sync_roots = set(folders.values())
+    if set(ownership["syncthing_roots"]) != declared_sync_roots:
+        raise BoundaryError(
+            "ownership.syncthing_roots must exactly match repo_local_folders",
+        )
+
+    for git_root in ownership["git_roots"]:
+        for sync_root in ownership["syncthing_roots"]:
+            if (
+                git_root == sync_root
+                or git_root in sync_root.parents
+                or sync_root in git_root.parents
+            ):
+                raise BoundaryError(
+                    f"Git and Syncthing ownership overlap: {git_root} and {sync_root}",
+                )
     return folders
 
 
@@ -186,6 +219,12 @@ def validate_syncthing_config(
             raise BoundaryError(
                 f"declared folder {folder_id} moved to {sync_root}; update sync-layout.json",
             )
+
+    missing = sorted(set(expected) - seen_ids)
+    if missing:
+        raise BoundaryError(
+            f"declared Syncthing folders missing from live config: {', '.join(missing)}",
+        )
 
     return checked
 

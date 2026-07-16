@@ -6,11 +6,11 @@ Review the actual canonical proposal, make the implementation as general and sim
 
 ## Result
 
-The canonical proposal now specifies a controlled test of deterministic Kron–Schur communication inside one parameter-shared multi-topology model. Fable 5 Max assigns **9.05 / 10, READY** for proposal readiness. Novelty is **7.0 / 10, PROCEED WITH CAUTION**. No implementation or empirical result is claimed.
+The canonical proposal now specifies a controlled test of deterministic Kron–Schur communication inside one parameter-shared multi-topology model. Fable 5 Max assigned **9.05 / 10, READY** to the pre-amendment G32 contract. The label-blind G28 feasibility amendment still requires targeted re-review. Novelty is **7.0 / 10, PROCEED WITH CAUTION**. No confirmatory empirical result is claimed.
 
 ## Principal Refinements
 
-- Reframed the primary question around source-topology diversity `G8/G16/G32`, unseen-grid size, and cumulative training FLOPs at fixed capacity and total scenarios.
+- Reframed the primary question around source-topology diversity, unseen-grid size, and cumulative training FLOPs at fixed capacity and total scenarios. The 2026-07-16 feasibility amendment changes the frozen levels from `G8/G16/G32` to `G8/G16/G28` after a label-blind PGLib inventory audit proved `G32` incompatible with the held-out-family and size-extrapolation requirements.
 - Made `cardef/gridfm-graphkit` the explicit implementation and reproducibility boundary relative to upstream `gridfm/gridfm-graphkit`.
 - Reduced the architecture to a common encoder/local-backbone/communication-slot/decoder contract.
 - Removed HELM reconstruction, affine physical unpooling, per-scenario hierarchy quantities, target-fitted normalization, and recursive hierarchy from the confirmatory path.
@@ -32,7 +32,7 @@ The canonical proposal now specifies a controlled test of deterministic Kron–S
 | Structural final gate | Fable 5 Max | 8.9375, NOT READY; all structural gates passed | [response](../.aris/traces/novelty-check/2026-07-13_run02/004-fable5-max-round5-final-gate.response.md) |
 | Disclosure audit | Fable 5 Max | 9.05, READY; novelty 7.0 | [response](../.aris/traces/novelty-check/2026-07-13_run02/005-fable5-max-round5-sentence-audit.response.md) |
 
-All Fable calls used session `f5411f61-3db6-4c81-87e1-0020d7fcbc5c`, model route `claude-fable-5`, maximum reasoning effort, calibration none, and read-only repository access. Earlier AGY/Antigravity rounds remain represented in `score-history.md` and immutable historical artifacts.
+All Fable calls used session `f5411f61-3db6-4c81-87e1-0020d7fcbc5c`, model route `claude-fable-5`, maximum reasoning effort, calibration none, and read-only repository access. Earlier AGY/Antigravity rounds are consolidated in `REVIEW_ARCHIVE.md` and summarized in `score-history.md`.
 
 ## Novelty Boundary
 
@@ -42,4 +42,4 @@ The components are LOW novelty. The controlled experimental combination is MEDIU
 
 ## Cleanup
 
-The final proposal, review summary, refinement report, novelty report, state, score history, and immutable reviewer traces retain the full decision record. The working round-5 proposal is removed after its proposal body is published canonically. Legacy experiment-result files remain because they are evidence from the earlier prototype, not intermediate proposals or plans. Historical timestamped final artifacts remain immutable.
+The final proposal, review summary, refinement report, novelty report, review archive, score history, and current experiment evidence retain the durable decision record. Superseded timestamped copies, Syncthing conflict files, and stale resume checkpoints were removed after consolidation. `REFINE_STATE.json` remains an ignored machine-local checkpoint. Legacy experiment evidence remains explicitly scoped and cannot authorize confirmatory runs.

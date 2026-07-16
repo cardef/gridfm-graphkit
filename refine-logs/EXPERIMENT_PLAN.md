@@ -4,26 +4,26 @@
 
 **Method thesis:** A sparse, parameter-free electrical hierarchy should provide more useful nonlocal communication than matched local, typewise-global-summary, and same-partition generic-hierarchy alternatives.
 
-**Date:** 2026-07-15
+**Date:** 2026-07-16
 
-**Implementation boundary:** `cardef/gridfm-graphkit`, bridge baseline `fac90c875d1decb42ef14817aca41c4d77a28412`; upstream `gridfm/gridfm-graphkit` reference `b3d663b62179222c1ebec00ee29f67ea50e68c0b`; merge base `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. I001 must still be regenerated from the clean commit that contains the bridge implementation.
+**Implementation boundary:** `cardef/gridfm-graphkit`, current evidence commit `c690d6d6fd6e71187f0f4659c8daf52becbba69a`; upstream `gridfm/gridfm-graphkit` reference `b3d663b62179222c1ebec00ee29f67ea50e68c0b`; merge base `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. I001–I009 and R001–R002 have typed hashed PASS records at the current evidence commit.
 
-**Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `18f55dff62c0f52dbef68b11bea5cf10d090f41bd7ea94f614639d590ef70282`; synchronized reviewed snapshot at `research/kron-schur/FINAL_PROPOSAL.md`.
-**Current status:** proposal READY; bridge implementation is CPU-unit-tested; clean provenance, real data inventory, source-only calibration/profiling, and R014 remain BLOCKED. All confirmatory runs remain BLOCKED.
+**Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `1f0aa148ac2a973b60d9c472e896a1394c48047ac566e801ae38dd7d388bbde1`.
+**Current status:** the proposal is amended from `G32` to `G28` after a label-blind feasibility audit; targeted external re-review is pending. The pinned PGLib inventory yields one deterministic minimum-group assignment with 28 sources, 27 targets across six held-out groups, source maximum 4,917 buses, and 10 size-extrapolative targets; R002 formally PASS. I010, R003–R014, and all confirmatory runs remain BLOCKED until their prerequisites pass under the amended committed contract.
 
 ## Claim Map
 
 | Claim | Why It Matters | Minimum Convincing Evidence | Linked Blocks |
 |---|---|---|---|
-| **C1 — compute-transfer scaling** | This is the paper's dominant contribution. It asks whether electrical hierarchy improves a domain-specific foundation model rather than a single-grid specialist. | At common cumulative-FLOP checkpoints, Kron must beat both Flat and Global at `G32/C` with an inverted one-sided 95% error bound below zero, retain a physical-residual upper bound no larger than `log(1.05)`, remain better at `C/2` and `C`, and show non-contracting point estimates from `G8` to `G32` and from the smallest to largest frozen size tercile. | B1, B3, B4 |
-| **C2 — electrical operator rather than generic hierarchy** | Without this separation, a positive result supports only generic multiscale communication. | At `G32/C`, the inverted one-sided 95% bound for `log(error_Kron)-log(error_Quotient)` must be below zero with the same 5% residual gate. Partition, adapter, channel schema, coarse-node count, trainable capacity, data, and sparsity cap must match; realized nonzeros must be reported and charged in FLOPs rather than falsely equalized. | B2, B3, B4 |
+| **C1 — compute-transfer scaling** | This is the paper's dominant contribution. It asks whether electrical hierarchy improves a domain-specific foundation model rather than a single-grid specialist. | At common cumulative-FLOP checkpoints, Kron must beat both Flat and Global at `G28/C` with an inverted one-sided 95% error bound below zero, retain a physical-residual upper bound no larger than `log(1.05)`, remain better at `C/2` and `C`, and show non-contracting point estimates from `G8` to `G28` and from the smallest to largest frozen size tercile. | B1, B3, B4 |
+| **C2 — electrical operator rather than generic hierarchy** | Without this separation, a positive result supports only generic multiscale communication. | At `G28/C`, the inverted one-sided 95% bound for `log(error_Kron)-log(error_Quotient)` must be below zero with the same 5% residual gate. Partition, adapter, channel schema, coarse-node count, trainable capacity, data, and sparsity cap must match; realized nonzeros must be reported and charged in FLOPs rather than falsely equalized. | B2, B3, B4 |
 
 ### Anti-claims to rule out
 
 | Anti-claim | Control |
 |---|---|
 | The gain comes from more parameters or training work. | Trainable parameters within 2% without dummy parameters; checkpoints at common counted cumulative FLOPs; exact parameters and work reported. |
-| The gain comes from more data. | One fixed total scenario count across nested `G8 subset G16 subset G32`; only topology diversity changes. |
+| The gain comes from more data. | One fixed total scenario count across nested `G8 subset G16 subset G28`; only topology diversity changes. |
 | The gain comes from a larger search budget. | At most twelve topology-only geometry policies and three Flat-only loss candidates; no arm-specific tuning. |
 | Any hierarchy or cheap global mixer would work equally well. | Same-partition Quotient and released GridSFM-style typewise Global controls. |
 | Target information leaked into preprocessing or model selection. | Target outputs are unreadable to normalization, partitioning, geometry, checkpointing, and hyperparameter code; violations invalidate the zero-shot block. |
@@ -107,8 +107,8 @@ Seeds and scenarios are never inferential replicates. Report scenario P95 and be
 
 | Quantity | Rule | Freeze evidence |
 |---|---|---|
-| Source sets | Nested intact PGLib base cases: `G8 subset G16 subset G32`; outage variants do not count as systems. | `topology_manifest.yaml` hash |
-| Total training scenarios | One exact count `S_total`, identical at G8/G16/G32; balance provenance groups then cases. | data-manifest hash |
+| Source sets | Nested intact PGLib base cases: `G8 subset G16 subset G28`; outage variants do not count as systems. | `topology_manifest.yaml` hash |
+| Total training scenarios | One exact count `S_total`, identical at G8/G16/G28; balance provenance groups then cases. | data-manifest hash |
 | Target pool | At least 12 intact topologies, at least 6 independent provenance groups, roughly 0.5k–13.7k buses, and at least 4 targets in each frozen bus-count tercile. | target-manifest hash |
 | Size extrapolation | `N_target > N_source_max`; at least 4 such targets across at least 2 target groups for the claim. | source extrema and target manifest |
 | Geometry policy | At most 12 joint `(rho, k_P, k_C, kappa)` policies; deterministic residual/FLOP choice from source topology only. | candidate table and selected-policy hash |
@@ -142,11 +142,11 @@ Any unresolved quantity above blocks R014. A value may be determined by its froz
 
 - **Claim tested:** C1.
 - **Why this block exists:** it directly tests whether electrical nonlocal communication changes transfer at fixed capacity, scenarios, and compute.
-- **Dataset / split / task:** PF on nested `G8/G16/G32` sources; zero-shot evaluation on the frozen held-out target manifest.
+- **Dataset / split / task:** PF on nested `G8/G16/G28` sources; zero-shot evaluation on the frozen held-out target manifest.
 - **Compared systems:** Flat-HGNS, Global-HGNS, and Kron-HGNS.
 - **Metrics:** headline dimensionless error, `RMSE_VM_pu`, `RMSE_VA_rad`, dimensionless physical residual, cumulative training FLOPs, GPU-hours, parameter count, warm inference latency, and failures.
 - **Setup details:** 3 cores × 3 diversity levels × seeds `{0,1}` = 18 runs. Same scenario count, data order policy, objective, optimizer family, local stem/readout, checkpoints, and model-size tier.
-- **Success criterion:** all five C1 conjunctive gates from the canonical proposal pass. The decisive comparison is `G32/C`; `C/2`, G8/G32, and size-tercile gates prevent checkpoint and scaling cherry-picking.
+- **Success criterion:** all five C1 conjunctive gates from the canonical proposal pass. The decisive comparison is `G28/C`; `C/2`, G8/G28, and size-tercile gates prevent checkpoint and scaling cherry-picking.
 - **Failure interpretation:** Global tie/win favors the simpler global mechanism; Flat tie/win rejects hierarchy necessity; loss of the effect at larger size/diversity rejects the scalability thesis; a FLOP-matched failure rejects compute efficiency.
 - **Table / figure target:** main Table 1 and error-versus-cumulative-FLOPs Figure 2.
 - **Priority:** MUST-RUN.
@@ -155,11 +155,11 @@ Any unresolved quantity above blocks R014. A value may be determined by its froz
 
 - **Claim tested:** C2.
 - **Why this block exists:** a hierarchy gain alone is not evidence that circuit-derived geometry matters.
-- **Dataset / split / task:** identical `G32` training data and frozen zero-shot targets used by B1.
+- **Dataset / split / task:** identical `G28` training data and frozen zero-shot targets used by B1.
 - **Compared systems:** Kron-HGNS versus Quotient-HGNS; B1 Flat and Global remain contextual references.
 - **Metrics:** paired error and residual contrasts, exact bounds, realized cross-level/coarse nonzeros, cumulative FLOPs, parameters, build cost, and inference cost.
 - **Setup details:** two additional Quotient runs, seeds `{0,1}`; identical partition, adapter, channel schema, coarse-node count, sparsity cap, and training recipe. Quotient is not padded to imitate Schur fill.
-- **Success criterion:** at `G32/C`, the inverted upper 95% error bound is below zero and the residual bound is no larger than `log(1.05)`.
+- **Success criterion:** at `G28/C`, the inverted upper 95% error bound is below zero and the residual bound is no larger than `log(1.05)`.
 - **Failure interpretation:** a tie collapses C2 to generic multiscale communication; a Quotient win makes the electrical operator unnecessary in the tested regime.
 - **Table / figure target:** main mechanism panel in Figure 3 and Table 2.
 - **Priority:** MUST-RUN.
@@ -192,7 +192,7 @@ Any unresolved quantity above blocks R014. A value may be determined by its froz
 
 ## Mandatory Run Matrix
 
-| Core | G8 | G16 | G32 | Seeds | Runs | Role |
+| Core | G8 | G16 | G28 | Seeds | Runs | Role |
 |---|---:|---:|---:|---|---:|---|
 | Flat-HGNS | yes | yes | yes | 0, 1 | 6 | local baseline |
 | Global-HGNS | yes | yes | yes | 0, 1 | 6 | released-domain global-summary baseline |
@@ -200,7 +200,7 @@ Any unresolved quantity above blocks R014. A value may be determined by its froz
 | Quotient-HGNS | no | no | yes | 0, 1 | 2 | electrical-mechanism control |
 | **Total** |  |  |  |  | **20** | fixed confirmatory matrix |
 
-All 20 runs are mandatory once R014 passes. Operational launch order may prioritize G32 to expose resource failures, but target efficacy outputs remain sealed until the matrix completes. No arm may be dropped because an early result is unfavorable.
+All 20 runs are mandatory once R014 passes. Operational launch order may prioritize G28 to expose resource failures, but target efficacy outputs remain sealed until the matrix completes. No arm may be dropped because an early result is unfavorable.
 
 ## Run Order and Milestones
 
@@ -233,7 +233,7 @@ reserve       = 0.20 S_campaign <= 36.67 GPU-hours,
 mean run cap  = 183.33 / 20 = 9.17 GPU-hours.
 ```
 
-The mean is diagnostic, not a per-run quota; R012 uses the sum of core-specific upper bounds. The Flat throughput probe, `C_cal`, and three loss candidates share the 3-hour Flat calibration bucket. G32 profiles and S001 share the remaining 7-hour pre-campaign bucket. CPU data generation and geometry construction are measured separately.
+The mean is diagnostic, not a per-run quota; R012 uses the sum of core-specific upper bounds. The Flat throughput probe, `C_cal`, and three loss candidates share the 3-hour Flat calibration bucket. G28 profiles and S001 share the remaining 7-hour pre-campaign bucket. CPU data generation and geometry construction are measured separately.
 
 If the largest common `C` satisfying the equation is below the preregistered source-only learning horizon, R014 fails. Do not delete a seed, baseline, diversity level, Quotient control, or reserve.
 
@@ -241,7 +241,7 @@ If the largest common `C` satisfying the equation is below the preregistered sou
 
 - open PGLib case metadata and synthetically generated PF scenarios;
 - exactly frozen nested source sets and a provenance-group-held-out target pool;
-- one fixed scenario total across G8/G16/G32;
+- one fixed scenario total across G8/G16/G28;
 - case-declared `baseMVA`, canonical schemas, and explicit missing-field masks;
 - immutable topology, scenario, split, geometry, config, environment, and code hashes.
 
@@ -298,7 +298,7 @@ The implemented runner also requires per-network hashed split tensors. Source ca
 | Artifact | Evidence source |
 |---|---|
 | Figure 1 — common backbone and fork boundary | I001–I010 implementation contract |
-| Figure 2 — held-out error versus cumulative FLOPs for G8/G16/G32 | E001–E018, A001–A002 |
+| Figure 2 — held-out error versus cumulative FLOPs for G8/G16/G28 | E001–E018, A001–A002 |
 | Figure 3 — size-tercile and Kron-versus-Quotient contrasts | E001–E020, A002–A003 |
 | Figure 4 — build, inference, memory, and failure envelope | P001–P004, E001–E020, A004 |
 | Table 1 — main error/residual/compute results | A001 |

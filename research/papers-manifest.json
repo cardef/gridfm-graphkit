@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-16",
+  "root": "papers",
+  "owner": "syncthing",
+  "files": [
+    {
+      "path": "1512.08250.pdf",
+      "source": "https://arxiv.org/abs/1512.08250",
+      "bytes": 492499,
+      "pages": 11,
+      "sha256": "42eaf3f4a6ab3608ea0423e9db23fcec2423f1086e907522127d2e5dc13d9cb6"
+    },
+    {
+      "path": "1706.06622.pdf",
+      "source": "https://arxiv.org/abs/1706.06622",
+      "bytes": 720568,
+      "pages": 8,
+      "sha256": "90761cce000b0adc6e0af8da9208ac963691749427bd1511a2bf7ba576bc735f"
+    },
+    {
+      "path": "2308.06888.pdf",
+      "source": "https://arxiv.org/abs/2308.06888",
+      "bytes": 1772166,
+      "pages": 25,
+      "sha256": "b869b94448e096730de8574b588469491aaa8c048d3fb7b26f37783dd7ce6985"
+    },
+    {
+      "path": "2403.00400.pdf",
+      "source": "https://arxiv.org/abs/2403.00400",
+      "bytes": 184971,
+      "pages": 17,
+      "sha256": "4ef1e88c9a0925a7e90571f0ccc1f9033ddc4df746f8c2c1ddc4e5bf1fcfae41"
+    }
+  ]
+}

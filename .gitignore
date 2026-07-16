@@ -30,8 +30,6 @@ b12b6627956a448588674ce7cbc08cb4/
 .claude/
 .aris/
 .codex/
-research-wiki
-idea-stage/
 papers/
 
 # New run outputs are Syncthing/MLflow-owned. Existing tracked result snapshots
@@ -43,9 +41,15 @@ experiments/**/checkpoints/
 .stfolder/
 .stversions/
 
-# All refine logs are Syncthing/MLflow-owned artifacts. Canonical research
-# contracts live under research/kron-schur/ so no Git branch tracks a
-# Syncthing root.
+# ARIS text and knowledge roots are Git-owned. The mutable resume checkpoint is
+# machine-local and may be discarded after a completed refinement run.
+!idea-stage/
+!idea-stage/**
+!refine-logs/
+!refine-logs/**
+refine-logs/REFINE_STATE.json
+!research-wiki/
+!research-wiki/**
 build/
 dist/
 

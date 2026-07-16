@@ -5,44 +5,32 @@ The operational Mac/Linux branch workflow is documented in
 
 A fresh clone must build, test, and run without Syncthing or agent tooling.
 Git is the source of truth for every deployment input and repository contract.
-Syncthing is optional replication for high-churn research artifacts that are
-explicitly excluded from Git.
+Syncthing is optional replication for large artifacts that are explicitly
+excluded from Git.
 
 ## Git-owned files
 
 - Source, tests, packaging, CI, examples, and deployment configuration.
 - Experiment scripts, canonical configurations, and SLURM launchers below
   `experiments/`.
+- Idea reports, pilot code, and small pilot evidence below `idea-stage/`.
+- Proposals, plans, trackers, reviews, and current experiment evidence below
+  `refine-logs/`; `REFINE_STATE.json` is an ignored machine-local checkpoint.
+- The structured literature and claim knowledge base below `research-wiki/`.
 - `AGENTS.md` and `CLAUDE.md`, because they are portable repository policy.
-- `MANIFEST.md` and the promoted Kron-Schur research snapshot under
-  `research/kron-schur/`.
+- `MANIFEST.md` and the content manifests under `research/`.
 
-No Git branch may track files below a Syncthing root. ARIS continues to use
-`refine-logs/` as its working directory, including its expected canonical
-filenames; those files are ignored and synchronized. Promote a reviewed
-snapshot to Git with:
-
-```bash
-python tools/promote_kron_schur_contract.py
-git diff -- research/kron-schur/
-git add research/kron-schur/
-git commit -s -m "Update Kron-Schur research contract"
-```
-
-The promotion is intentionally one-way: ARIS writes the working copy, and Git
-records the reviewed snapshot. Do not edit the synchronized copy from Linux
-while ARIS is running on the Mac.
+Git and Syncthing roots never overlap. ARIS keeps its native project-relative
+paths, but Git now provides their history and cross-machine transport. Commit
+at workflow gates rather than synchronizing partially written text files.
 
 ## Syncthing-owned files
 
-The saved Mac configuration may replicate these ignored directories:
+The saved Mac configuration may replicate only these ignored directories:
 
 | Folder | Repository path | Purpose |
 | --- | --- | --- |
-| `gridfm-idea-stage` | `idea-stage/` | Discovery and prototype notes |
 | `gridfm-papers` | `papers/` | Paper working artifacts |
-| `gridfm-refine-logs` | `refine-logs/` | Timestamped history and review records |
-| `gridfm-research-wiki` | `research-wiki/` | Working research wiki |
 | `gridfm-mlruns` | `mlruns/` | Experiment tracking artifacts |
 
 Syncthing is replication, not version control. Do not use it to move tracked
@@ -62,9 +50,9 @@ side produced the files:
 
 | Content | Authoritative writer | Bridge direction |
 | --- | --- | --- |
-| `idea-stage/`, `refine-logs/`, `research-wiki/`, `papers/` | Mac/workstation ARIS workflow | workstation → GPFS |
+| `papers/` | Mac/workstation literature workflow | workstation → GPFS |
 | `mlruns/` | Linux/HPC execution | GPFS → workstation |
-| `experiments/` | Git branch | no rsync; use Git pull/push |
+| `experiments/`, `idea-stage/`, `refine-logs/`, `research-wiki/` | Git branch | no rsync; use Git pull/push |
 
 Use environment variables for machine-specific roots; do not commit absolute
 paths:
@@ -90,8 +78,8 @@ rsync -ainc \
   "$GRIDFM_SYNCTHING_REPO/mlruns/"
 ```
 
-Reverse the source and destination only for the four ARIS working roots in
-the table. Never use `--delete` for this bridge. Do not run opposing rsync
+Reverse the source and destination only when intentionally retrieving a paper
+from GPFS. Never use `--delete` for this bridge. Do not run opposing rsync
 directions concurrently, and do not edit the same logical artifact while a
 copy or Syncthing transfer is active.
 

@@ -2,14 +2,15 @@
 
 ## Outcome
 
-- **Final verdict:** READY
+- **Last external verdict:** READY for the pre-amendment `G8/G16/G32` contract
+- **Current amendment status:** `G8/G16/G28`; targeted external re-review pending
 - **Final weighted score:** 9.05 / 10
 - **Reviewer of record:** Fable 5 Max
 - **Model route:** `claude-fable-5`
 - **Reasoning effort:** max
 - **Session:** `f5411f61-3db6-4c81-87e1-0020d7fcbc5c`
 - **Calibration:** none
-- **Readiness scope:** proposal readiness only; implementation and submission remain unverified
+- **Readiness scope:** the 9.05 score applies to the pre-amendment proposal only; implementation and submission remain unverified
 - **Novelty verdict:** 7.0 / 10 — PROCEED WITH CAUTION
 
 ## Review Evolution
@@ -61,4 +62,4 @@ Fable reopened the earlier READY result because the quotient control claimed an 
 
 ## Next Boundary
 
-No proposal-level issue remains. Implementation must still pass F0–F5 in the fork before the 20-run campaign. READY does not mean that code, experiments, or a manuscript already satisfy the proposal.
+The label-blind 2026-07-16 feasibility audit replaced `G32` with `G28` while preserving the 20-run matrix, six-group inference, target-size envelope, and size-extrapolation claim. This amendment requires a targeted proposal re-review before reviewed status can be restored. Implementation must still pass F0–F5 in the fork before the campaign.

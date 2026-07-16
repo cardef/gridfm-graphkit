@@ -16,7 +16,7 @@ The contribution is a controlled study, not a claim to have invented Kron reduct
 | Claim | Assessment | Reason |
 |---|---|---|
 | C1. Same-partition Kron-versus-quotient mechanism study under matched capacity, data, and cumulative FLOPs | MEDIUM | No complete precedent was located, but it is an obvious composition of known ingredients unless the control and scaling result are unusually clean. |
-| C2. Kron advantage persists from `G8` to `G32` and does not contract on larger unseen grids | HIGH only if observed | This would be the main novel empirical finding. It cannot be claimed before the preregistered experiment passes. |
+| C2. Kron advantage persists from `G8` to `G28` and does not contract on larger unseen grids | HIGH only if observed | This would be the main novel empirical finding. It cannot be claimed before the preregistered experiment passes. |
 | C3. Conservative real-latent transport derived from Kron support and coefficient magnitudes | LOW | Restriction/prolongation pairs, Kron pooling, and AMG-style transport are established. Treat this as an implementation contract. |
 | C4. Content-addressed geometry registry and additive fork seam | LOW | Standard software-engineering patterns; no novelty claim is warranted. |
 

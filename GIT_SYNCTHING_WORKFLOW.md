@@ -1,6 +1,7 @@
 # Git, Syncthing, and ARIS workflow
 
-Git owns code and reproducibility. Syncthing owns mutable research artifacts.
+Git owns code, research text, and reproducibility. Syncthing owns large binary
+and run artifacts.
 Syncthing is bidirectional, but it does not understand branches, commits,
 merges, or tags.
 
@@ -9,30 +10,30 @@ merges, or tags.
 | Item | Owner | Purpose |
 | --- | --- | --- |
 | `main` | Git | Clean, tested, deployable repository |
-| `research/<paper>` | Git | Durable research line for one improvement/paper |
+| `research/<paper>/` | Git | Durable research code and immutable run receipts |
 | `exp/<paper>-<variant>` | Git | Short-lived code variant or ablation |
 | `run/<id>` tag | Git | Immutable pointer to an executed revision |
-| `refine-logs/` | ARIS + Syncthing | Working proposals, plans, reviews, checkpoints |
-| `idea-stage/` | ARIS + Syncthing | Idea discovery and pilot notes |
-| `research-wiki/` | ARIS + Syncthing | Working literature and claim knowledge base |
+| `idea-stage/` | Git | Idea discovery, pilot code, and small evidence |
+| `refine-logs/` | Git | Canonical proposal, plan, tracker, reviews, and current evidence |
+| `research-wiki/` | Git | Literature, ideas, claims, graph, and audit log |
 | `papers/` | Syncthing | Paper drafts, PDFs, and working figures |
 | `mlruns/` | Linux/HPC + Syncthing | MLflow runs, checkpoints, logs, results |
+| `refine-logs/REFINE_STATE.json` | Local only | Disposable mid-run resume checkpoint |
 
-Git must not track files below a Syncthing root. The boundary is checked by
-`tools/check_syncthing_boundary.py` in pre-commit and CI.
+Git never tracks files below a Syncthing root. Syncthing never manages a
+Git-owned text directory.
 
 ## Mac, workstation, and HPC roles
 
 - Mac: research coordination, ARIS runs, contract review, branch integration.
-- Linux workstation: bidirectional Syncthing peer and the local artifact
-  workspace used to bridge files to and from GPFS.
+- Linux workstation: Syncthing peer for `papers/` and `mlruns/`, plus the local
+  artifact workspace used to bridge those roots to and from GPFS.
 - HPC/GPFS: checkout of the committed revision and expensive runs; GPFS is not
   directly managed by Syncthing in the current deployment.
 
-Mac and workstation may write synchronized files, but they must not edit the
-same logical file concurrently. Run ARIS refinement on one machine at a time.
-Use the explicit one-way routes in `SYNC_LAYOUT.md` to bridge artifacts
-between the workstation and GPFS.
+Git transports ARIS text between machines. Run one refinement session on one
+machine, then commit its durable outputs at the next gate. Use the explicit
+one-way routes in `SYNC_LAYOUT.md` only for `papers/` and `mlruns/`.
 
 ## Start a research line
 
@@ -52,22 +53,21 @@ git switch -c exp/<paper-slug>-<variant> research/<paper-slug>
 
 ## ARIS contract flow
 
-ARIS and the research skills expect their working files in `refine-logs/`.
-Those files are ignored by Git and synchronized by Syncthing.
+The canonical contract is edited and reviewed at the standard ARIS paths in
+`refine-logs/`. Durable outputs are Git-tracked. The mutable
+`REFINE_STATE.json` checkpoint is local and ignored; do not transfer a running
+refinement session between machines.
 
-After a proposal, plan, or review passes its gate, promote a reviewed snapshot
-into the Git-owned research directory. On a research branch with the helper:
+On the research branch, review and commit the contract directly:
 
 ```bash
-python tools/promote_kron_schur_contract.py
-git diff -- research/kron-schur/
-git add research/kron-schur/
+git diff -- refine-logs/
+git add refine-logs/FINAL_PROPOSAL.md refine-logs/EXPERIMENT_PLAN.md \
+  refine-logs/EXPERIMENT_TRACKER.md refine-logs/REVIEW_SUMMARY.md \
+  refine-logs/NOVELTY_REPORT.md refine-logs/REFINEMENT_REPORT.md
 git commit -s -m "Update research contract"
 git push -u origin research/<paper-slug>
 ```
-
-Promotion is one-way: ARIS writes the working copy, and Git records the
-reviewed snapshot.
 
 ## Run on Linux/HPC
 

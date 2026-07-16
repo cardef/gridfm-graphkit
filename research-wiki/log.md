@@ -1,0 +1,76 @@
+# Research Wiki Log
+
+_Append-only timeline._
+- `2026-07-06T01:03:47Z` Wiki initialized
+- `2026-07-06T07:25:31Z` ingest_paper: ingested paper:pham2024_reduced_optimal_power (arxiv:2402.06226)
+- `2026-07-06T07:25:33Z` ingest_paper: ingested paper:fortunato2022_multiscale_meshgraphnets (arxiv:2210.00612)
+- `2026-07-06T07:25:34Z` ingest_paper: ingested paper:cao2022_efficient_learning_meshbased (arxiv:2210.02573)
+- `2026-07-06T07:25:36Z` ingest_paper: ingested paper:piloto2024_canos_fast_scalable (arxiv:2403.17660)
+- `2026-07-06T07:25:38Z` ingest_paper: ingested paper:lovett2024_opfdata_largescale_datasets (arxiv:2406.07234)
+- `2026-07-06T07:25:40Z` ingest_paper: ingested paper:lin2023_powerflownet_power_flow (arxiv:2311.03415)
+- `2026-07-06T07:25:42Z` ingest_paper: ingested paper:rivera2025_benchmark_dataset_power (arxiv:2510.22048)
+- `2026-07-06T07:25:43Z` ingest_paper: ingested paper:hamann2024_foundation_models_electric (arxiv:2407.09434)
+- `2026-07-06T07:25:45Z` ingest_paper: ingested paper:ma2023_graph_inductive_biases (arxiv:2305.17589)
+- `2026-07-06T07:25:47Z` ingest_paper: ingested paper:pfaff2020_learning_meshbased_simulation (arxiv:2010.03409)
+- `2026-07-06T07:25:49Z` ingest_paper: ingested paper:sanchezgonzalez2020_learning_simulate_complex (arxiv:2002.09405)
+- `2026-07-06T07:25:51Z` ingest_paper: ingested paper:gao2019_graph_unets (arxiv:1905.05178)
+- `2026-07-06T07:25:52Z` ingest_paper: ingested paper:pham2022_reduced_optimal_power (arxiv:2206.13591)
+- `2026-07-06T07:38:25Z` wiki-enrich: enriched paper:piloto2024_canos_fast_scalable from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:26Z` wiki-enrich: enriched paper:lovett2024_opfdata_largescale_datasets from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:26Z` wiki-enrich: enriched paper:lin2023_powerflownet_power_flow from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:26Z` wiki-enrich: enriched paper:rivera2025_benchmark_dataset_power from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:27Z` wiki-enrich: enriched paper:pham2024_reduced_optimal_power from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:27Z` wiki-enrich: enriched paper:pham2022_reduced_optimal_power from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:27Z` wiki-enrich: enriched paper:fortunato2022_multiscale_meshgraphnets from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:28Z` wiki-enrich: enriched paper:cao2022_efficient_learning_meshbased from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:28Z` wiki-enrich: enriched paper:gao2019_graph_unets from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:28Z` wiki-enrich: enriched paper:ma2023_graph_inductive_biases from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:28Z` wiki-enrich: enriched paper:pfaff2020_learning_meshbased_simulation from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:29Z` wiki-enrich: enriched paper:sanchezgonzalez2020_learning_simulate_complex from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:38:29Z` wiki-enrich: enriched paper:hamann2024_foundation_models_electric from page-abstract-fallback (filled 9/9 sections)
+- `2026-07-06T07:52:31Z` wiki-enrich: enriched paper:gao2019_graph_unets from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:53:06Z` wiki-enrich: enriched paper:lovett2024_opfdata_largescale_datasets from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:53:20Z` wiki-enrich: enriched paper:cao2022_efficient_learning_meshbased from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:53:22Z` wiki-enrich: enriched paper:fortunato2022_multiscale_meshgraphnets from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:53:45Z` wiki-enrich: enriched paper:lin2023_powerflownet_power_flow from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:53:51Z` wiki-enrich: enriched paper:hamann2024_foundation_models_electric from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:53:53Z` wiki-enrich: enriched paper:pfaff2020_learning_meshbased_simulation from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:54:04Z` wiki-enrich: enriched paper:ma2023_graph_inductive_biases from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:54:15Z` wiki-enrich: enriched paper:piloto2024_canos_fast_scalable from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:54:24Z` wiki-enrich: enriched paper:pham2024_reduced_optimal_power from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:54:43Z` wiki-enrich: enriched paper:sanchezgonzalez2020_learning_simulate_complex from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:54:48Z` wiki-enrich: enriched paper:rivera2025_benchmark_dataset_power from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:54:51Z` wiki-enrich: enriched paper:pham2022_reduced_optimal_power from arxiv-pdf-fulltext (full-text, filled 9/9 sections)
+- `2026-07-06T07:57:20Z` gap_map: corrected G1 — pham2024_reduced_optimal_power is not virtual-node graph coarsening (nested two-stage classifier, no structural hierarchy); gap remains fully open (per full-text re-enrichment)
+- `2026-07-06T12:24:52Z` upsert_idea: added idea:factorial-size-transfer-attribution [stage=proposed outcome=pending]
+- `2026-07-06T12:26:13Z` upsert_idea: added idea:domain-vs-learned-coarsening [stage=proposed outcome=pending]
+- `2026-07-06T12:26:14Z` upsert_idea: added idea:kron-schur-unet [stage=proposed outcome=pending]
+- `2026-07-06T12:26:14Z` upsert_idea: added idea:ward-crop-augmentation [stage=proposed outcome=pending]
+- `2026-07-06T12:26:14Z` upsert_idea: added idea:pf-information-range-atlas [stage=proposed outcome=pending]
+- `2026-07-06T12:26:15Z` upsert_idea: added idea:hierarchy-vs-depth-matched-compute [stage=proposed outcome=pending]
+- `2026-07-06T12:26:15Z` upsert_idea: added idea:schwarz-ward-decomposition [stage=proposed outcome=pending]
+- `2026-07-06T12:26:15Z` upsert_idea: added idea:topology-vs-size-protocol [stage=proposed outcome=pending]
+- `2026-07-06T12:26:15Z` upsert_idea: added idea:hmatrix-zbus-attention [stage=proposed outcome=pending]
+- `2026-07-06T12:26:41Z` upsert_idea: added idea:electrically-regularized-learned-coarsening [stage=archived outcome=pending]
+- `2026-07-06T12:26:41Z` upsert_idea: added idea:ward-teacher-supervision [stage=archived outcome=pending]
+- `2026-07-06T12:26:42Z` upsert_idea: added idea:linear-probe-implicit-hierarchy [stage=archived outcome=pending]
+- `2026-07-06T12:26:42Z` upsert_idea: added idea:oversmoothing-dirichlet-sweep [stage=archived outcome=pending]
+- `2026-07-06T12:26:42Z` upsert_idea: added idea:hierarchy-levels-scaling-law [stage=archived outcome=pending]
+- `2026-07-06T12:26:43Z` upsert_idea: added idea:coarse-grid-correction-head [stage=archived outcome=pending]
+- `2026-07-06T12:26:43Z` upsert_idea: added idea:contingency-amortization-breakeven [stage=archived outcome=pending]
+- `2026-07-06T12:26:43Z` idea-creator run01 2026-07-06: hierarchical GNN scaling — 35 generated, 25 deduped, cross-model triage (codex gpt-5.5 xhigh), 9 proposed + 7 archived recorded; 2 CPU pilots (kron fill-in POSITIVE, PTDF locality SURPRISING); report at idea-stage/IDEA_REPORT.md
+- `2026-07-06T13:49:56Z` research-refine: kron-schur-unet READY 9.00/10 after 4 rounds (7.15->8.05->8.60->9.00); FINAL_PROPOSAL.md written; experiment plan re-sequenced to hard-gated order
+- `2026-07-06T13:50:22Z` upsert_idea: updated idea:kron-schur-unet [stage=active outcome=pending]
+- `2026-07-06T13:50:23Z` research-refine: kron-schur-unet READY 9.00/10 after 4 rounds (7.15->8.05->8.60->9.00); FINAL_PROPOSAL.md written; experiment plan re-sequenced to hard-gated order
+- `2026-07-07T17:20:55Z` ingest_paper: ingested paper:schaft2024_kron_reduction_nonlinear (arxiv:2403.00400)
+- `2026-07-07T17:20:56Z` ingest_paper: ingested paper:dorfler2011_kron_reduction_graphs (arxiv:1102.2950)
+- `2026-07-07T17:20:56Z` ingest_paper: ingested paper:monshizadeh2015_novel_reduced_model (arxiv:1512.08250)
+- `2026-07-07T17:20:57Z` ingest_paper: ingested paper:chevalier2022_towards_optimal_kronbased (arxiv:2204.05554)
+- `2026-07-07T17:20:57Z` ingest_paper: ingested paper:liu2017_approximate_analytical_solutions (arxiv:1706.06622)
+- `2026-07-07T17:20:58Z` ingest_paper: ingested paper:bueler2023_full_approximation_scheme (arxiv:2308.06888)
+- `2026-07-07T17:20:58Z` ingest_paper: ingested paper:ho2026_twolevel_nonlinear_schwarz (arxiv:2603.24542)
+- `2026-07-07T17:20:59Z` ingest_paper: ingested paper:taghibakhshi2023_mggnn_multigrid_graph (arxiv:2301.11378)
+- `2026-07-07T17:20:59Z` ingest_paper: ingested paper:xie2023_mgcnn_learnable_multigrid (arxiv:2312.11093)
+- `2026-07-07T17:21:00Z` ingest_paper: ingested paper:fink2026_rapnet_accelerating_algebraic (arxiv:2605.26854)
+- `2026-07-07T17:21:00Z` ingest_paper: ingested paper:bazzi2026_physicsinformed_coarsening_multigrid (arxiv:2605.31013)
+- `2026-07-07T17:21:01Z` ingest_paper: ingested paper:chen2023_physicsguided_residual_learning (arxiv:2301.12062)

@@ -1,0 +1,22 @@
+
+[Pilot A] case1354_pegase: nb=1354 boundary=420 (31.0%, kv>=380 or gen) fine offdiag nnz=3420
+  tol=1e-06: coarse offdiag density=2.5%, mass kept=1.0000
+  tol=0.0001: coarse offdiag density=2.1%, mass kept=1.0000
+  tol=0.001: coarse offdiag density=1.8%, mass kept=1.0000
+  95% of off-diag mass in 0.40% of possible coarse edges (k=705)
+
+[Pilot B] case1354_pegase: diameter~25, sources=80
+  Spearman(log10|PTDF|, hop)  = -0.359
+  Spearman(log10|PTDF|, Reff) = -0.242   (delta=-0.117)
+  median log10|PTDF| slope per hop = -0.097 (10x drop every 10.3 hops)
+
+[Pilot A] Texas2k: nb=2000 boundary=499 (24.9%, kv>=500 or gen) fine offdiag nnz=5356
+  tol=1e-06: coarse offdiag density=19.4%, mass kept=1.0000
+  tol=0.0001: coarse offdiag density=10.9%, mass kept=1.0000
+  tol=0.001: coarse offdiag density=7.2%, mass kept=1.0000
+  95% of off-diag mass in 0.31% of possible coarse edges (k=765)
+
+[Pilot B] Texas2k: diameter~28, sources=80
+  Spearman(log10|PTDF|, hop)  = -0.418
+  Spearman(log10|PTDF|, Reff) = -0.157   (delta=-0.261)
+  median log10|PTDF| slope per hop = -0.095 (10x drop every 10.5 hops)

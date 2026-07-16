@@ -31,14 +31,20 @@ repos:
         # when "--baseline" with "--use-all-plugins", pre-commit scan with all available plugins
         # add "--fail-on-unaudited" to fail pre-commit for unaudited potential secrets
           args: [--baseline, .secrets.baseline, --use-all-plugins]
-          # This generated inventory contains only public content hashes pinned
-          # to the PGLib source revision; scanning them as credentials is noise.
-          exclude: '.*\.ipynb$|^experiments/fm_scaling/frozen/pglib_candidate_inventory\.json$'
+          # These generated inventories contain only public content or Git
+          # provenance hashes; scanning them as credentials is noise.
+          exclude: '.*\.ipynb$|^experiments/fm_scaling/frozen/pglib_candidate_inventory\.json$|^research/papers-manifest\.json$'
 -   repo: local
     hooks:
     -   id: syncthing-boundary
         name: Syncthing cannot overlap the checked-out Git tree
         entry: python tools/check_syncthing_boundary.py
+        language: system
+        pass_filenames: false
+        always_run: true
+    -   id: research-contract-source
+        name: Kron-Schur contract has one source of truth
+        entry: python tools/check_research_contract.py
         language: system
         pass_filenames: false
         always_run: true

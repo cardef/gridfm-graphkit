@@ -110,12 +110,8 @@ External plugins register additional components when imported through
 
 ## Active Kron-Schur Research Contract
 
-The current research contract has two layers:
+The only source of truth is the Git-tracked contract at ARIS's native paths:
 
-- ARIS working files in `refine-logs/FINAL_PROPOSAL.md` and
-  `refine-logs/EXPERIMENT_PLAN.md` remain the paths consumed by the research
-  skills and are synchronized as ignored artifacts.
-- The reviewed Git snapshot lives under `research/kron-schur/`.
 - `refine-logs/FINAL_PROPOSAL.md` defines the method and claim boundary.
 - `refine-logs/EXPERIMENT_PLAN.md` defines constants, estimands, budgets, and run
   rules.
@@ -123,9 +119,11 @@ The current research contract has two layers:
 - `refine-logs/NOVELTY_REPORT.md` defines the source-backed novelty boundary.
 - `MANIFEST.md` for generated research artifacts.
 
-After an ARIS review gate, promote the working contract with
-`python tools/promote_kron_schur_contract.py` and commit the resulting Git
-snapshot. Linux/HPC runs must use the committed branch and record its SHA.
+All durable files below `idea-stage/`, `refine-logs/`, and `research-wiki/`
+are Git-owned; Syncthing must not manage those roots. `REFINE_STATE.json` is an
+ignored, machine-local resume checkpoint. Do not recreate contract copies
+under `research/kron-schur/`. Linux/HPC runs must use the committed canonical
+files and record the branch SHA.
 
 Proposal readiness is not implementation readiness. The tracker currently
 blocks treatment runs until implementation items I001-I010 and freeze gate
@@ -183,6 +181,17 @@ Follow PEP 8, retain project license headers on new files, and use DCO sign-off
 for commits (`git commit -s`). See `CONTRIBUTING.md`.
 
 ## ARIS Skills
+
+ARIS keeps its standard project-relative routing, but ownership is determined
+by artifact type:
+
+- Git owns `idea-stage/`, `refine-logs/`, and `research-wiki/`.
+- Syncthing owns only the ignored `papers/` and `mlruns/` roots.
+- `.aris/`, `REFINE_STATE.json`, caches, and incomplete runtime state are local
+  only.
+
+Commit durable ARIS text at workflow gates. Do not use Syncthing or rsync to
+transport Git-owned ARIS directories.
 
 A development checkout may have project-local Claude skill links under
 `.claude/skills/`, recorded by `.aris/installed-skills.txt`. These directories
