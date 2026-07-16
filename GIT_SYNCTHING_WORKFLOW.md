@@ -35,6 +35,10 @@ Git transports ARIS text between machines. Run one refinement session on one
 machine, then commit its durable outputs at the next gate. Use the explicit
 one-way routes in `SYNC_LAYOUT.md` only for `papers/` and `mlruns/`.
 
+Global agent installations and Claude project sessions are not synchronized.
+Recreate skills from their Git/package sources. The only synchronized global
+agent state is `~/.codex/memories/`, with exactly one writer at a time.
+
 ## Start a research line
 
 Create one research branch per improvement or paper, not one branch per run:

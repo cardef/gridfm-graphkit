@@ -89,9 +89,13 @@ variables.
 
 ## Agent state
 
-- Install Claude and Codex skills from the ARIS Git checkout; do not synchronize
-  generated skill installations or project-local symlink farms.
-- `~/.codex/memories/` may be synchronized only with a single-writer policy.
+- Install Claude, shared-agent, and Codex skills from their Git/package sources;
+  do not synchronize generated skill installations or project-local symlink
+  farms.
+- Do not synchronize Claude project sessions. They are mutable runtime history,
+  not portable project state.
+- `~/.codex/memories/` is the only synchronized global agent-state root and may
+  be synchronized only with a single-writer policy.
   Concurrent writers can create conflict copies and corrupt the routing index.
 - Never synchronize an entire `~/.codex`, `~/.claude`, `.codex`, `.claude`, or
   `.aris` tree. Exclude credentials, API-key-bearing configuration, databases
