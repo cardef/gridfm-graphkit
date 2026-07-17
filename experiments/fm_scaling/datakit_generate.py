@@ -10,10 +10,16 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import multiprocessing
 import platform
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Datakit's feasibility-bound worker uses multiprocessing.Pool. Force spawn
+# before Julia starts: forking the initialized multithreaded Julia runtime
+# deadlocks both parent and child on Abacus.
+multiprocessing.set_start_method("spawn", force=True)
 
 # JuliaCall must initialize before GraphKit imports Torch; the reverse order is a
 # documented segfault risk in mixed Julia/PyTorch processes.

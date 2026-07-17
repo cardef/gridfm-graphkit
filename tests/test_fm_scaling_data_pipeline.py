@@ -21,6 +21,18 @@ from gridfm_graphkit.fm_scaling.manifest import file_sha256
 from gridfm_graphkit.fm_scaling.splits import validate_materialized_splits
 
 
+def test_datakit_generation_forces_spawn_before_julia_initialization():
+    entrypoint = (
+        Path(__file__).parents[1]
+        / "experiments"
+        / "fm_scaling"
+        / "datakit_generate.py"
+    )
+    source = entrypoint.read_text()
+    spawn = 'multiprocessing.set_start_method("spawn", force=True)'
+    assert 0 <= source.index(spawn) < source.index("import juliacall")
+
+
 def _case():
     return {
         "network": "case2_test",
