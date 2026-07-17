@@ -11,6 +11,7 @@ import hashlib
 import importlib.metadata
 import json
 import multiprocessing
+import os
 import platform
 import sys
 from datetime import datetime, timezone
@@ -27,6 +28,33 @@ import juliacall  # noqa: F401
 
 from experiments.fm_scaling.prepare_data import assert_datakit_checkout
 from gridfm_graphkit.fm_scaling.manifest import file_sha256
+
+
+_CHUNK_SEED_SHIM = "GRIDFM_DATAKIT_UINT32_CHUNK_SEED"
+
+
+def _install_uint32_chunk_seed_shim() -> None:
+    """Bound Datakit's derived chunk seed without changing frozen base seeds."""
+    from gridfm_datakit.process import process_network
+
+    current = process_network.custom_seed
+    if getattr(current, "_gridfm_uint32_chunk_seed", False):
+        return
+
+    class Uint32ChunkSeed(current):
+        _gridfm_uint32_chunk_seed = True
+
+        def __init__(self, seed=None):
+            bounded = None if seed is None else int(seed) % (2**32)
+            super().__init__(bounded)
+
+    process_network.custom_seed = Uint32ChunkSeed
+
+
+# Spawned workers import this module without calling main(). The parent sets the
+# marker only after verifying the exact editable Datakit checkout.
+if os.environ.get(_CHUNK_SEED_SHIM) == "1":
+    _install_uint32_chunk_seed_shim()
 
 
 def _environment_hash() -> str:
@@ -50,6 +78,8 @@ def main() -> int:
         args.repo_root.resolve(),
         args.expected_commit,
     )
+    os.environ[_CHUNK_SEED_SHIM] = "1"
+    _install_uint32_chunk_seed_shim()
     import gridfm_datakit
     from gridfm_datakit.generate import generate_power_flow_data_distributed
 

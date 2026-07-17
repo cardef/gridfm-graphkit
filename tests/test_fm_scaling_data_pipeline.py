@@ -33,6 +33,17 @@ def test_datakit_generation_forces_spawn_before_julia_initialization():
     assert 0 <= source.index(spawn) < source.index("import juliacall")
 
 
+def test_datakit_chunk_seed_shim_preserves_frozen_seed_separation():
+    modulus = 2**32
+    base_seeds = range(20260714, 20260714 + 55)
+    derived = {
+        (seed * 20_000 + scenario + 1) % modulus
+        for seed in base_seeds
+        for scenario in range(2331)
+    }
+    assert len(derived) == 55 * 2331
+
+
 def _case():
     return {
         "network": "case2_test",
