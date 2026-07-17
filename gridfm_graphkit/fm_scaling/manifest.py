@@ -257,13 +257,13 @@ class CampaignManifest:
 def expected_run_matrix() -> dict[str, tuple[str, str, int]]:
     matrix = {}
     run = 1
-    for g_level in ("G8", "G16", "G28"):
+    for g_level in ("G8", "G16", "G26"):
         for core in ("flat", "global", "kron"):
             for seed in (0, 1):
                 matrix[f"E{run:03d}"] = (core, g_level, seed)
                 run += 1
     for seed in (0, 1):
-        matrix[f"E{run:03d}"] = ("quotient", "G28", seed)
+        matrix[f"E{run:03d}"] = ("quotient", "G26", seed)
         run += 1
     return matrix
 

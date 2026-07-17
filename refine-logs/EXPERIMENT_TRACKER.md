@@ -1,13 +1,14 @@
 # Experiment Tracker: Kron–Schur GridFM Scaling
 
-**Date:** 2026-07-16
+**Date:** 2026-07-17
 
-**Proposal SHA-256:** `1f0aa148ac2a973b60d9c472e896a1394c48047ac566e801ae38dd7d388bbde1`
+**Proposal SHA-256:** `385cd3ba44995ff8ddaa3250abbefc941f566b27f9cd2da61821bf601abf9547`
 
 **Campaign status:** BLOCKED until I001–I010 and R014 are PASS.
 
-**Proposal review:** PASS for the G8/G16/G28 contract; cross-family external
-re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
+**Proposal review:** PENDING for the G8/G16/G26 contract. The 9.05 / 10 READY
+verdict covered G28 and is historical; the attempted G26 re-review failed
+authentication before a verdict. No treatment is authorized.
 
 **Status vocabulary:** `TODO`, `RUNNING`, `PASS`, `FAIL`, `BLOCKED`, `SKIPPED`.
 **Legacy rule:** existing M0/M1 artifacts cannot change a status below.
@@ -24,7 +25,7 @@ re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
 | I006 | M1 | Implement content-addressed registry | all | multi-topology | immutable cache key/hash/device tests; no sample paths or copied operators | MUST | PASS | regenerated typed hashed `registry-tests` record at `c690d6d`; 2/2 selected tests pass |
 | I007 | M2 | Extract one communication seam | Flat/Global/Kron/Quotient | synthetic + source | shared encoder/stem/slot/readout; output/gradient schemas; parameter report | MUST | PASS | regenerated typed hashed `seam-tests` record at `c690d6d`; 8/8 selected tests pass; capacity freeze remains R004 |
 | I008 | M3 | Implement portable PF data contract | all | source + target metadata | case-declared `baseMVA`, source-only optional stats, target-output unreadability test | MUST | PASS | regenerated typed hashed `data-tests` record at `c690d6d`; 8/8 selected tests pass; no target outcomes were read |
-| I009 | M3 | Implement balanced training/evaluation | all | G8/G16/G28 | provenance/case sampler, per-graph/component loss, known-value projection, metric unit tests | MUST | PASS | regenerated typed hashed `training-tests` record at `c690d6d`; 22/22 selected tests pass with the G28 matrix and locked analysis |
+| I009 | M3 | Implement balanced training/evaluation | all | G8/G16/G26 | provenance/case sampler, per-graph/component loss, known-value projection, metric unit tests | MUST | BLOCKED | prior PASS evidence predates the G26 source-development repair; focused tests pass on Abacus, but typed evidence must be regenerated at the amended clean commit |
 | I010 | M3 | Implement compute and compatibility gates | all | synthetic + largest grids | cumulative-FLOP checkpoint tests, profiler cross-check, compile parity, upstream-flat load, clean clone, MLflow child-store create/search smoke | MUST | BLOCKED | fresh CPU audit at clean `4a293b2` passes upstream identity, MLflow child-store smoke, clean-clone import, and flat schema/FLOP checks; blocked by absent reviewed upstream-flat checkpoint, unavailable CUDA compile/FLOP parity, and absent largest-grid data/peaks |
 
 ## Readiness and Freeze Gates
@@ -32,9 +33,9 @@ re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
 | ID | Milestone | Purpose | System / Variant | Split | Required Evidence | Priority | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
 | R001 | M0 | Build candidate topology inventory | data | all available cases | case IDs, provenance groups, bus counts, `baseMVA`, integrity status | MUST | PASS | regenerated formal record at `c690d6d`; PGLib v23 commit `dc6be4b`: 66 cases, 65 eligible, 15 conservative provenance groups, 3–78,484 buses; one preserved integrity warning |
-| R002 | M0 | Freeze source-development split rules | data | source candidates | G8⊂G16⊂G28 rule, fixed `S_total`, source-dev groups, no outage pseudo-systems | MUST | PASS | formal typed `source-split` record at `c690d6d`; held-out groups EPIGRIDS/K/PEGASE/RTE/SDET/SNEM, 28 sources, 27 targets, source maximum 4,917 buses, and 10 extrapolative targets; outcomes unread |
-| R003 | M1 | Evaluate geometry candidates | Kron | source-development topology only | ≤12-policy table: residual, conditioning, nnz, FLOPs, build time, host peak | MUST | BLOCKED | R002 passes, but the source-development group split, candidate table, explicit projected-FLOP model, and admissible data are not frozen; runner now fails closed on the missing FLOP model |
-| R004 | M2 | Match common capacity | all | source topology only | widths and Flat `q`; all parameter counts within 2% | MUST | BLOCKED | R002 passes, but the deterministic width/Flat-`q` search domain and admissible source manifest are not frozen |
+| R002 | M0 | Freeze source-development split rules | data | source candidates | G8⊂G16⊂G26 rule, fixed `S_total`, source-dev groups, no outage pseudo-systems | MUST | BLOCKED | executable topology-only audit PASS on job 54357 with `S_total=11,655`; G26 maximal; PSERC/ACTIV source development; six target groups and 27 targets; awaits clean reachable commit and regenerated typed receipt |
+| R003 | M1 | Evaluate geometry candidates | Kron | source-development topology only | ≤12-policy table: residual, conditioning, nnz, FLOPs, build time, host peak | MUST | BLOCKED | 12-policy topology-only grid and explicit width-64 projected-FLOP model frozen at SHA-256 `3cb2a7a`; waits for audited source-development data |
+| R004 | M2 | Match common capacity | all | source topology only | widths and Flat `q`; all parameter counts within 2% | MUST | BLOCKED | executable job 54389 PASS: Flat 122/q1=898,655; Global 118=898,101; Kron/Quotient 123=897,657; relative gap 0.1112%; awaits clean committed typed receipt |
 | R005 | M4 | Freeze `C_cal` | Flat | source-development | treatment-blind throughput probe and 3-hour aggregate upper bound | MUST | TODO | probe is charged to Flat calibration bucket |
 | C001 | M4 | Loss candidate 1 | Flat seed 0 | source-development | `C_cal` checkpoint, error, residual, GPU-hours | MUST | BLOCKED | waits for R005 |
 | C002 | M4 | Loss candidate 2 | Flat seed 0 | source-development | `C_cal` checkpoint, error, residual, GPU-hours | MUST | BLOCKED | waits for R005 |
@@ -43,10 +44,10 @@ re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
 | R007 | M4 | Estimate design dispersion | selected Flat seed 0 | held-out source-development groups | group errors, `s_Flat`, `sigma_design=sqrt(2)s_Flat` | MUST | BLOCKED | deterministic reducer ready; selected `C_cal` evidence absent |
 | R008 | M4 | Freeze powered target-group count | analysis | candidate target groups | 1M-draw PCG64 power report, seed 20260714, ≥80% power, count ≥6 | MUST | BLOCKED | vectorized exact-sign power reducer ready; source-development dispersion absent |
 | R009 | M4 | Freeze target manifest and terciles | data | held-out targets | selected groups/topologies, ≥4 per tercile, source extrema, extrapolation subset | MUST | BLOCKED | target outputs unreadable |
-| P001 | M4 | Profile Local core | Flat | G28 source / largest source shapes | counted FLOPs, GPU-hours, wall time, peaks | MUST | BLOCKED | treatment-blind |
-| P002 | M4 | Profile Global core | Global | G28 source / largest source shapes | counted FLOPs, GPU-hours, wall time, peaks | MUST | BLOCKED | exactly one summary slot |
-| P003 | M4 | Profile Kron core and build | Kron | G28 source / largest source shapes | counted FLOPs, runtime fit, build time, host/GPU peaks | MUST | BLOCKED | failures preserved |
-| P004 | M4 | Profile Quotient core and build | Quotient | G28 source / largest source shapes | counted FLOPs, runtime fit, build time, host/GPU peaks | MUST | BLOCKED | no padded edges |
+| P001 | M4 | Profile Local core | Flat | G26 source / largest source shapes | counted FLOPs, GPU-hours, wall time, peaks | MUST | BLOCKED | treatment-blind |
+| P002 | M4 | Profile Global core | Global | G26 source / largest source shapes | counted FLOPs, GPU-hours, wall time, peaks | MUST | BLOCKED | exactly one summary slot |
+| P003 | M4 | Profile Kron core and build | Kron | G26 source / largest source shapes | counted FLOPs, runtime fit, build time, host/GPU peaks | MUST | BLOCKED | failures preserved |
+| P004 | M4 | Profile Quotient core and build | Quotient | G26 source / largest source shapes | counted FLOPs, runtime fit, build time, host/GPU peaks | MUST | BLOCKED | no padded edges |
 | R010 | M4 | Fit core-specific runtime upper bounds | all | profiles | upper-bound model and uncertainty audit | MUST | BLOCKED | feeds common `C` |
 | S001 | M5 | Treatment-blind execution smoke | common seam | G8 source-only | short run, checkpoints, hashes, no tuning | MUST | BLOCKED | included in remaining 7-hour pre-campaign bucket |
 | R011 | M5 | Dry-run locked evaluator | analysis | synthetic immutable artifacts | aggregation, exact inversion, failure denominator, figure-table schema | MUST | BLOCKED | no target outcomes |
@@ -70,14 +71,14 @@ re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
 | E010 | M6 | C1 | Global, G16, seed 1 | source G16 → frozen targets | same | MUST | BLOCKED | waits for R014 |
 | E011 | M6 | C1 | Kron, G16, seed 0 | source G16 → frozen targets | same + geometry costs | MUST | BLOCKED | waits for R014 |
 | E012 | M6 | C1 | Kron, G16, seed 1 | source G16 → frozen targets | same + geometry costs | MUST | BLOCKED | waits for R014 |
-| E013 | M6 | C1 | Flat, G28, seed 0 | source G28 → frozen targets | error, residual, FLOPs, GPU-hours, failures | MUST | BLOCKED | decisive setting |
-| E014 | M6 | C1 | Flat, G28, seed 1 | source G28 → frozen targets | same | MUST | BLOCKED | decisive setting |
-| E015 | M6 | C1 | Global, G28, seed 0 | source G28 → frozen targets | same | MUST | BLOCKED | decisive setting |
-| E016 | M6 | C1 | Global, G28, seed 1 | source G28 → frozen targets | same | MUST | BLOCKED | decisive setting |
-| E017 | M6 | C1/C2 | Kron, G28, seed 0 | source G28 → frozen targets | same + geometry costs | MUST | BLOCKED | decisive setting |
-| E018 | M6 | C1/C2 | Kron, G28, seed 1 | source G28 → frozen targets | same + geometry costs | MUST | BLOCKED | decisive setting |
-| E019 | M6 | C2 | Quotient, G28, seed 0 | source G28 → frozen targets | same + realized nnz/build cost | MUST | BLOCKED | same cap, no fill padding |
-| E020 | M6 | C2 | Quotient, G28, seed 1 | source G28 → frozen targets | same + realized nnz/build cost | MUST | BLOCKED | same cap, no fill padding |
+| E013 | M6 | C1 | Flat, G26, seed 0 | source G26 → frozen targets | error, residual, FLOPs, GPU-hours, failures | MUST | BLOCKED | decisive setting |
+| E014 | M6 | C1 | Flat, G26, seed 1 | source G26 → frozen targets | same | MUST | BLOCKED | decisive setting |
+| E015 | M6 | C1 | Global, G26, seed 0 | source G26 → frozen targets | same | MUST | BLOCKED | decisive setting |
+| E016 | M6 | C1 | Global, G26, seed 1 | source G26 → frozen targets | same | MUST | BLOCKED | decisive setting |
+| E017 | M6 | C1/C2 | Kron, G26, seed 0 | source G26 → frozen targets | same + geometry costs | MUST | BLOCKED | decisive setting |
+| E018 | M6 | C1/C2 | Kron, G26, seed 1 | source G26 → frozen targets | same + geometry costs | MUST | BLOCKED | decisive setting |
+| E019 | M6 | C2 | Quotient, G26, seed 0 | source G26 → frozen targets | same + realized nnz/build cost | MUST | BLOCKED | same cap, no fill padding |
+| E020 | M6 | C2 | Quotient, G26, seed 1 | source G26 → frozen targets | same + realized nnz/build cost | MUST | BLOCKED | same cap, no fill padding |
 
 ## Locked Analysis and Paper Artifacts
 
@@ -85,7 +86,7 @@ re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
 |---|---|---|---|---|---|---|---|
 | A001 | M7 | Aggregate immutable metrics | E001–E020 | scenario→topology→seed→group metrics; component errors | MUST | BLOCKED | failures retained |
 | A002 | M7 | Test C1 and C2 | A001 | exact p-values, inverted bounds, all conjunctive gates | MUST | BLOCKED | wild bootstrap is sensitivity only |
-| A003 | M7 | Evaluate size/diversity behavior | A001 | frozen-tercile and G8/G16/G28 panels | MUST | BLOCKED | G16 reported, not pass gate |
+| A003 | M7 | Evaluate size/diversity behavior | A001 | frozen-tercile and G8/G16/G26 panels | MUST | BLOCKED | G16 reported, not pass gate |
 | A004 | M7 | Report systems envelope | P001–P004, E001–E020 | build/inference/memory/nonzero/failure table | MUST | BLOCKED | amortization at 1 and 1000 |
 | X001 | post-M7 | Exploratory few-shot appendix | completed mandatory campaign | descriptive curves only | OPTIONAL | BLOCKED | outside 230-hour confirmatory budget; cannot rescue claims |
 
@@ -98,10 +99,10 @@ re-review assigned 9.05 / 10, READY. This status does not authorize treatment.
 | Legacy M0 summaries | CPU wiring, profiling, overfit, reconstruction, mmap, and prototype hierarchy checks completed | engineering hints only; no status change |
 | Legacy M1 MLflow experiment `702378410004452588` | 30 records: 11 finished, 19 stale; only Flat/case2000 finished; 238.675 one-GPU elapsed hours across finished records | not confirmatory; no I/R/E credit |
 | Legacy M1 SLURM logs | 40 `.stfolder`/MLflow discovery failures plus cancellation, OOM, and Triton resource failures | adds fail-closed store smoke to I010 |
-| Current local backend | CPU only; no CUDA or MPS; fresh clean-commit evidence was regenerated at GraphKit `4a293b2` with editable Datakit `b0d55d0`; 134/134 full unit tests pass | I001–I009 and R001–R002 have typed hashed PASS records; I010 remains blocked and no treatment launch is authorized |
+| Current Abacus backend | shared Python 3.12 environment validated on an RTX A4000 with NumPy 2.4.6, PyTorch 2.12.1+cu126, PyG 2.8.0, and PyMETIS 2025.2.2; independent documentation replay passed | accelerator access is usable, but amended I009/R002 evidence, G26 review, and later gates remain blocked; no treatment launch is authorized |
 
-1. **Freeze missing CPU inputs:** exact `S_total`, source-training/source-development groups, the geometry candidate/FLOP-model artifact, and the width/Flat-`q` capacity-search domain.
-2. **Data generation:** after that freeze and with adequate storage, generate and audit static-topology PF data from the R002-selected members; target outcomes remain unreadable to selection code.
+1. **Land frozen CPU inputs:** G26/R002, the 12-policy geometry/FLOP model, and the R004 capacity domain now have executable PASS evidence; regenerate typed receipts at the clean reachable commit.
+2. **Data generation:** generate and audit the frozen static-topology pools (2,331 scenarios for each source; 512 for each source-development/target) from the R002-selected members; target outcomes remain unreadable to selection code.
 3. **R003/R004:** run the bounded source-only geometry and capacity calibrations and write typed gate records.
 4. **I010:** add a reviewed upstream-flat checkpoint fixture, then run CUDA compile/FLOP parity and largest-grid host/accelerator peaks on a GPU node after admissible data exist.
 5. **R014:** only after every required I/R/C/P/S record is hashed PASS, materialize the explicit E001–E020 campaign and launch by manifest ID.

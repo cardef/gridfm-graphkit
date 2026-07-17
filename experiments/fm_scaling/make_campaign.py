@@ -143,14 +143,14 @@ def main() -> int:
     source_sets = freeze["source_sets"]
     if not (
         set(source_sets["G8"]).issubset(source_sets["G16"])
-        and set(source_sets["G16"]).issubset(source_sets["G28"])
-        and [len(source_sets[key]) for key in ("G8", "G16", "G28")] == [8, 16, 28]
+        and set(source_sets["G16"]).issubset(source_sets["G26"])
+        and [len(source_sets[key]) for key in ("G8", "G16", "G26")] == [8, 16, 26]
     ):
-        raise ValueError("source sets must be nested with sizes 8, 16, and 28")
+        raise ValueError("source sets must be nested with sizes 8, 16, and 26")
     target_networks = freeze.get("target_networks")
     if not isinstance(target_networks, list) or not target_networks:
         raise ValueError("target_networks must be a nonempty explicit list")
-    if set(target_networks) & set(source_sets["G28"]):
+    if set(target_networks) & set(source_sets["G26"]):
         raise ValueError("source and target networks must be disjoint")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)

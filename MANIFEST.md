@@ -11,7 +11,7 @@ produced by an ARIS run. Git history is the version history for text artifacts.
 | `idea-stage/HELM_UNPOOL_NOTE.md` | Legacy HELM pilot interpretation used by historical code | Retained as scoped prototype evidence |
 | `idea-stage/pilot_cpu.py` and `pilot_results.txt` | CPU locality and Kron-fill pilot | Retained as unique evidence |
 | `idea-stage/helm_unpool_pilot.py` and `helm_unpool_results.json` | Legacy HELM pilot | Retained as unique evidence |
-| `refine-logs/FINAL_PROPOSAL.md` | Sole method and claim boundary | Canonical G28 amendment; externally re-reviewed READY |
+| `refine-logs/FINAL_PROPOSAL.md` | Sole method and claim boundary | Canonical G26 source-development amendment; external re-review pending |
 | `refine-logs/EXPERIMENT_PLAN.md` | Constants, estimands, budgets, and run rules | Canonical |
 | `refine-logs/EXPERIMENT_TRACKER.md` | Implementation, freeze, campaign, and analysis gates | Canonical; treatment runs blocked until R014 |
 | `refine-logs/REVIEW_SUMMARY.md` | Current review verdict and amendment status | Canonical |
@@ -21,7 +21,7 @@ produced by an ARIS run. Git history is the version history for text artifacts.
 | `refine-logs/EXPERIMENT_RESULTS.md` | Current performed-evidence summary | Zero confirmatory treatment runs |
 | `refine-logs/EXPERIMENT_CODE_REVIEW.md` | Current implementation review | Retained gate evidence |
 | `refine-logs/score-history.md` | Reviewer score trail | Historical provenance |
-| `G28_EXTERNAL_REREVIEW.md` | Self-contained cross-family review of the G28 feasibility amendment | Current external verdict; proposal scope only |
+| `G28_EXTERNAL_REREVIEW.md` | Self-contained cross-family review of the earlier G28 feasibility amendment | Historical verdict superseded for the current G26 endpoint |
 | `research-wiki/` | Literature, idea, claim, and graph knowledge base | Git-owned living knowledge base |
 | `research/kron-schur/runs/*.json` | Immutable legacy run receipts | Historical evidence only |
 

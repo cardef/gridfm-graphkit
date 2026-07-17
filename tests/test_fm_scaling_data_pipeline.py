@@ -40,11 +40,31 @@ def test_inventory_and_rendered_config_disable_all_structural_perturbations(tmp_
         {
             "schema_version": INVENTORY_SCHEMA,
             "datakit_commit": commit,
-            "cases": [case],
+            "design": {
+                "source_scenarios_per_topology": 2,
+                "source_dev_scenarios_per_topology": 2,
+                "target_scenarios_per_topology": 2,
+                "seed_rule": "20260714_plus_frozen_case_index",
+                "r002_sha256": "b" * 64,
+            },
+            "cases": [
+                {**case, "network": f"source-{index}", "topology_key": f"source-{index}", "seed": 20260714 + index}
+                for index in range(26)
+            ]
+            + [
+                {**case, "network": f"dev-{index}", "topology_key": f"dev-{index}", "split": "source_dev", "seed": 20260740 + index}
+                for index in range(2)
+            ]
+            + [
+                {**case, "network": f"target-{index}", "topology_key": f"target-{index}", "split": "target", "seed": 20260742 + index}
+                for index in range(27)
+            ],
         },
     )
     assert observed_commit == commit
-    assert cases == [case]
+    assert len(cases) == 55
+    assert cases[0]["split"] == "source"
+    assert cases[-1]["split"] == "target"
     config = render_datakit_config(case, tmp_path / "data", workers=3)
     assert config["topology_perturbation"] == {"type": "none"}
     assert config["generation_perturbation"] == {"type": "none"}
@@ -196,7 +216,7 @@ def test_split_materialization_is_per_network_hashed_and_target_test_only(tmp_pa
 
 def test_target_freeze_enforces_whole_groups_and_terciles(tmp_path):
     topologies = {}
-    for index in range(28):
+    for index in range(26):
         topologies[f"source-{index}"] = {
             "topology_key": f"source-{index}",
             "baseMVA": 100,

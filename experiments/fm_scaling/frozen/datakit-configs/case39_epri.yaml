@@ -1,0 +1,34 @@
+network:
+  name: case39_epri
+  source: pglib
+  reader: native
+load:
+  generator: agg_load_profile
+  agg_profile: default
+  scenarios: 2331
+  sigma: 0.2
+  change_reactive_power: true
+  global_range: 0.4
+  max_scaling_factor: 4.0
+  step_size: 0.1
+  start_scaling_factor: 1.0
+topology_perturbation:
+  type: none
+generation_perturbation:
+  type: none
+admittance_perturbation:
+  type: none
+settings:
+  num_processes: 8
+  data_dir: /gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO/HierarchicalFM/gridfm-graphkit/data/fm-scaling
+  large_chunk_size: 1000
+  overwrite: true
+  mode: pf
+  include_dc_res: false
+  enable_solver_logs: false
+  pf_fast: true
+  dcpf_fast: true
+  pf_solver: powermodel
+  opf_formulation: polar
+  max_iter: 200
+  seed: 20260720

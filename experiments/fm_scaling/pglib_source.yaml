@@ -7,7 +7,14 @@ target_bus_range:
   minimum: 500
   maximum: 13659
 requirements:
-  source_count: 28
+  source_count: 26
+  source_levels: [8, 16, 26]
+  source_dev_group_count: 2
+  # Smallest total balanced across 5/7 groups and giving each of the 13-case
+  # endpoint group at least 128 batches: ceil(7 * 13 * 128 / 35) * 35.
+  samples_total: 11655
+  training_batch_size: 1
+  minimum_endpoint_batches_per_case: 128
   target_count: 12
   target_group_count: 6
   extrapolative_target_count: 4

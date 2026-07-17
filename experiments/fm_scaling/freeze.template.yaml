@@ -14,7 +14,7 @@ split_manifest: experiments/fm_scaling/frozen/split_manifest.yaml
 source_sets:
   G8: []
   G16: []
-  G28: []
+  G26: []
 target_networks: []
 available_scenarios: {}
 samples_total: 0

@@ -2,7 +2,7 @@
 
 > **Repository scope:** this proposal explicitly targets [`cardef/gridfm-graphkit`](https://github.com/cardef/gridfm-graphkit), a research fork of upstream [`gridfm/gridfm-graphkit`](https://github.com/gridfm/gridfm-graphkit). The fork is the implementation and reproducibility boundary; it is not a claimed contribution.
 
-> **2026-07-16 feasibility amendment:** the largest source-diversity level is `G28`, not `G32`. An exhaustive whole-provenance-group audit of the pinned PGLib v23 inventory found `G28` is the largest source set compatible with at least six held-out target groups, the frozen 0.5k–13.7k target envelope, and at least four size-extrapolative targets across at least two groups. No treatment result informed this amendment.
+> **2026-07-17 source-development amendment (pending external re-review):** the previous `G28` feasibility audit omitted the requirement that calibration use at least two disjoint whole-provenance source-development groups. An exhaustive topology-only audit of the pinned PGLib v23 inventory found no `G28` assignment and found `G26` is the largest source set compatible with two source-development groups, at least six held-out target groups, the frozen 0.5k–13.7k target envelope, and at least four size-extrapolative targets across at least two groups. The deterministic tie-break reserves PSERC and ACTIV for source development. No PF outcome or treatment result informed this amendment. The earlier G28 review remains historical and does not authorize this G26 contract.
 
 ## Problem Anchor
 
@@ -18,7 +18,7 @@ The paper uses *foundation model* in the domain-specific sense used by LUMINA: o
 
 The primary question is:
 
-> At fixed learned capacity, total training scenarios, and cumulative training FLOPs, does deterministic Kron–Schur geometry give one parameter-shared multi-topology model lower held-out PF error at non-inferior physical residual than matched flat-local and typewise-global-summary communication as source base-topology count grows from 8 to 28 and unseen grid size grows from roughly 0.5k to 13.7k buses?
+> At fixed learned capacity, total training scenarios, and cumulative training FLOPs, does deterministic Kron–Schur geometry give one parameter-shared multi-topology model lower held-out PF error at non-inferior physical residual than matched flat-local and typewise-global-summary communication as source base-topology count grows from 8 to 26 and unseen grid size grows from roughly 0.5k to 13.7k buses?
 
 The study measures three distinct axes: source-topology diversity, held-out graph size, and cumulative compute. It does not infer a universal model-size or data-size scaling law from three diversity levels.
 
@@ -175,7 +175,7 @@ All headline models apply the same encoder, exactly `L_pre` shared fine-graph lo
 1. **Flat-HGNS:** the slot contains a source-frozen number `q` of additional fine-graph relation-aware blocks.
 2. **Global-HGNS:** the slot contains exactly one GridSFM v1.1-style typewise mean-plus-max pool, one projection and broadcast, and one fine-graph local block. There is no second global summary elsewhere.
 3. **Kron-HGNS:** the slot contains one down/coarse/up adapter and exactly one coarse block.
-4. **Quotient-HGNS:** the `G28` mechanism control uses the same single adapter slot and coarse-block count with quotient geometry.
+4. **Quotient-HGNS:** the `G26` mechanism control uses the same single adapter slot and coarse-block count with quotient geometry.
 
 Widths and `q` are selected by a deterministic source-only parameter-matching search to keep trainable parameters within 2% without dummy parameters. Exact parameters, profiled cumulative FLOPs, wall time, and memory are reported. Fine and coarse blocks use independent parameters because their graph domains differ; matching concerns total capacity, not artificial weight tying.
 
@@ -202,7 +202,7 @@ Every arm uses the same zero-shot-safe normalization:
 
 ### Source and target topology sets
 
-Construct nested source sets `G8 subset G16 subset G28` from distinct intact PGLib base cases. Line-outage variants do not count as distinct systems and are excluded from the core study. The total number of source training scenarios is identical across `G8`, `G16`, and `G28`; diversity therefore trades scenarios per topology rather than silently increasing data.
+Construct nested source sets `G8 subset G16 subset G26` from distinct intact PGLib base cases. Line-outage variants do not count as distinct systems and are excluded from the core study. The exact sampler total is `S_total = 11,655` scenario exposures per epoch for each of `G8`, `G16`, and `G26`; diversity therefore trades exposures per topology rather than silently increasing training work. This is the smallest multiple balanced across the observed five- and seven-group source sets that gives every case in the 13-case endpoint provenance group at least 128 batches per epoch at batch size one. Generate 2,331 immutable PF scenarios per source topology, which prevents within-epoch reuse even for a singleton G8 provenance group, and 512 scenarios per source-development or target topology. Sampling without replacement is per case until its pool is exhausted; all arms at a diversity level see the same frozen splits.
 
 Related snapshots and variants share a `provenance_group`. Whole groups, not files, are held out. The confirmatory target pool contains at least twelve intact topologies over at least six held-out provenance groups and spans roughly 0.5k–13.7k buses; fewer than six groups blocks confirmation. After the source-only Flat-HGNS calibration fixes the power-gated group count, but before the first global or hierarchy treatment run, a frozen `topology_manifest.yaml` records case, group, bus count, source/target split, case `baseMVA`, and integrity status. It also records `N_source_min` and `N_source_max`. A target is called size-extrapolative only when `N_target > N_source_max`; at least four such targets across at least two held-out groups are required for a size-extrapolation claim.
 
@@ -214,7 +214,7 @@ Related snapshots and variants share a `provenance_group`. Whole groups, not fil
 - There is no coarse loss, reconstruction loss, or hierarchy-specific regularizer.
 - Models checkpoint when cumulative profiled work first crosses `{C/4, C/2, C}`. A sample-matched endpoint is secondary.
 - Source-only development cases select architecture-independent training choices. No target-specific checkpoint is selected.
-- Mandatory runs are `3 communication cores x 3 diversity levels x 2 seeds = 18`, plus two `G28` Quotient-HGNS seeds: 20 pretraining runs.
+- Mandatory runs are `3 communication cores x 3 diversity levels x 2 seeds = 18`, plus two `G26` Quotient-HGNS seeds: 20 pretraining runs.
 
 Zero-shot evaluation builds target geometry without labels and evaluates the shared checkpoint directly. Build time and peak host memory are reported separately and amortized over `1` and `1000` scenarios. Few-shot adaptation is an optional exploratory appendix only after the mandatory campaign and reserve close; it has no preregistered claim, cannot enter the title or abstract, and is not budgeted inside the 230 GPU-hour confirmatory study.
 
@@ -228,13 +228,13 @@ The group count is power-gated before any treatment run. Define the smallest sci
 
 The target manifest freezes bus-count terciles before training, with at least four targets per tercile. The primary pass requires:
 
-1. at `G28/C`, the inverted one-sided upper 95% bound for `d_e` is below zero against both Flat-HGNS and Global-HGNS;
+1. at `G26/C`, the inverted one-sided upper 95% bound for `d_e` is below zero against both Flat-HGNS and Global-HGNS;
 2. the inverted upper 95% bound for `d_r` is at most `log(1.05)` against both baselines; 5% is a study-design margin, not an industry tolerance;
 3. the family-balanced `d_e` point estimate is below zero against both baselines at both fixed checkpoints `C/2` and `C`;
 4. the family-balanced `d_e` point estimate is negative in every frozen size tercile and the largest-tercile estimate is no closer to zero than the smallest-tercile estimate; this replaces an underpowered fitted slope claim; and
-5. the family-balanced `d_e` point estimate is negative at the diversity endpoints `G8` and `G28`, and the `G28` estimate is no closer to zero than the `G8` estimate; `G16` remains a mandatory reported point but is not an additional pass gate.
+5. the family-balanced `d_e` point estimate is negative at the diversity endpoints `G8` and `G26`, and the `G26` estimate is no closer to zero than the `G8` estimate; `G16` remains a mandatory reported point but is not an additional pass gate.
 
-For the electrical-mechanism claim, the same exact group-level test must put the upper 95% bound for `log(error_Kron)-log(error_Quotient)` below zero at `G28/C`, while the same 5% residual gate holds. No effect threshold is selected after pilots.
+For the electrical-mechanism claim, the same exact group-level test must put the upper 95% bound for `log(error_Kron)-log(error_Quotient)` below zero at `G26/C`, while the same 5% residual gate holds. No effect threshold is selected after pilots.
 
 Reported systems metrics are cumulative training FLOPs, GPU-hours, warm inference latency, accelerator peak memory, static build time, dense-intermediate host peak memory, and amortized end-to-end latency. Any construction failure fails the primary claim on that topology; it is not removed or assigned a convenient imputation.
 
@@ -285,7 +285,7 @@ Conditional `torch.compile` use requires output-parity, gradient-parity, and FLO
 
 ## Compute and Timeline
 
-- Spend at most 10 GPU-hours total before the campaign: at most 3 on Flat-HGNS loss-weight selection and the remainder on treatment-blind `G28` throughput profiles.
+- Spend at most 10 GPU-hours total before the campaign: at most 3 on Flat-HGNS loss-weight selection and the remainder on treatment-blind `G26` throughput profiles.
 - Fit an upper runtime bound for each core as a function of counted FLOPs.
 - Freeze the largest common `C` for which the 20 upper-bound run costs, profiling spend, and a 20% campaign reserve total at most 230 GPU-hours.
 - If `C` falls below a source-only preregistered learning horizon, block the confirmatory campaign rather than deleting a seed, baseline, diversity level, or quotient control.
@@ -297,7 +297,7 @@ Conditional `torch.compile` use requires output-parity, gradient-parity, and FLO
 The planned paper needs four load-bearing figures rather than a broad catalog:
 
 1. the common-backbone/fork-boundary diagram with the communication core as the sole treatment;
-2. held-out error versus cumulative FLOPs for `G8/G16/G28`, with physical-residual gates;
+2. held-out error versus cumulative FLOPs for `G8/G16/G26`, with physical-residual gates;
 3. paired Kron advantage across frozen target-size terciles and the Kron-versus-quotient mechanism result; and
 4. static build cost, warm inference cost, and failure coverage.
 

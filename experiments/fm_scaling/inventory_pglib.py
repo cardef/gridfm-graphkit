@@ -82,8 +82,19 @@ def audit_split(cases: list[dict], source: dict) -> dict:
     requirements = source["requirements"]
     target_range = source["target_bus_range"]
     source_count = int(requirements["source_count"])
+    source_levels = [int(value) for value in requirements["source_levels"]]
+    if source_levels != sorted(set(source_levels)) or source_levels[-1] != source_count:
+        raise ContractError("source_levels must be unique, sorted, and end at source_count")
+    samples_total = int(requirements["samples_total"])
+    training_batch_size = int(requirements["training_batch_size"])
+    minimum_endpoint_batches_per_case = int(
+        requirements["minimum_endpoint_batches_per_case"],
+    )
+    if min(samples_total, training_batch_size, minimum_endpoint_batches_per_case) < 1:
+        raise ContractError("training balance requirements must be positive")
     target_count = int(requirements["target_count"])
     target_group_count = int(requirements["target_group_count"])
+    source_dev_group_count = int(requirements["source_dev_group_count"])
     extrapolative_count = int(requirements["extrapolative_target_count"])
     extrapolative_group_count = int(
         requirements["extrapolative_target_group_count"],
@@ -96,14 +107,6 @@ def audit_split(cases: list[dict], source: dict) -> dict:
     for count in range(1, len(groups) + 1):
         for target_groups_tuple in itertools.combinations(groups, count):
             target_groups = set(target_groups_tuple)
-            source_cases = sorted(
-                [
-                    case
-                    for case in eligible_cases
-                    if case["provenance_group"] not in target_groups
-                ],
-                key=lambda case: (case["bus_count"], case["network"]),
-            )
             target_cases = sorted(
                 [
                     case
@@ -116,34 +119,104 @@ def audit_split(cases: list[dict], source: dict) -> dict:
                 key=lambda case: (case["bus_count"], case["network"]),
             )
             observed_target_groups = {case["provenance_group"] for case in target_cases}
-            if (
-                len(source_cases) < source_count
-                or len(target_cases) < target_count
-                or len(observed_target_groups) < target_group_count
-            ):
+            if len(target_cases) < target_count or len(observed_target_groups) < target_group_count:
                 continue
-            selected_sources = source_cases[:source_count]
-            source_max = max(case["bus_count"] for case in selected_sources)
-            extrapolative = [
-                case for case in target_cases if case["bus_count"] > source_max
-            ]
-            if (
-                len(extrapolative) < extrapolative_count
-                or len({case["provenance_group"] for case in extrapolative})
-                < extrapolative_group_count
+            remaining_groups = [group for group in groups if group not in target_groups]
+            for source_dev_tuple in itertools.combinations(
+                remaining_groups,
+                source_dev_group_count,
             ):
-                continue
-            feasible.append(
-                {
-                    "target_groups": list(target_groups_tuple),
-                    "source_networks": [case["network"] for case in selected_sources],
-                    "target_networks": [case["network"] for case in target_cases],
-                    "source_max_bus_count": source_max,
-                    "extrapolative_targets": [
-                        case["network"] for case in extrapolative
+                source_dev_groups = set(source_dev_tuple)
+                source_cases = sorted(
+                    [
+                        case
+                        for case in eligible_cases
+                        if case["provenance_group"]
+                        not in target_groups | source_dev_groups
                     ],
-                },
-            )
+                    key=lambda case: (case["bus_count"], case["network"]),
+                )
+                if len(source_cases) < source_count:
+                    continue
+                selected_sources = source_cases[:source_count]
+                training_balance = {}
+                balance_passed = True
+                for level in source_levels:
+                    level_cases = selected_sources[:level]
+                    level_group_counts = Counter(
+                        case["provenance_group"] for case in level_cases
+                    )
+                    denominator = training_batch_size * len(level_group_counts)
+                    if samples_total % denominator:
+                        balance_passed = False
+                        break
+                    batches_per_group = samples_total // denominator
+                    minimum_batches_per_case = min(
+                        batches_per_group // count
+                        for count in level_group_counts.values()
+                    )
+                    if (
+                        level == source_count
+                        and minimum_batches_per_case
+                        < minimum_endpoint_batches_per_case
+                    ):
+                        balance_passed = False
+                        break
+                    training_balance[f"G{level}"] = {
+                        "provenance_group_count": len(level_group_counts),
+                        "provenance_group_case_counts": dict(
+                            sorted(level_group_counts.items()),
+                        ),
+                        "batches_per_group": batches_per_group,
+                        "minimum_batches_per_case": minimum_batches_per_case,
+                    }
+                if not balance_passed:
+                    continue
+                source_max = max(case["bus_count"] for case in selected_sources)
+                extrapolative = [
+                    case for case in target_cases if case["bus_count"] > source_max
+                ]
+                if (
+                    len(extrapolative) < extrapolative_count
+                    or len({case["provenance_group"] for case in extrapolative})
+                    < extrapolative_group_count
+                ):
+                    continue
+                source_dev_cases = sorted(
+                    [
+                        case
+                        for case in eligible_cases
+                        if case["provenance_group"] in source_dev_groups
+                    ],
+                    key=lambda case: (case["bus_count"], case["network"]),
+                )
+                source_dev_maxima = sorted(
+                    max(
+                        case["bus_count"]
+                        for case in source_dev_cases
+                        if case["provenance_group"] == group
+                    )
+                    for group in source_dev_tuple
+                )
+                feasible.append(
+                    {
+                        "target_groups": list(target_groups_tuple),
+                        "source_dev_groups": list(source_dev_tuple),
+                        "source_dev_group_max_bus_counts": source_dev_maxima,
+                        "source_networks": [
+                            case["network"] for case in selected_sources
+                        ],
+                        "source_dev_networks": [
+                            case["network"] for case in source_dev_cases
+                        ],
+                        "training_balance": training_balance,
+                        "target_networks": [case["network"] for case in target_cases],
+                        "source_max_bus_count": source_max,
+                        "extrapolative_targets": [
+                            case["network"] for case in extrapolative
+                        ],
+                    },
+                )
         if feasible:
             break
     selected = min(
@@ -151,7 +224,10 @@ def audit_split(cases: list[dict], source: dict) -> dict:
         key=lambda item: (
             item["source_max_bus_count"],
             -len(item["target_networks"]),
+            -item["source_dev_group_max_bus_counts"][0],
+            -item["source_dev_group_max_bus_counts"][-1],
             item["target_groups"],
+            item["source_dev_groups"],
         ),
         default=None,
     )
@@ -160,7 +236,9 @@ def audit_split(cases: list[dict], source: dict) -> dict:
         "gate_id": "R002",
         "status": "PASS" if selected is not None else "BLOCKED",
         "selection_rule": (
-            "fewest_held_out_groups_then_min_source_max_then_max_targets"
+            "fewest_target_groups_then_min_source_max_then_max_targets_"
+            "then_max_source_dev_min_bus_count_then_max_source_dev_max_bus_count_"
+            "subject_to_exact_training_balance_then_lexicographic_groups"
         ),
         "requirements": requirements,
         "target_bus_range": target_range,
@@ -170,8 +248,9 @@ def audit_split(cases: list[dict], source: dict) -> dict:
         "block_reason": (
             None
             if selected is not None
-            else "no whole-provenance-group assignment satisfies the frozen "
-            "source, target, independent-group, and size-extrapolation constraints"
+            else "no disjoint whole-provenance-group source, source-development, "
+            "and target assignment satisfies the frozen count, independent-group, "
+            "and size-extrapolation constraints"
         ),
     }
 

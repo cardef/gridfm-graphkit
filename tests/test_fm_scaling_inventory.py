@@ -45,7 +45,12 @@ def test_split_audit_blocks_when_whole_groups_are_infeasible():
     source = {
         "target_bus_range": {"minimum": 500, "maximum": 13659},
         "requirements": {
-            "source_count": 28,
+            "source_count": 26,
+            "source_levels": [8, 16, 26],
+            "source_dev_group_count": 2,
+            "samples_total": 11655,
+            "training_batch_size": 1,
+            "minimum_endpoint_batches_per_case": 128,
             "target_count": 12,
             "target_group_count": 6,
             "extrapolative_target_count": 4,
@@ -58,7 +63,11 @@ def test_split_audit_blocks_when_whole_groups_are_infeasible():
 
 
 def test_split_audit_finds_a_valid_whole_group_assignment():
-    cases = [_case(f"source-{index}", index + 1, "source") for index in range(28)]
+    cases = [_case(f"source-{index}", index + 1, f"s{index % 7}") for index in range(26)]
+    cases += [
+        _case("source-dev-0", 27, "source-dev-0"),
+        _case("source-dev-1", 28, "source-dev-1"),
+    ]
     for group in range(6):
         cases.extend(
             _case(f"target-{group}-{index}", 500 + group * 100 + index, f"g{group}")
@@ -67,7 +76,12 @@ def test_split_audit_finds_a_valid_whole_group_assignment():
     source = {
         "target_bus_range": {"minimum": 500, "maximum": 13659},
         "requirements": {
-            "source_count": 28,
+            "source_count": 26,
+            "source_levels": [8, 16, 26],
+            "source_dev_group_count": 2,
+            "samples_total": 11655,
+            "training_batch_size": 1,
+            "minimum_endpoint_batches_per_case": 128,
             "target_count": 12,
             "target_group_count": 6,
             "extrapolative_target_count": 4,
@@ -77,11 +91,30 @@ def test_split_audit_finds_a_valid_whole_group_assignment():
     result = audit_split(cases, source)
     assert result["status"] == "PASS"
     assert result["selected"] is not None
+    assert result["selected"]["source_dev_groups"] == ["source-dev-0", "source-dev-1"]
+    assert result["selected"]["training_balance"]["G26"] == {
+        "provenance_group_count": 7,
+        "provenance_group_case_counts": {
+            "s0": 4,
+            "s1": 4,
+            "s2": 4,
+            "s3": 4,
+            "s4": 4,
+            "s5": 3,
+            "s6": 3,
+        },
+        "batches_per_group": 1665,
+        "minimum_batches_per_case": 416,
+    }
     assert len(result["selected"]["target_groups"]) == 6
 
 
 def test_split_audit_can_be_recorded_as_typed_gate_evidence(tmp_path):
-    cases = [_case(f"source-{index}", index + 1, "source") for index in range(28)]
+    cases = [_case(f"source-{index}", index + 1, f"s{index % 7}") for index in range(26)]
+    cases += [
+        _case("source-dev-0", 27, "source-dev-0"),
+        _case("source-dev-1", 28, "source-dev-1"),
+    ]
     for group in range(6):
         cases.extend(
             _case(f"target-{group}-{index}", 500 + group * 100 + index, f"g{group}")
@@ -90,7 +123,12 @@ def test_split_audit_can_be_recorded_as_typed_gate_evidence(tmp_path):
     source = {
         "target_bus_range": {"minimum": 500, "maximum": 13659},
         "requirements": {
-            "source_count": 28,
+            "source_count": 26,
+            "source_levels": [8, 16, 26],
+            "source_dev_group_count": 2,
+            "samples_total": 11655,
+            "training_batch_size": 1,
+            "minimum_endpoint_batches_per_case": 128,
             "target_count": 12,
             "target_group_count": 6,
             "extrapolative_target_count": 4,
@@ -113,4 +151,4 @@ def test_split_audit_can_be_recorded_as_typed_gate_evidence(tmp_path):
     )
 
     evidence = validate_gate_evidence(evidence_path, "R002")
-    assert evidence["selected"]["source_max_bus_count"] == 28
+    assert evidence["selected"]["source_max_bus_count"] == 26

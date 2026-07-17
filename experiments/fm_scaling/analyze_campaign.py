@@ -269,7 +269,7 @@ def analyze(manifest_path: Path, repo_root: Path) -> dict:
             metadata,
             treatment="kron",
             baseline=baseline,
-            g_level="G28",
+            g_level="G26",
             checkpoint="C",
         )
         comparisons[f"kron_vs_{baseline}"] = _decision(groups)
@@ -278,7 +278,7 @@ def analyze(manifest_path: Path, repo_root: Path) -> dict:
         metadata,
         treatment="kron",
         baseline="quotient",
-        g_level="G28",
+        g_level="G26",
         checkpoint="C",
     )
     comparisons["kron_vs_quotient"] = _decision(quotient_groups)
@@ -293,14 +293,14 @@ def analyze(manifest_path: Path, repo_root: Path) -> dict:
                     metadata,
                     "kron",
                     baseline,
-                    "G28",
+                    "G26",
                     checkpoint,
                 )
                 for checkpoint in CHECKPOINT_FILES
             },
             "diversity": {
                 level: _point_estimate(averaged, metadata, "kron", baseline, level, "C")
-                for level in ("G8", "G16", "G28")
+                for level in ("G8", "G16", "G26")
             },
             "size_terciles": {
                 tercile: _point_estimate(
@@ -308,7 +308,7 @@ def analyze(manifest_path: Path, repo_root: Path) -> dict:
                     metadata,
                     "kron",
                     baseline,
-                    "G28",
+                    "G26",
                     "C",
                     {
                         topology_key
@@ -333,7 +333,7 @@ def analyze(manifest_path: Path, repo_root: Path) -> dict:
         )
         and all(
             values["diversity"]["G8"] < 0
-            and values["diversity"]["G28"] <= values["diversity"]["G8"]
+            and values["diversity"]["G26"] <= values["diversity"]["G8"]
             for values in point_estimates.values()
         )
         and all(

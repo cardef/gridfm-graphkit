@@ -15,6 +15,10 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# JuliaCall must initialize before GraphKit imports Torch; the reverse order is a
+# documented segfault risk in mixed Julia/PyTorch processes.
+import juliacall  # noqa: F401
+
 from experiments.fm_scaling.prepare_data import assert_datakit_checkout
 from gridfm_graphkit.fm_scaling.manifest import file_sha256
 

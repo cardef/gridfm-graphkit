@@ -102,12 +102,34 @@ def validate_inventory(payload: dict) -> tuple[str, list[dict]]:
     expected_commit = str(payload.get("datakit_commit", ""))
     if len(expected_commit) != 40:
         raise ContractError("data inventory requires a full datakit_commit")
+    design = payload.get("design")
+    design_fields = {
+        "source_scenarios_per_topology",
+        "source_dev_scenarios_per_topology",
+        "target_scenarios_per_topology",
+        "seed_rule",
+        "r002_sha256",
+    }
+    if not isinstance(design, dict) or set(design) != design_fields:
+        raise ContractError("data inventory requires the exact frozen design fields")
+    if design["seed_rule"] != "20260714_plus_frozen_case_index":
+        raise ContractError("data inventory has the wrong seed rule")
+    if len(str(design["r002_sha256"])) != 64:
+        raise ContractError("data inventory requires an R002 SHA-256")
+    expected_scenarios = {
+        "source": int(design["source_scenarios_per_topology"]),
+        "source_dev": int(design["source_dev_scenarios_per_topology"]),
+        "target": int(design["target_scenarios_per_topology"]),
+    }
+    if min(expected_scenarios.values()) < 1:
+        raise ContractError("frozen scenario pool sizes must be positive")
     cases = payload.get("cases")
     if not isinstance(cases, list) or not cases:
         raise ContractError("data inventory requires a nonempty cases list")
     networks: set[str] = set()
     topology_keys: set[str] = set()
-    for case in cases:
+    split_counts = {"source": 0, "source_dev": 0, "target": 0}
+    for case_index, case in enumerate(cases):
         if not isinstance(case, dict) or set(case) - _CASE_FIELDS:
             raise ContractError("data inventory case has unknown fields")
         required = {
@@ -133,10 +155,16 @@ def validate_inventory(payload: dict) -> tuple[str, list[dict]]:
             raise ContractError(f"{network} has invalid source")
         if case["source"] == "file" and not case.get("network_dir"):
             raise ContractError(f"{network} requires network_dir")
-        if case["split"] not in {"source", "source_dev", "target"}:
+        split = str(case["split"])
+        if split not in split_counts:
             raise ContractError(f"{network} has invalid split")
-        if int(case["scenarios"]) <= 0 or int(case["seed"]) < 0:
-            raise ContractError(f"{network} has invalid scenarios or seed")
+        split_counts[split] += 1
+        if int(case["scenarios"]) != expected_scenarios[split]:
+            raise ContractError(f"{network} differs from the frozen scenario pool")
+        if int(case["seed"]) != 20260714 + case_index:
+            raise ContractError(f"{network} differs from the frozen seed rule")
+    if split_counts != {"source": 26, "source_dev": 2, "target": 27}:
+        raise ContractError(f"data inventory has wrong split counts: {split_counts}")
     return expected_commit, cases
 
 

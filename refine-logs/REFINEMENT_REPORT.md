@@ -6,11 +6,11 @@ Review the actual canonical proposal, make the implementation as general and sim
 
 ## Result
 
-The canonical proposal now specifies a controlled test of deterministic Kron–Schur communication inside one parameter-shared multi-topology model. Fable 5 Max assigned **9.05 / 10, READY** to the pre-amendment G32 contract; a separate cross-family external re-review assigned **9.05 / 10, READY** to the current G28 contract and restored proposal-level reviewed status. Novelty is **7.0 / 10, PROCEED WITH CAUTION**. No confirmatory empirical result is claimed.
+The canonical proposal specifies a controlled test of deterministic Kron–Schur communication inside one parameter-shared multi-topology model. Fable 5 Max assigned **9.05 / 10, READY** to the earlier G32 contract, and a cross-family review assigned **9.05 / 10, READY** to the superseded G28 contract. The current G26 source-development repair is pending external review because the available Claude session failed authentication before a verdict. Novelty remains **7.0 / 10, PROCEED WITH CAUTION**. No confirmatory empirical result is claimed.
 
 ## Principal Refinements
 
-- Reframed the primary question around source-topology diversity, unseen-grid size, and cumulative training FLOPs at fixed capacity and total scenarios. The 2026-07-16 feasibility amendment changes the frozen levels from `G8/G16/G32` to `G8/G16/G28` after a label-blind PGLib inventory audit proved `G32` incompatible with the held-out-family and size-extrapolation requirements.
+- Reframed the primary question around source-topology diversity, unseen-grid size, and cumulative training FLOPs at fixed capacity and total scenarios. The 2026-07-17 topology-only repair changes the endpoint from `G28` to `G26` after adding the required two disjoint whole-provenance source-development groups; exhaustive enumeration finds G26 maximal.
 - Made `cardef/gridfm-graphkit` the explicit implementation and reproducibility boundary relative to upstream `gridfm/gridfm-graphkit`.
 - Reduced the architecture to a common encoder/local-backbone/communication-slot/decoder contract.
 - Removed HELM reconstruction, affine physical unpooling, per-scenario hierarchy quantities, target-fitted normalization, and recursive hierarchy from the confirmatory path.
@@ -32,6 +32,7 @@ The canonical proposal now specifies a controlled test of deterministic Kron–S
 | Structural final gate | Fable 5 Max | 8.9375, NOT READY; all structural gates passed | [response](../.aris/traces/novelty-check/2026-07-13_run02/004-fable5-max-round5-final-gate.response.md) |
 | Disclosure audit | Fable 5 Max | 9.05, READY; novelty 7.0 | [response](../.aris/traces/novelty-check/2026-07-13_run02/005-fable5-max-round5-sentence-audit.response.md) |
 | G28 feasibility-amendment re-review | Claude via `claude-review` | 9.05, READY; no proposal-level blocker | [verdict](../.aris/traces/research-review/2026-07-16_run01/002-g28-verdict-followup.response.md), [addendum](../.aris/traces/research-review/2026-07-16_run01/003-g28-maximality-addendum.response.md) |
+| G26 source-development amendment re-review | Claude via `claude-review` | no verdict; OAuth refresh failed before tokens | local failed trace, session `c7f48ef5-62ab-4a78-a74f-aad973e2db90` |
 
 All Fable calls used session `f5411f61-3db6-4c81-87e1-0020d7fcbc5c`, model route `claude-fable-5`, maximum reasoning effort, calibration none, and read-only repository access. Earlier AGY/Antigravity rounds are consolidated in `REVIEW_ARCHIVE.md` and summarized in `score-history.md`.
 
@@ -41,6 +42,11 @@ and is retained as a failed trace; the bounded follow-up produced the review,
 and the final addendum accepted the pre-amendment G32 BLOCKED records plus the
 deterministic 28--32 maximality check. No treatment result was supplied or
 credited.
+
+The G26 re-review attempt was bounded to the source-development inconsistency,
+maximality proof, deterministic PSERC/ACTIV tie-break, and claim preservation.
+Authentication failed before model output, so no independent judgment is
+attributed to that attempt and the amendment remains pending review.
 
 ## Novelty Boundary
 

@@ -39,7 +39,7 @@ def _records():
                 records.append(
                     {
                         "system": system,
-                        "g_level": "G28",
+                        "g_level": "G26",
                         "seed": seed,
                         "checkpoint": "C",
                         "topology_key": "case-a",
@@ -134,7 +134,7 @@ def test_run_matrix_is_exact_and_has_only_two_quotient_runs():
     matrix = expected_run_matrix()
     assert list(matrix) == [f"E{index:03d}" for index in range(1, 21)]
     quotient = [value for value in matrix.values() if value[0] == "quotient"]
-    assert quotient == [("quotient", "G28", 0), ("quotient", "G28", 1)]
+    assert quotient == [("quotient", "G26", 0), ("quotient", "G26", 1)]
 
 
 def test_generated_config_trains_on_sources_and_evaluates_frozen_targets(tmp_path):

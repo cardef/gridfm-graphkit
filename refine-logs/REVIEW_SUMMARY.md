@@ -2,15 +2,15 @@
 
 ## Outcome
 
-- **Final external verdict:** READY for the current `G8/G16/G28` contract
-- **Current amendment status:** externally re-reviewed; reviewed status restored
-- **Final weighted score:** 9.05 / 10
-- **Reviewer of record:** Claude cross-family external re-review
+- **Current external verdict:** PENDING for the `G8/G16/G26` contract
+- **Current amendment status:** topology-only feasibility repair complete; re-review unavailable because the Claude OAuth session expired before a verdict
+- **Latest applicable weighted score:** none for G26; the historical G28 review scored 9.05 / 10
+- **Reviewer of record:** pending
 - **Model route:** `claude-review`
 - **Reasoning effort:** high-rigor
-- **Session:** `3cd19e69-999a-4814-a4dc-a0f0d059650d`
+- **Failed G26 session:** `c7f48ef5-62ab-4a78-a74f-aad973e2db90`
 - **Calibration:** none
-- **Readiness scope:** current G28 proposal only; implementation and submission remain unverified
+- **Readiness scope:** the historical READY verdict covers G28 only and does not transfer to G26
 - **Novelty verdict:** 7.0 / 10 — PROCEED WITH CAUTION
 
 ## Review Evolution
@@ -25,16 +25,24 @@
 | 5a | Fable 5 Max structural gate | 8.9375 | NOT READY |
 | 5b | Fable 5 Max disclosure audit | 9.05 | READY |
 | 6 | Claude cross-family G28 amendment re-review | 9.05 | READY |
+| 7 | Claude cross-family G26 amendment re-review | — | AUTHENTICATION FAILED; NO VERDICT |
 
 Fable reopened the earlier READY result because the quotient control claimed an impossible equality of nonzero counts and the six-group design lacked a power/MDE specification. The final candidate removes the impossible equality, narrows Claim 2 accordingly, and makes insufficient power a pre-campaign block.
 
-The G28 re-review separately tested whether the feasibility amendment changed
-the estimand, causal control, statistical design, or claim boundary. It found no
-proposal-level blocker. The outcome-blind audit reads topology metadata only;
-the existing G32 BLOCKED records and a deterministic 28--32 enumeration confirm
-that G28 is the largest feasible integer source count under the frozen
-constraints. The full review is in `G28_EXTERNAL_REREVIEW.md`; raw interaction
-traces are under `.aris/traces/research-review/2026-07-16_run01/`.
+The historical G28 re-review separately tested whether that feasibility
+amendment changed the estimand, causal control, statistical design, or claim
+boundary. It found no proposal-level blocker. The outcome-blind audit reads
+topology metadata only; the existing G32 BLOCKED records and a deterministic
+28--32 enumeration confirm that G28 is the largest feasible integer source count
+under the constraints used at that time. The full review is in
+`G28_EXTERNAL_REREVIEW.md`; raw interaction traces are under
+`.aris/traces/research-review/2026-07-16_run01/`.
+
+That audit omitted the already-preregistered requirement for at least two
+disjoint whole-provenance source-development groups. A corrected exhaustive
+topology-only enumeration finds G26 maximal and deterministically reserves
+PSERC and ACTIV. The attempted G26 review produced no tokens or verdict because
+the Claude OAuth session could not be refreshed. Treatment remains blocked.
 
 ## Final Dimension Scores
 
@@ -61,7 +69,7 @@ traces are under `.aris/traces/research-review/2026-07-16_run01/`.
 8. Geometry policy, loss weights, widths, and local depth are selected by bounded source-only rules before treatment runs.
 9. The forbidden-import `MetaPathFinder` test runs from the first F2 commit onward.
 10. Component novelty is not claimed. The defensible contribution is the controlled scaling study and, conditionally, its empirical finding.
-11. The reviewed diversity endpoint is G28. The G8/G16/G28 matrix supports only the preregistered endpoint and non-contraction claims, not a universal scaling exponent.
+11. The current diversity endpoint is G26. The G8/G16/G26 matrix supports only the preregistered endpoint and non-contraction claims, not a universal scaling exponent; external review of this amendment is pending.
 
 ## Residual Risks
 
@@ -74,4 +82,4 @@ traces are under `.aris/traces/research-review/2026-07-16_run01/`.
 
 ## Next Boundary
 
-The label-blind 2026-07-16 feasibility audit replaced `G32` with `G28` while preserving the 20-run matrix, six-group inference, target-size envelope, and size-extrapolation claim. Cross-family external re-review assigned **9.05 / 10, READY** and restored proposal-level reviewed status for G28. This does not authorize treatment: implementation must still pass F0--F5 and R014 before the campaign.
+The label-blind 2026-07-17 repair replaces G28 with G26 so that two whole-provenance source-development groups are disjoint from training and target groups while preserving the 20-run matrix, six-group inference, target-size envelope, and size-extrapolation claim. External review is pending; the exact balanced `S_total=11,655` audit passes, but clean-commit evidence and R014 remain BLOCKED.

@@ -1,0 +1,10 @@
+schema_version: fm-scaling-capacity-domain-v1
+domain:
+  widths: [112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]
+  flat_blocks: [1, 2, 3, 4]
+  tolerance: 0.02
+  l_pre: 2
+  l_post: 2
+  edge_dim: 10
+  input_bus_dim: 15
+  input_gen_dim: 6
