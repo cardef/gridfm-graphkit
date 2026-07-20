@@ -73,6 +73,14 @@ def _install_topology_preprocessing_shim() -> None:
     generate.load_net_from_pglib = load_net_from_pglib
 
 
+def _recorded_dropped_bus_ids() -> list[int]:
+    if len(_TOPOLOGY_PREPROCESSING) != 1:
+        raise RuntimeError(
+            "generation must load exactly one normalized PGLib topology",
+        )
+    return next(iter(_TOPOLOGY_PREPROCESSING.values()))
+
+
 # Spawned workers import this module without calling main(). The parent sets the
 # marker only after verifying the exact editable Datakit checkout.
 if os.environ.get(_CHUNK_SEED_SHIM) == "1":
@@ -124,10 +132,7 @@ def main() -> int:
         "inventory_sha256": args.inventory_sha256,
         "topology_preprocessing": {
             "policy": TOPOLOGY_PREPROCESSING_POLICY,
-            "dropped_bus_ids": _TOPOLOGY_PREPROCESSING.get(
-                args.config.stem,
-                [],
-            ),
+            "dropped_bus_ids": _recorded_dropped_bus_ids(),
         },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
