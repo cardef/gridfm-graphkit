@@ -1,8 +1,8 @@
 # Experiment Tracker: Kron–Schur GridFM Scaling
 
-**Date:** 2026-07-17
+**Date:** 2026-07-20
 
-**Proposal SHA-256:** `385cd3ba44995ff8ddaa3250abbefc941f566b27f9cd2da61821bf601abf9547`
+**Proposal SHA-256:** `d9a3b6d3810eaeb13cb1bbe24cff457a7bcacda038f517c7a4d90cc9e95ea1b7`
 
 **Campaign status:** BLOCKED until I001–I010 and R014 are PASS.
 
@@ -99,9 +99,9 @@ authentication before a verdict. No treatment is authorized.
 | Legacy M0 summaries | CPU wiring, profiling, overfit, reconstruction, mmap, and prototype hierarchy checks completed | engineering hints only; no status change |
 | Legacy M1 MLflow experiment `702378410004452588` | 30 records: 11 finished, 19 stale; only Flat/case2000 finished; 238.675 one-GPU elapsed hours across finished records | not confirmatory; no I/R/E credit |
 | Legacy M1 SLURM logs | 40 `.stfolder`/MLflow discovery failures plus cancellation, OOM, and Triton resource failures | adds fail-closed store smoke to I010 |
-| Current Abacus backend | shared Python 3.12 environment validated on an RTX A4000 with NumPy 2.4.6, PyTorch 2.12.1+cu126, PyG 2.8.0, and PyMETIS 2025.2.2; independent documentation replay passed | accelerator access is usable; I002–I009 and R001/R002/R004 have formal PASS receipts at `93815a6`; commit `e2ab5a8` clears the spawn-before-Julia deadlock and bounds derived chunk seeds to uint32; end-to-end smoke 54456 passes; G26 review, I010, R003, and later gates remain blocked; no treatment launch is authorized |
+| Current Abacus backend | initial arrays 54458/54459 produced 53/55 complete topology pools; `case2742_goc` timed out and `case10192_epigrids` failed because PowerModels omits three declared inert type-4 buses | commit `e4df8c0` adds a source-only fail-closed energized-topology policy; 13 focused tests (54564), the actual-case normalization preflight (54565), and one-scenario end-to-end smoke (54575) pass; recovery jobs 54583/54586 and dependent R003 job 54588 are active; no treatment launch is authorized |
 
-1. **Data generation:** requeue-enabled jobs 54458 and 54459 generate the frozen static-topology pools (2,331 scenarios for each source; 512 for each source-development/target) from the R002-selected members; dependent job 54460 audits all 55 outputs and runs R003 only after generation completes; target outcomes remain unreadable to selection code.
+1. **Data generation:** jobs 54583 and 54586 regenerate only the two missing frozen pools with 24-hour limits; job 54588 is dependency-locked to finalize all 55 topology records and run R003 from clean commit `e4df8c0`; target outcomes remain unreadable to selection code.
 2. **R003:** run the bounded source-development-only geometry calibration after audited data are available and write its typed gate record.
 3. **I010:** add a reviewed upstream-flat checkpoint fixture, then run CUDA compile/FLOP parity and largest-grid host/accelerator peaks on a GPU node after admissible data exist.
 4. **R014:** only after every required I/R/C/P/S record is hashed PASS, materialize the explicit E001–E020 campaign and launch by manifest ID.

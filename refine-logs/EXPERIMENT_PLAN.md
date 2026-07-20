@@ -4,12 +4,12 @@
 
 **Method thesis:** A sparse, parameter-free electrical hierarchy should provide more useful nonlocal communication than matched local, typewise-global-summary, and same-partition generic-hierarchy alternatives.
 
-**Date:** 2026-07-17
+**Date:** 2026-07-20
 
-**Implementation boundary:** `cardef/gridfm-graphkit`, amended freeze commit `93815a67b9e7f4db1b3677f8480400a5425cb0b4`, current data-generation commit `e2ab5a887beeaf54c9589da0e688a7b3ca68ef50`; upstream `gridfm/gridfm-graphkit` reference `b3d663b62179222c1ebec00ee29f67ea50e68c0b`; merge base `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. Formal clean-commit receipts at `93815a6` pass I002–I009 and R001/R002/R004; I001 remains bound to its earlier clean provenance record, and I010 remains incomplete.
+**Implementation boundary:** `cardef/gridfm-graphkit`, amended freeze commit `93815a67b9e7f4db1b3677f8480400a5425cb0b4`, current data-generation recovery commit `e4df8c0bda57ef69c44087b72002119cd35fc1dc`; upstream `gridfm/gridfm-graphkit` reference `b3d663b62179222c1ebec00ee29f67ea50e68c0b`; merge base `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. Formal clean-commit receipts at `93815a6` pass I002–I009 and R001/R002/R004; I001 remains bound to its earlier clean provenance record, and I010 remains incomplete.
 
-**Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `385cd3ba44995ff8ddaa3250abbefc941f566b27f9cd2da61821bf601abf9547`.
-**Current status:** a label-blind feasibility repair changes the reviewed `G28` endpoint to `G26` because the prior audit did not reserve the two disjoint whole-provenance source-development groups required by calibration and power design. The pinned PGLib inventory yields a deterministic assignment with 26 training sources, PSERC and ACTIV as source-development groups, and the same 27 targets across six held-out groups, 4,917-bus source maximum, and 10 size-extrapolative targets. Cross-family re-review of G26 is pending; the available Claude route failed authentication before producing a verdict. Formal R002 and R004 receipts at clean reachable `93815a6` pass with `S_total = 11,655` and a 0.1112% four-arm parameter gap. Job 54456 validates the spawn and uint32 chunk-seed repairs end to end. Frozen data generation is running as requeue-enabled jobs 54458 and 54459; dependent job 54460 will audit all 55 outputs before R003. I010, R003, R005–R014, and all confirmatory runs remain BLOCKED.
+**Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `d9a3b6d3810eaeb13cb1bbe24cff457a7bcacda038f517c7a4d90cc9e95ea1b7`.
+**Current status:** the G26 split and formal R002/R004 receipts remain unchanged. Initial generation produced 53/55 complete provenance records; `case2742_goc` timed out and `case10192_epigrids` exposed three case-declared inert type-4 buses omitted by PowerModels. Commit `e4df8c0` adds the fail-closed topology-only energized-network policy, records its provenance, and passes 13 focused tests plus a one-scenario 10,189-bus end-to-end smoke. Recovery jobs 54583 and 54586 are running with 24-hour limits; dependent job 54588 will audit all 55 outputs and run R003. Cross-family G26 review, I010, R003, R005–R014, and all confirmatory runs remain BLOCKED.
 
 ## Claim Map
 
