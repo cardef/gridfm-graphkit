@@ -3,6 +3,7 @@ selection_freeze:
   rule: inventory_split_before_generation
   inventory_path: /gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO/HierarchicalFM/gridfm-graphkit/experiments/fm_scaling/frozen/data_inventory.yaml
   inventory_sha256: 664a7b527cc2415ed265d4357dfc6d01bcb257dec2fd479ecbb7319e4831bf83
+  topology_preprocessing: drop_declared_inert_type4_buses_v1
 topologies:
   case3_lmbd:
     topology_key: pglib-v23:case3_lmbd
@@ -645,7 +646,7 @@ topologies:
     baseMVA: 100.0
     provenance_group: epigrids
     split: target
-    bus_count: 10192
+    bus_count: 10189
     scenario_count: 512
     datakit_commit: b0d55d03c7575dd31d5ef38b228767fb8249c717
     config_sha256: 1ae0a611136c08ab98350ea1efbcbf6ff3be1c432578434269c39c9a140a0ae3
