@@ -110,6 +110,7 @@ Seeds and scenarios are never inferential replicates. Report scenario P95 and be
 | Source sets | Nested intact PGLib base cases: `G8 subset G16 subset G26`; outage variants do not count as systems. | `topology_manifest.yaml` hash |
 | Total training scenarios | `S_total = 11,655` sampled scenario exposures per epoch, identical at G8/G16/G26; batch size 1; balance provenance groups then cases; at least 128 endpoint batches per case. | data-manifest hash |
 | Generated scenario pools | 2,331 per source topology; 512 per source-development or target topology. The source pool prevents within-epoch reuse at the maximum singleton-case allocation. | data-inventory and config hashes |
+| Energized topology normalization | Deterministically drop only case-declared MATPOWER type-4 buses with zero load/shunt and no in-service generator or incident branch; otherwise fail closed. Record effective bus count, policy, and dropped original IDs. | topology-manifest and generation-provenance hashes |
 | Target pool | At least 12 intact topologies, at least 6 independent provenance groups, roughly 0.5k–13.7k buses, and at least 4 targets in each frozen bus-count tercile. | target-manifest hash |
 | Size extrapolation | `N_target > N_source_max`; at least 4 such targets across at least 2 target groups for the claim. | source extrema and target manifest |
 | Geometry policy | At most 12 joint `(rho, k_P, k_C, kappa)` policies; deterministic residual/FLOP choice from source topology only. | candidate table and selected-policy hash |

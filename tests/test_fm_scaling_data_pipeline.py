@@ -4,10 +4,12 @@
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 import yaml
 
+from experiments.fm_scaling.datakit_topology import prune_declared_inert_buses
 from experiments.fm_scaling.finalize_data import finalize
 from experiments.fm_scaling.freeze_targets import freeze_targets
 from experiments.fm_scaling.make_splits import materialize
@@ -42,6 +44,44 @@ def test_datakit_chunk_seed_shim_preserves_frozen_seed_separation():
         for scenario in range(2331)
     }
     assert len(derived) == 55 * 2331
+
+
+def test_declared_inert_type4_bus_is_dropped_without_reading_outcomes():
+    mpc = {
+        "bus": np.array(
+            [
+                [1, 3, 0, 0, 0, 0],
+                [2, 1, 1, 0.2, 0, 0],
+                [24082, 4, 0, 0, 0, 0],
+            ],
+            dtype=float,
+        ),
+        "gen": np.array([[1, 0, 0, 0, 0, 0, 0, 1]], dtype=float),
+        "branch": np.array(
+            [
+                [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [2, 24082, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ],
+            dtype=float,
+        ),
+        "gencost": np.array([[2, 0, 0, 3, 1, 1, 1]], dtype=float),
+    }
+    normalized, dropped = prune_declared_inert_buses(mpc)
+    assert dropped == [24082]
+    assert normalized["bus"][:, 0].tolist() == [1, 2]
+    assert normalized["branch"].shape[0] == 1
+    assert normalized["gen"].shape[0] == normalized["gencost"].shape[0] == 1
+
+
+def test_declared_noninert_type4_bus_fails_closed():
+    mpc = {
+        "bus": np.array([[1, 3, 0, 0, 0, 0], [2, 4, 1, 0, 0, 0]], dtype=float),
+        "gen": np.empty((0, 8)),
+        "branch": np.empty((0, 11)),
+        "gencost": np.empty((0, 7)),
+    }
+    with pytest.raises(ContractError, match="nonzero load or shunt"):
+        prune_declared_inert_buses(mpc)
 
 
 def _case():

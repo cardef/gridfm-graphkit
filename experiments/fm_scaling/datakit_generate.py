@@ -26,11 +26,16 @@ multiprocessing.set_start_method("spawn", force=True)
 # documented segfault risk in mixed Julia/PyTorch processes.
 import juliacall  # noqa: F401
 
+from experiments.fm_scaling.datakit_topology import (
+    TOPOLOGY_PREPROCESSING_POLICY,
+    normalize_datakit_network,
+)
 from experiments.fm_scaling.prepare_data import assert_datakit_checkout
 from gridfm_graphkit.fm_scaling.manifest import file_sha256
 
 
 _CHUNK_SEED_SHIM = "GRIDFM_DATAKIT_UINT32_CHUNK_SEED"
+_TOPOLOGY_PREPROCESSING: dict[str, list[int]] = {}
 
 
 def _install_uint32_chunk_seed_shim() -> None:
@@ -51,10 +56,28 @@ def _install_uint32_chunk_seed_shim() -> None:
     process_network.custom_seed = Uint32ChunkSeed
 
 
+def _install_topology_preprocessing_shim() -> None:
+    """Normalize declared inert type-4 buses before scenario generation."""
+    from gridfm_datakit import generate
+
+    current = generate.load_net_from_pglib
+    if getattr(current, "_gridfm_topology_preprocessing", False):
+        return
+
+    def load_net_from_pglib(grid_name: str):
+        network, dropped = normalize_datakit_network(current(grid_name))
+        _TOPOLOGY_PREPROCESSING[grid_name] = dropped
+        return network
+
+    load_net_from_pglib._gridfm_topology_preprocessing = True
+    generate.load_net_from_pglib = load_net_from_pglib
+
+
 # Spawned workers import this module without calling main(). The parent sets the
 # marker only after verifying the exact editable Datakit checkout.
 if os.environ.get(_CHUNK_SEED_SHIM) == "1":
     _install_uint32_chunk_seed_shim()
+    _install_topology_preprocessing_shim()
 
 
 def _environment_hash() -> str:
@@ -80,6 +103,7 @@ def main() -> int:
     )
     os.environ[_CHUNK_SEED_SHIM] = "1"
     _install_uint32_chunk_seed_shim()
+    _install_topology_preprocessing_shim()
     import gridfm_datakit
     from gridfm_datakit.generate import generate_power_flow_data_distributed
 
@@ -98,6 +122,13 @@ def main() -> int:
         "platform": platform.platform(),
         "environment_sha256": _environment_hash(),
         "inventory_sha256": args.inventory_sha256,
+        "topology_preprocessing": {
+            "policy": TOPOLOGY_PREPROCESSING_POLICY,
+            "dropped_bus_ids": _TOPOLOGY_PREPROCESSING.get(
+                args.config.stem,
+                [],
+            ),
+        },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

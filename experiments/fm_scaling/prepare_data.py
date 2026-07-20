@@ -22,6 +22,10 @@ from urllib.parse import unquote, urlparse
 
 import yaml
 
+from experiments.fm_scaling.datakit_topology import (
+    TOPOLOGY_PREPROCESSING_POLICY,
+    normalize_datakit_network,
+)
 from gridfm_graphkit.fm_scaling.contracts import ContractError, SCHEMA_VERSION
 from gridfm_graphkit.fm_scaling.manifest import file_sha256
 
@@ -220,6 +224,7 @@ def _network_metadata(case: dict) -> tuple[float, int]:
     else:
         path = Path(case["network_dir"]).resolve() / f"{case['network']}.m"
         network = load_net_from_file(str(path))
+    network, _ = normalize_datakit_network(network)
     return float(network.baseMVA), int(network.buses.shape[0])
 
 
@@ -305,6 +310,7 @@ def prepare(
             "rule": "inventory_split_before_generation",
             "inventory_path": str(inventory_path.resolve()),
             "inventory_sha256": file_sha256(inventory_path),
+            "topology_preprocessing": TOPOLOGY_PREPROCESSING_POLICY,
         },
         "topologies": topologies,
     }
