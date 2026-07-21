@@ -26,7 +26,7 @@ authentication before a verdict. No treatment is authorized.
 | I007 | M2 | Extract one communication seam | Flat/Global/Kron/Quotient | synthetic + source | shared encoder/stem/slot/readout; output/gradient schemas; parameter report | MUST | PASS | formal typed hashed `seam-tests` record at clean reachable `93815a6`; 8/8 selected tests pass (job 54416); R004 is frozen |
 | I008 | M3 | Implement portable PF data contract | all | source + target metadata | case-declared `baseMVA`, source-only optional stats, target-output unreadability test | MUST | PASS | formal typed hashed `data-tests` record at clean reachable `93815a6`; 8/8 selected tests pass (job 54416); no target outcomes were read |
 | I009 | M3 | Implement balanced training/evaluation | all | G8/G16/G26 | provenance/case sampler, per-graph/component loss, known-value projection, metric unit tests | MUST | PASS | formal typed hashed `training-tests` record at clean reachable `93815a6`; 22/22 selected tests pass (job 54414) |
-| I010 | M3 | Implement compute and compatibility gates | all | synthetic + largest grids | cumulative-FLOP checkpoint tests, profiler cross-check, compile parity, upstream-flat load, clean clone, MLflow child-store create/search smoke | MUST | BLOCKED | fresh CPU audit at clean `4a293b2` passes upstream identity, MLflow child-store smoke, clean-clone import, and flat schema/FLOP checks; blocked by absent reviewed upstream-flat checkpoint, unavailable CUDA compile/FLOP parity, and absent largest-grid data/peaks |
+| I010 | M3 | Implement compute and compatibility gates | all | synthetic + largest grids | cumulative-FLOP checkpoint tests, profiler cross-check, compile parity, upstream-flat load, clean clone, MLflow child-store create/search smoke | MUST | BLOCKED | fresh CPU audit at clean `d9f8229` passes upstream identity, MLflow child-store smoke, clean-clone import, and Flat schema/FLOP checks (job 54722); tracked upstream Flat checkpoint load passes the compatibility suite (job 54716); A40 compile/profiler/all-core largest-grid job 54723 waits for the audited geometry chain |
 
 ## Readiness and Freeze Gates
 
@@ -99,11 +99,11 @@ authentication before a verdict. No treatment is authorized.
 | Legacy M0 summaries | CPU wiring, profiling, overfit, reconstruction, mmap, and prototype hierarchy checks completed | engineering hints only; no status change |
 | Legacy M1 MLflow experiment `702378410004452588` | 30 records: 11 finished, 19 stale; only Flat/case2000 finished; 238.675 one-GPU elapsed hours across finished records | not confirmatory; no I/R/E credit |
 | Legacy M1 SLURM logs | 40 `.stfolder`/MLflow discovery failures plus cancellation, OOM, and Triton resource failures | adds fail-closed store smoke to I010 |
-| Current Abacus backend | source-development repairs 54686/54687 completed exactly 512 PF outputs each; R003 job 54699 completed; recovery array 54691 is processing the remaining incomplete pools | retry provenance records every attempted/successful count; R003 typed gate passes at `8706bac`; no treatment launch is authorized |
+| Current Abacus backend | source-development repairs 54686/54687 completed exactly 512 PF outputs each; R003 job 54699 completed; recovery array 54691 is processing 31 remaining incomplete pools; full audit/freezes/geometry are chained as 54702/54711–54714; I010 CPU job 54722 passed its available checks and GPU job 54723 is dependency-blocked | retry provenance records every attempted/successful count; R003 typed gate passes at `8706bac`; no treatment launch is authorized |
 
-1. **Data generation:** resume only the 32 incomplete pools under `deterministic_retry_to_fixed_success_count_v1`; preserve the frozen initial configs/base seeds and record every deterministic retry, solver drop, raw hash, and provenance hash.
+1. **Data generation:** complete array 54691's 31 remaining pools under `deterministic_retry_to_fixed_success_count_v1`; preserve the frozen initial configs/base seeds and record every deterministic retry, solver drop, raw hash, and provenance hash.
 2. **R003:** PASS at `8706bac` (job 54699); freeze selected geometry policy hash `e17a2551d54cc78678f6ca55c056e149f01d52b9081e0b2793d3eea2bea35ec2` for downstream profiling and manifests.
-3. **I010:** add a reviewed upstream-flat checkpoint fixture, then run CUDA compile/FLOP parity and largest-grid host/accelerator peaks on a GPU node after admissible data exist.
+3. **I010:** consume jobs 54722/54723 to freeze compile mode and record profiler plus largest-grid host/accelerator peaks after the audited geometry bundle exists.
 4. **R014:** only after every required I/R/C/P/S record is hashed PASS, materialize the explicit E001–E020 campaign and launch by manifest ID.
 
 
