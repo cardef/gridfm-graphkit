@@ -313,6 +313,29 @@ def test_finalize_data_accepts_parallel_branches_by_stable_branch_id(tmp_path):
     assert manifest["topologies"]["case2_test"]["integrity_status"] == "PASS"
 
 
+
+def test_finalize_data_can_scope_audit_to_source_development(tmp_path):
+    draft, config_dir = _draft(tmp_path)
+    payload = yaml.safe_load(draft.read_text())
+    source = payload["topologies"]["case2_test"]
+    source["split"] = "source_dev"
+    payload["topologies"]["unready_target"] = {
+        **source,
+        "topology_key": "unready-target",
+        "split": "target",
+        "integrity_status": "PENDING",
+    }
+    draft.write_text(yaml.safe_dump(payload, sort_keys=False))
+    manifest = finalize(
+        draft,
+        config_dir,
+        tmp_path / "data",
+        tmp_path / "topology-manifest.yaml",
+        splits={"source_dev"},
+    )
+    assert manifest["topologies"]["case2_test"]["integrity_status"] == "PASS"
+    assert manifest["topologies"]["unready_target"]["integrity_status"] == "PENDING"
+
 def test_finalize_data_rejects_scenario_varying_admittance(tmp_path):
     draft, config_dir = _draft(tmp_path, varying_y=True)
     with pytest.raises(ContractError, match="vary by scenario"):

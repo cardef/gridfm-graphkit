@@ -216,11 +216,14 @@ def finalize(
     config_dir: Path,
     data_root: Path,
     output_path: Path,
+    splits: set[str] | None = None,
 ) -> dict:
     manifest = load_topology_manifest(draft_path)
     failures = []
     inventory_sha256 = manifest.get("selection_freeze", {}).get("inventory_sha256")
     for network, record in manifest["topologies"].items():
+        if splits is not None and record["split"] not in splits:
+            continue
         try:
             _finalize_one(
                 network,
@@ -249,6 +252,7 @@ def _parse_args():
     parser.add_argument("--config-dir", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--split", action="append", dest="splits")
     return parser.parse_args()
 
 
@@ -259,6 +263,7 @@ def main() -> int:
         args.config_dir.resolve(),
         args.data_root.resolve(),
         args.output.resolve(),
+        splits=set(args.splits) if args.splits else None,
     )
     return 0
 
