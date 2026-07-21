@@ -35,10 +35,7 @@ from gridfm_graphkit.fm_scaling.splits import validate_materialized_splits
 
 def test_datakit_generation_forces_spawn_before_julia_initialization():
     entrypoint = (
-        Path(__file__).parents[1]
-        / "experiments"
-        / "fm_scaling"
-        / "datakit_generate.py"
+        Path(__file__).parents[1] / "experiments" / "fm_scaling" / "datakit_generate.py"
     )
     source = entrypoint.read_text()
     spawn = 'multiprocessing.set_start_method("spawn", force=True)'
@@ -56,8 +53,6 @@ def test_datakit_chunk_seed_shim_preserves_frozen_seed_separation():
     assert len(derived) == 55 * 2331
 
 
-
-
 def test_datakit_retry_chunk_seeds_are_disjoint_for_frozen_bounds():
     modulus = 2**32
     base_seeds = list(range(20260714, 20260714 + 55))
@@ -67,12 +62,13 @@ def test_datakit_retry_chunk_seeds_are_disjoint_for_frozen_bounds():
         for seed in base_seeds
     ]
     starts = sorted((seed * 20_000 + 1) % modulus for seed in attempt_seeds)
-    gaps = [
-        right - left
-        for left, right in zip(starts, starts[1:])
-    ] + [starts[0] + modulus - starts[-1]]
+    gaps = [right - left for left, right in zip(starts, starts[1:])] + [
+        starts[0] + modulus - starts[-1]
+    ]
     assert len(starts) == len(set(starts))
     assert min(gaps) > 2331
+
+
 def test_datakit_retry_policy_completes_the_frozen_success_count(tmp_path):
     raw = tmp_path / "case" / "raw"
     config = {
@@ -167,15 +163,32 @@ def test_inventory_and_rendered_config_disable_all_structural_perturbations(tmp_
                 "r002_sha256": "b" * 64,
             },
             "cases": [
-                {**case, "network": f"source-{index}", "topology_key": f"source-{index}", "seed": 20260714 + index}
+                {
+                    **case,
+                    "network": f"source-{index}",
+                    "topology_key": f"source-{index}",
+                    "seed": 20260714 + index,
+                }
                 for index in range(26)
             ]
             + [
-                {**case, "network": f"dev-{index}", "topology_key": f"dev-{index}", "split": "source_dev", "seed": 20260740 + index}
+                {
+                    **case,
+                    "network": f"dev-{index}",
+                    "topology_key": f"dev-{index}",
+                    "split": "source_dev",
+                    "seed": 20260740 + index,
+                }
                 for index in range(2)
             ]
             + [
-                {**case, "network": f"target-{index}", "topology_key": f"target-{index}", "split": "target", "seed": 20260742 + index}
+                {
+                    **case,
+                    "network": f"target-{index}",
+                    "topology_key": f"target-{index}",
+                    "split": "target",
+                    "seed": 20260742 + index,
+                }
                 for index in range(27)
             ],
         },
@@ -318,7 +331,6 @@ def test_finalize_data_accepts_parallel_branches_by_stable_branch_id(tmp_path):
     assert manifest["topologies"]["case2_test"]["integrity_status"] == "PASS"
 
 
-
 def test_finalize_data_can_scope_audit_to_source_development(tmp_path):
     draft, config_dir = _draft(tmp_path)
     payload = yaml.safe_load(draft.read_text())
@@ -340,6 +352,7 @@ def test_finalize_data_can_scope_audit_to_source_development(tmp_path):
     )
     assert manifest["topologies"]["case2_test"]["integrity_status"] == "PASS"
     assert manifest["topologies"]["unready_target"]["integrity_status"] == "PENDING"
+
 
 def test_finalize_data_rejects_scenario_varying_admittance(tmp_path):
     draft, config_dir = _draft(tmp_path, varying_y=True)
@@ -431,8 +444,7 @@ def test_split_freeze_is_deterministic_outcome_blind_and_heldout_test_only(tmp_p
     assert first["freeze"]["seed_base"] == SPLIT_SEED_BASE
     assert first["freeze"]["outcomes_read"] is False
     assert {
-        key: len(first["splits"]["source"][key])
-        for key in ("train", "val", "test")
+        key: len(first["splits"]["source"][key]) for key in ("train", "val", "test")
     } == {
         "train": 16,
         "val": 2,
