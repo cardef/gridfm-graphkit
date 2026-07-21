@@ -27,18 +27,37 @@ RAW_TOPOLOGY_FILES = (
 )
 
 
+def _artifact_sha256(path: Path) -> str:
+    """Hash a file or partitioned dataset directory deterministically."""
+    if path.is_file():
+        files = [("", path)]
+    elif path.is_dir():
+        files = [
+            (child.relative_to(path).as_posix(), child)
+            for child in sorted(path.rglob("*"))
+            if child.is_file()
+        ]
+        if not files:
+            raise ContractError(f"empty raw data artifact {path}")
+    else:
+        raise ContractError(f"missing raw data artifact {path}")
+
+    digest = hashlib.sha256()
+    for relative_name, child in files:
+        digest.update(relative_name.encode())
+        digest.update(b"\0")
+        with child.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
 def raw_data_sha256(raw: Path) -> str:
     digest = hashlib.sha256()
     for name in RAW_TOPOLOGY_FILES:
         path = raw / name
-        if not path.is_file():
-            raise ContractError(f"missing raw data artifact {path}")
-        file_digest = hashlib.sha256()
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                file_digest.update(chunk)
         digest.update(name.encode())
-        digest.update(file_digest.hexdigest().encode())
+        digest.update(_artifact_sha256(path).encode())
     return digest.hexdigest()
 
 

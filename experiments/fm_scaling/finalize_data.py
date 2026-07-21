@@ -113,7 +113,9 @@ def _finalize_one(
             raise ContractError(f"{network} generation provenance mismatch")
         record["generation_provenance_sha256"] = file_sha256(provenance_path)
     raw = data_root / network / "raw"
-    missing = [name for name in (*RAW_FILES, "args.log") if not (raw / name).is_file()]
+    missing = [name for name in RAW_FILES if not (raw / name).exists()]
+    if not (raw / "args.log").is_file():
+        missing.append("args.log")
     if missing:
         raise ContractError(f"{network} misses raw files {missing}")
     logged = _logged_config(raw / "args.log")

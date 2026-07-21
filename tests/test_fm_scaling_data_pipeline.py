@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from experiments.fm_scaling.datakit_topology import prune_declared_inert_buses
-from experiments.fm_scaling.finalize_data import finalize
+from experiments.fm_scaling.finalize_data import RAW_FILES, finalize
 from experiments.fm_scaling.freeze_targets import freeze_targets
 from experiments.fm_scaling.make_splits import materialize
 from experiments.fm_scaling.prepare_data import (
@@ -224,6 +224,24 @@ def test_finalize_data_proves_static_complete_scenarios_and_hashes(tmp_path):
     assert len(record["raw_sha256"]) == 64
     assert len(record["data_hash"]) == 64
     assert yaml.safe_load(output.read_text()) == manifest
+
+
+def test_finalize_data_accepts_partitioned_parquet_datasets(tmp_path):
+    draft, config_dir = _draft(tmp_path)
+    raw = tmp_path / "data" / "case2_test" / "raw"
+    for name in RAW_FILES:
+        path = raw / name
+        frame = pd.read_parquet(path)
+        path.unlink()
+        frame["scenario_partition"] = frame["scenario"] % 2
+        frame.to_parquet(
+            path,
+            partition_cols=["scenario_partition"],
+            index=False,
+        )
+    output = tmp_path / "topology-manifest.yaml"
+    manifest = finalize(draft, config_dir, tmp_path / "data", output)
+    assert manifest["topologies"]["case2_test"]["integrity_status"] == "PASS"
 
 
 def test_finalize_data_rejects_scenario_varying_admittance(tmp_path):
