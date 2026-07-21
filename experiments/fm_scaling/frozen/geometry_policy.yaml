@@ -1,0 +1,9 @@
+rho: 0.2
+k_p: 16
+k_c: 16
+kappa: 16.0
+metis_seed: 20260714
+max_condition: 1000000000000.0
+max_harmonic_residual: 1.0
+max_dense_bytes: 68719476736
+max_build_seconds: 600.0

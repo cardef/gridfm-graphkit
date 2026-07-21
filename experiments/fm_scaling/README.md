@@ -100,7 +100,8 @@ an environment other than `../.venv`. All generated configs set topology,
 admittance, and generation perturbations to `none`.
 
 After generation, finalize hashes and static-topology evidence, freeze target
-membership without reading outcomes, and materialize explicit scenario IDs:
+membership without reading outcomes, freeze outcome-blind scenario IDs, and
+materialize them:
 
 ```bash
 ../.venv/bin/python -m experiments.fm_scaling.finalize_data \
@@ -113,6 +114,10 @@ membership without reading outcomes, and materialize explicit scenario IDs:
   --manifest experiments/fm_scaling/frozen/topology_manifest.audited.yaml \
   --selection experiments/fm_scaling/frozen/target_freeze.yaml \
   --output experiments/fm_scaling/frozen/topology_manifest.yaml
+
+../.venv/bin/python -m experiments.fm_scaling.freeze_splits \
+  --topology-manifest experiments/fm_scaling/frozen/topology_manifest.yaml \
+  --output experiments/fm_scaling/frozen/splits.yaml
 
 ../.venv/bin/python -m experiments.fm_scaling.make_splits \
   --spec experiments/fm_scaling/frozen/splits.yaml \

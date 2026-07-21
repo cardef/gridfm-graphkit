@@ -16,6 +16,11 @@ from experiments.fm_scaling.datakit_retry import (
     retry_seed,
 )
 from experiments.fm_scaling.finalize_data import RAW_FILES, finalize
+from experiments.fm_scaling.freeze_splits import (
+    SPLIT_POLICY,
+    SPLIT_SEED_BASE,
+    freeze_splits,
+)
 from experiments.fm_scaling.freeze_targets import freeze_targets
 from experiments.fm_scaling.make_splits import materialize
 from experiments.fm_scaling.prepare_data import (
@@ -385,6 +390,64 @@ def test_split_materialization_is_per_network_hashed_and_target_test_only(tmp_pa
     )
     assert observed["splits"]["target"]["train"] == []
     assert (output_root / "source" / "train.pt").is_file()
+
+
+def test_split_freeze_is_deterministic_outcome_blind_and_heldout_test_only(tmp_path):
+    topology = {
+        "schema_version": SCHEMA_VERSION,
+        "topologies": {
+            "source": {
+                "topology_key": "source",
+                "baseMVA": 100,
+                "provenance_group": "source-group",
+                "split": "source",
+                "bus_count": 2,
+                "scenario_count": 20,
+            },
+            "source-dev": {
+                "topology_key": "source-dev",
+                "baseMVA": 100,
+                "provenance_group": "dev-group",
+                "split": "source_dev",
+                "bus_count": 3,
+                "scenario_count": 5,
+            },
+            "target": {
+                "topology_key": "target",
+                "baseMVA": 100,
+                "provenance_group": "target-group",
+                "split": "target",
+                "bus_count": 4,
+                "scenario_count": 6,
+            },
+        },
+    }
+    topology_path = tmp_path / "topology.yaml"
+    topology_path.write_text(yaml.safe_dump(topology))
+    first = freeze_splits(topology_path, tmp_path / "first.yaml")
+    second = freeze_splits(topology_path, tmp_path / "second.yaml")
+    assert first == second
+    assert first["freeze"]["policy"] == SPLIT_POLICY
+    assert first["freeze"]["seed_base"] == SPLIT_SEED_BASE
+    assert first["freeze"]["outcomes_read"] is False
+    assert {
+        key: len(first["splits"]["source"][key])
+        for key in ("train", "val", "test")
+    } == {
+        "train": 16,
+        "val": 2,
+        "test": 2,
+    }
+    assert first["splits"]["source-dev"] == {
+        "train": [],
+        "val": [],
+        "test": list(range(5)),
+    }
+    assert first["splits"]["target"] == {
+        "train": [],
+        "val": [],
+        "test": list(range(6)),
+    }
 
 
 def test_target_freeze_enforces_whole_groups_and_terciles(tmp_path):
