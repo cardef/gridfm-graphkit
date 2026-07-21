@@ -16,6 +16,8 @@ import platform
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+import yaml
+
 
 # Datakit's feasibility-bound worker uses multiprocessing.Pool. Force spawn
 # before Julia starts: forking the initialized multithreaded Julia runtime
@@ -25,6 +27,12 @@ multiprocessing.set_start_method("spawn", force=True)
 # JuliaCall must initialize before GraphKit imports Torch; the reverse order is a
 # documented segfault risk in mixed Julia/PyTorch processes.
 import juliacall  # noqa: F401
+from experiments.fm_scaling.datakit_retry import (
+    RETRY_POLICY,
+    RETRY_STATE_FILE,
+    complete_pf_pool,
+    successful_scenario_count,
+)
 
 from experiments.fm_scaling.datakit_topology import (
     TOPOLOGY_PREPROCESSING_POLICY,
@@ -104,6 +112,7 @@ def main() -> int:
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--inventory-sha256", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--resume-incomplete", action="store_true")
     args = parser.parse_args()
     datakit_root = assert_datakit_checkout(
         args.repo_root.resolve(),
@@ -115,13 +124,47 @@ def main() -> int:
     import gridfm_datakit
     from gridfm_datakit.generate import generate_power_flow_data_distributed
 
-    generate_power_flow_data_distributed(str(args.config.resolve()))
+    config_path = args.config.resolve()
+    config_sha256 = file_sha256(config_path)
+    prior = None
+    if args.resume_incomplete:
+        if not args.output.is_file():
+            raise RuntimeError("resume requires the original generation provenance")
+        prior = json.loads(args.output.read_text())
+        if (
+            prior.get("status") != "GENERATED"
+            or prior.get("config_sha256") != config_sha256
+            or prior.get("datakit_commit") != args.expected_commit
+            or prior.get("inventory_sha256") != args.inventory_sha256
+        ):
+            raise RuntimeError("resume provenance does not match frozen inputs")
+
+    config = yaml.safe_load(config_path.read_text())
+    raw = (
+        Path(config["settings"]["data_dir"]).resolve()
+        / config["network"]["name"]
+        / "raw"
+    )
+    retry_state = complete_pf_pool(
+        config,
+        raw,
+        generate_power_flow_data_distributed,
+        resume=args.resume_incomplete,
+    )
+    topology_preprocessing = (
+        {
+            "policy": TOPOLOGY_PREPROCESSING_POLICY,
+            "dropped_bus_ids": _recorded_dropped_bus_ids(),
+        }
+        if _TOPOLOGY_PREPROCESSING
+        else prior["topology_preprocessing"]
+    )
     payload = {
         "schema_version": "fm-scaling-datakit-provenance-v1",
         "status": "GENERATED",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "config_path": str(args.config.resolve()),
-        "config_sha256": file_sha256(args.config.resolve()),
+        "config_path": str(config_path),
+        "config_sha256": config_sha256,
         "datakit_commit": args.expected_commit,
         "datakit_root": str(datakit_root),
         "module_path": str(Path(gridfm_datakit.__file__).resolve()),
@@ -130,10 +173,12 @@ def main() -> int:
         "platform": platform.platform(),
         "environment_sha256": _environment_hash(),
         "inventory_sha256": args.inventory_sha256,
-        "topology_preprocessing": {
-            "policy": TOPOLOGY_PREPROCESSING_POLICY,
-            "dropped_bus_ids": _recorded_dropped_bus_ids(),
-        },
+        "topology_preprocessing": topology_preprocessing,
+        "retry_policy": RETRY_POLICY,
+        "requested_scenario_count": int(config["load"]["scenarios"]),
+        "successful_scenario_count": successful_scenario_count(raw),
+        "generation_attempts": retry_state["attempts"],
+        "retry_state_sha256": file_sha256(raw / RETRY_STATE_FILE),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

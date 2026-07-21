@@ -4,12 +4,12 @@
 
 **Method thesis:** A sparse, parameter-free electrical hierarchy should provide more useful nonlocal communication than matched local, typewise-global-summary, and same-partition generic-hierarchy alternatives.
 
-**Date:** 2026-07-20
+**Date:** 2026-07-21
 
-**Implementation boundary:** `cardef/gridfm-graphkit`, amended freeze commit `93815a67b9e7f4db1b3677f8480400a5425cb0b4`, current data-generation recovery commit `e4df8c0bda57ef69c44087b72002119cd35fc1dc`; upstream `gridfm/gridfm-graphkit` reference `b3d663b62179222c1ebec00ee29f67ea50e68c0b`; merge base `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. Formal clean-commit receipts at `93815a6` pass I002–I009 and R001/R002/R004; I001 remains bound to its earlier clean provenance record, and I010 remains incomplete.
+**Implementation boundary:** `cardef/gridfm-graphkit`, amended freeze commit `93815a67b9e7f4db1b3677f8480400a5425cb0b4`, partitioned-audit base commit `c5256579cc6f5f41f6be0cea5f1558ff51d94ced`; every recovery and gate artifact records its exact later execution commit. Upstream `gridfm/gridfm-graphkit` reference and merge base remain `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. Formal clean-commit receipts at `93815a6` pass I002–I009 and R001/R002/R004; I001 remains bound to its earlier clean provenance record, and I010 remains incomplete.
 
 **Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `d9a3b6d3810eaeb13cb1bbe24cff457a7bcacda038f517c7a4d90cc9e95ea1b7`.
-**Current status:** the G26 split and formal R002/R004 receipts remain unchanged. Initial generation produced 53/55 complete provenance records; `case2742_goc` timed out and `case10192_epigrids` exposed three case-declared inert type-4 buses omitted by PowerModels. Commit `e4df8c0` adds the fail-closed topology-only energized-network policy, records its provenance, and passes 13 focused tests plus a one-scenario 10,189-bus end-to-end smoke. Recovery jobs 54583 and 54586 are running with 24-hour limits; dependent job 54588 will audit all 55 outputs and run R003. Cross-family G26 review, I010, R003, R005–R014, and all confirmatory runs remain BLOCKED.
+**Current status:** all 55 initial PF-mode generation jobs have complete provenance. Audit job 54676 then exposed Datakit solver attrition: PF mode uses an internal OPF solve only to choose generator setpoints, silently drops failed setpoint solves, and renumbers successful PF outputs. It also exposed a false topology alarm caused by parallel branches sharing endpoints. The fixed global recovery rule appends deterministically seeded PF attempts until the frozen success count is reached, records every attempt/drop, and audits branches by stable branch ID. R003, I010, R005–R014, and all confirmatory runs remain BLOCKED until their typed PASS records exist.
 
 ## Claim Map
 
@@ -109,7 +109,7 @@ Seeds and scenarios are never inferential replicates. Report scenario P95 and be
 |---|---|---|
 | Source sets | Nested intact PGLib base cases: `G8 subset G16 subset G26`; outage variants do not count as systems. | `topology_manifest.yaml` hash |
 | Total training scenarios | `S_total = 11,655` sampled scenario exposures per epoch, identical at G8/G16/G26; batch size 1; balance provenance groups then cases; at least 128 endpoint batches per case. | data-manifest hash |
-| Generated scenario pools | 2,331 per source topology; 512 per source-development or target topology. The source pool prevents within-epoch reuse at the maximum singleton-case allocation. | data-inventory and config hashes |
+| Generated scenario pools | Exactly 2,331 successful PF outputs per source topology and 512 per source-development or target topology. Keep the frozen first-attempt config and base seed. If Datakit drops an internal OPF setpoint solve, append attempts under the single global `deterministic_retry_to_fixed_success_count_v1` rule: retry round `r>=1` uses `base_seed + 1000r`, requests exactly the remaining deficit, never overwrites prior successes, and records requested/before/after counts plus the retry-state hash. The 1,000 stride is globally fixed and keeps every frozen topology/round chunk-seed interval disjoint. No topology-specific retry rule or solver setting is permitted. | data-inventory, config, generation-provenance, retry-state, and raw-data hashes |
 | Energized topology normalization | Deterministically drop only case-declared MATPOWER type-4 buses with zero load/shunt and no in-service generator or incident branch; otherwise fail closed. Record effective bus count, policy, and dropped original IDs. | topology-manifest and generation-provenance hashes |
 | Target pool | At least 12 intact topologies, at least 6 independent provenance groups, roughly 0.5k–13.7k buses, and at least 4 targets in each frozen bus-count tercile. | target-manifest hash |
 | Size extrapolation | `N_target > N_source_max`; at least 4 such targets across at least 2 target groups for the claim. | source extrema and target manifest |

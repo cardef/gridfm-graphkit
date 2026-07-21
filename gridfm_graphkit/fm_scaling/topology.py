@@ -94,10 +94,10 @@ def load_grid_topology(
     )
     branches = pd.read_parquet(
         branch_path,
-        columns=["scenario", "from_bus", "to_bus", "br_status"],
+        columns=["scenario", "idx", "from_bus", "to_bus", "br_status"],
     )
     _assert_static(y_bus, ["index1", "index2"], ["G", "B"])
-    _assert_static(branches, ["from_bus", "to_bus"], ["br_status"])
+    _assert_static(branches, ["idx"], ["from_bus", "to_bus", "br_status"])
 
     first_y = (
         y_bus[y_bus["scenario"] == y_bus["scenario"].min()]
@@ -106,8 +106,7 @@ def load_grid_topology(
     )
     first_branches = (
         branches[branches["scenario"] == branches["scenario"].min()]
-        .sort_values(["from_bus", "to_bus"])
-        .drop_duplicates(["from_bus", "to_bus"])
+        .sort_values(["idx"])
     )
     first_branches = first_branches[first_branches["br_status"] == 1]
     num_bus = int(record["bus_count"])

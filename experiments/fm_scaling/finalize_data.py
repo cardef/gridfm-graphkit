@@ -14,6 +14,11 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+from experiments.fm_scaling.datakit_retry import (
+    RETRY_POLICY,
+    RETRY_STATE_FILE,
+    build_retry_config,
+)
 from gridfm_graphkit.fm_scaling.contracts import ContractError
 from gridfm_graphkit.fm_scaling.data import load_topology_manifest
 from gridfm_graphkit.fm_scaling.manifest import file_sha256
@@ -28,22 +33,26 @@ RAW_FILES = (
 )
 
 
-def _logged_config(path: Path) -> dict:
+def _logged_configs(path: Path) -> list[dict]:
     lines = path.read_text().splitlines(keepends=True)
     markers = [
         index
         for index, line in enumerate(lines)
         if line.startswith("New generation started at ")
     ]
-    if len(markers) != 1:
-        raise ContractError(f"{path} must contain exactly one generation record")
-    payload = yaml.safe_load("".join(lines[markers[0] + 1 :]))
-    if not isinstance(payload, dict):
-        raise ContractError(f"{path} does not contain a YAML configuration")
-    return payload
+    if not markers:
+        raise ContractError(f"{path} has no generation records")
+    payloads = []
+    for marker_index, start in enumerate(markers):
+        stop = markers[marker_index + 1] if marker_index + 1 < len(markers) else len(lines)
+        payload = yaml.safe_load("".join(lines[start + 1 : stop]))
+        if not isinstance(payload, dict):
+            raise ContractError(f"{path} contains an invalid YAML configuration")
+        payloads.append(payload)
+    return payloads
 
 
-def _assert_generation_config(config: dict, network: str, expected: dict) -> None:
+def _assert_generation_config(config: dict, network: str, scenario_count: int) -> None:
     if config.get("network", {}).get("name") != network:
         raise ContractError(f"{network} args.log names a different network")
     if config.get("settings", {}).get("mode") != "pf":
@@ -57,10 +66,69 @@ def _assert_generation_config(config: dict, network: str, expected: dict) -> Non
     ):
         if config.get(field, {}).get("type") != "none":
             raise ContractError(f"{network} enables forbidden {field}")
-    if int(config.get("load", {}).get("scenarios", -1)) != int(
-        expected["scenario_count"],
-    ):
+    if int(config.get("load", {}).get("scenarios", -1)) != int(scenario_count):
         raise ContractError(f"{network} scenario count differs from manifest")
+
+
+def _assert_generation_log(
+    configs: list[dict],
+    prepared: dict,
+    network: str,
+    record: dict,
+    provenance: dict | None,
+    raw: Path,
+) -> None:
+    target = int(record["scenario_count"])
+    if configs[0] != prepared:
+        raise ContractError(f"{network} initial args.log config differs from freeze")
+    _assert_generation_config(configs[0], network, target)
+    attempts = provenance.get("generation_attempts") if provenance else None
+    if attempts is None:
+        if len(configs) != 1:
+            raise ContractError(f"{network} has unproven retry generation records")
+        return
+    if (
+        provenance.get("retry_policy") != RETRY_POLICY
+        or int(provenance.get("requested_scenario_count", -1)) != target
+        or int(provenance.get("successful_scenario_count", -1)) != target
+        or not isinstance(attempts, list)
+        or len(attempts) != len(configs)
+    ):
+        raise ContractError(f"{network} retry provenance is inconsistent")
+
+    successful = 0
+    for index, (config, attempt) in enumerate(zip(configs, attempts)):
+        requested = target - successful
+        expected_config = (
+            prepared
+            if index == 0
+            else build_retry_config(prepared, index, requested)
+        )
+        if config != expected_config:
+            raise ContractError(f"{network} retry config {index} differs from policy")
+        _assert_generation_config(config, network, requested)
+        expected_seed = int(expected_config["settings"]["seed"])
+        if (
+            int(attempt.get("retry_round", -1)) != index
+            or int(attempt.get("seed", -1)) != expected_seed
+            or int(attempt.get("requested", -1)) != requested
+            or int(attempt.get("successful_before", -1)) != successful
+        ):
+            raise ContractError(f"{network} retry attempt {index} is inconsistent")
+        after = attempt.get("successful_after")
+        if after is None or not successful <= int(after) <= successful + requested:
+            raise ContractError(f"{network} retry attempt {index} has invalid progress")
+        successful = int(after)
+    if successful != target:
+        raise ContractError(f"{network} retry policy did not complete the frozen pool")
+
+    retry_state_path = raw / RETRY_STATE_FILE
+    if (
+        not retry_state_path.is_file()
+        or file_sha256(retry_state_path) != provenance.get("retry_state_sha256")
+        or json.loads(retry_state_path.read_text()).get("attempts") != attempts
+    ):
+        raise ContractError(f"{network} retry state hash or attempts mismatch")
 
 
 def _scenario_ids(path: Path) -> set[int]:
@@ -99,7 +167,9 @@ def _finalize_one(
     if file_sha256(config_path) != record["config_sha256"]:
         raise ContractError(f"{network} prepared config hash mismatch")
     prepared = yaml.safe_load(config_path.read_text())
-    _assert_generation_config(prepared, network, record)
+    _assert_generation_config(prepared, network, int(record["scenario_count"]))
+    raw = data_root / network / "raw"
+    provenance = None
     provenance_value = record.get("generation_provenance_path")
     if provenance_value:
         provenance_path = Path(str(provenance_value)).resolve()
@@ -112,14 +182,13 @@ def _finalize_one(
         ):
             raise ContractError(f"{network} generation provenance mismatch")
         record["generation_provenance_sha256"] = file_sha256(provenance_path)
-    raw = data_root / network / "raw"
     missing = [name for name in RAW_FILES if not (raw / name).exists()]
     if not (raw / "args.log").is_file():
         missing.append("args.log")
     if missing:
         raise ContractError(f"{network} misses raw files {missing}")
-    logged = _logged_config(raw / "args.log")
-    _assert_generation_config(logged, network, record)
+    logged = _logged_configs(raw / "args.log")
+    _assert_generation_log(logged, prepared, network, record, provenance, raw)
     expected_ids = set(range(int(record["scenario_count"])))
     for name in RAW_FILES:
         observed = _scenario_ids(raw / name)

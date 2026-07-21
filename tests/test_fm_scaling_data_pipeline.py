@@ -10,6 +10,11 @@ import pytest
 import yaml
 
 from experiments.fm_scaling.datakit_topology import prune_declared_inert_buses
+from experiments.fm_scaling.datakit_retry import (
+    RETRY_POLICY,
+    complete_pf_pool,
+    retry_seed,
+)
 from experiments.fm_scaling.finalize_data import RAW_FILES, finalize
 from experiments.fm_scaling.freeze_targets import freeze_targets
 from experiments.fm_scaling.make_splits import materialize
@@ -44,6 +49,52 @@ def test_datakit_chunk_seed_shim_preserves_frozen_seed_separation():
         for scenario in range(2331)
     }
     assert len(derived) == 55 * 2331
+
+
+
+
+def test_datakit_retry_chunk_seeds_are_disjoint_for_frozen_bounds():
+    modulus = 2**32
+    base_seeds = list(range(20260714, 20260714 + 55))
+    attempt_seeds = base_seeds + [
+        retry_seed(seed, retry_round)
+        for retry_round in range(1, 129)
+        for seed in base_seeds
+    ]
+    starts = sorted((seed * 20_000 + 1) % modulus for seed in attempt_seeds)
+    gaps = [
+        right - left
+        for left, right in zip(starts, starts[1:])
+    ] + [starts[0] + modulus - starts[-1]]
+    assert len(starts) == len(set(starts))
+    assert min(gaps) > 2331
+def test_datakit_retry_policy_completes_the_frozen_success_count(tmp_path):
+    raw = tmp_path / "case" / "raw"
+    config = {
+        "settings": {"mode": "pf", "seed": 17, "overwrite": True},
+        "load": {"scenarios": 5},
+    }
+    increments = [2, 2, 1]
+    calls = []
+
+    def generate(attempt_config):
+        before = (
+            int((raw / "n_scenarios.txt").read_text())
+            if (raw / "n_scenarios.txt").is_file()
+            and not attempt_config["settings"]["overwrite"]
+            else 0
+        )
+        raw.mkdir(parents=True, exist_ok=True)
+        increment = increments[len(calls)]
+        calls.append(attempt_config)
+        (raw / "n_scenarios.txt").write_text(str(before + increment))
+
+    state = complete_pf_pool(config, raw, generate)
+    assert [attempt["successful_after"] for attempt in state["attempts"]] == [2, 4, 5]
+    assert [call["load"]["scenarios"] for call in calls] == [5, 3, 1]
+    assert calls[1]["settings"]["overwrite"] is False
+    assert calls[1]["settings"]["seed"] == retry_seed(17, 1)
+    assert state["retry_policy"] == RETRY_POLICY
 
 
 def test_declared_inert_type4_bus_is_dropped_without_reading_outcomes():
@@ -148,6 +199,7 @@ def _write_raw(raw: Path, config: dict, *, varying_y: bool = False) -> None:
     gen_rows = [{"scenario": scenario, "id": 0} for scenario in scenarios]
     branch_rows = [
         {
+            "idx": 0,
             "scenario": scenario,
             "from_bus": 0,
             "to_bus": 1,
@@ -241,6 +293,23 @@ def test_finalize_data_accepts_partitioned_parquet_datasets(tmp_path):
         )
     output = tmp_path / "topology-manifest.yaml"
     manifest = finalize(draft, config_dir, tmp_path / "data", output)
+    assert manifest["topologies"]["case2_test"]["integrity_status"] == "PASS"
+
+
+def test_finalize_data_accepts_parallel_branches_by_stable_branch_id(tmp_path):
+    draft, config_dir = _draft(tmp_path)
+    path = tmp_path / "data" / "case2_test" / "raw" / "branch_data.parquet"
+    branches = pd.read_parquet(path)
+    parallel = branches.copy()
+    parallel["idx"] = 1
+    parallel["br_status"] = 0
+    pd.concat([branches, parallel], ignore_index=True).to_parquet(path)
+    manifest = finalize(
+        draft,
+        config_dir,
+        tmp_path / "data",
+        tmp_path / "topology-manifest.yaml",
+    )
     assert manifest["topologies"]["case2_test"]["integrity_status"] == "PASS"
 
 
