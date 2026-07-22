@@ -15,6 +15,7 @@ import pandas as pd
 import yaml
 
 from experiments.fm_scaling.datakit_retry import (
+    RETRY_CANDIDATE_POLICY,
     RETRY_POLICY,
     RETRY_STATE_FILE,
     build_retry_config,
@@ -44,7 +45,9 @@ def _logged_configs(path: Path) -> list[dict]:
         raise ContractError(f"{path} has no generation records")
     payloads = []
     for marker_index, start in enumerate(markers):
-        stop = markers[marker_index + 1] if marker_index + 1 < len(markers) else len(lines)
+        stop = (
+            markers[marker_index + 1] if marker_index + 1 < len(markers) else len(lines)
+        )
         payload = yaml.safe_load("".join(lines[start + 1 : stop]))
         if not isinstance(payload, dict):
             raise ContractError(f"{path} contains an invalid YAML configuration")
@@ -96,13 +99,21 @@ def _assert_generation_log(
     ):
         raise ContractError(f"{network} retry provenance is inconsistent")
 
+    uses_candidate_policy = any(
+        attempt.get("candidate_policy") == RETRY_CANDIDATE_POLICY
+        for attempt in attempts
+    )
+    if (
+        uses_candidate_policy
+        and provenance.get("retry_candidate_policy") != RETRY_CANDIDATE_POLICY
+    ):
+        raise ContractError(f"{network} retry candidate provenance is inconsistent")
+
     successful = 0
     for index, (config, attempt) in enumerate(zip(configs, attempts)):
         requested = target - successful
         expected_config = (
-            prepared
-            if index == 0
-            else build_retry_config(prepared, index, requested)
+            prepared if index == 0 else build_retry_config(prepared, index, requested)
         )
         if config != expected_config:
             raise ContractError(f"{network} retry config {index} differs from policy")
@@ -115,6 +126,11 @@ def _assert_generation_log(
             or int(attempt.get("successful_before", -1)) != successful
         ):
             raise ContractError(f"{network} retry attempt {index} is inconsistent")
+        candidate_policy = attempt.get("candidate_policy")
+        if candidate_policy not in (None, RETRY_CANDIDATE_POLICY):
+            raise ContractError(
+                f"{network} retry attempt {index} has an unknown candidate policy",
+            )
         after = attempt.get("successful_after")
         if after is None or not successful <= int(after) <= successful + requested:
             raise ContractError(f"{network} retry attempt {index} has invalid progress")

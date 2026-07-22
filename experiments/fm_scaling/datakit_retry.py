@@ -12,8 +12,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 
 RETRY_POLICY = "deterministic_retry_to_fixed_success_count_v1"
+RETRY_CANDIDATE_POLICY = "full_horizon_pcg64_subsample_v1"
 RETRY_SEED_STRIDE = 1000
 RETRY_STATE_FILE = "fm_scaling_retry_state.json"
 MAX_RETRY_ROUNDS = 128
@@ -24,6 +27,16 @@ def retry_seed(base_seed: int, retry_round: int) -> int:
     if retry_round < 1:
         raise ValueError("retry_round must be positive")
     return int(base_seed) + RETRY_SEED_STRIDE * retry_round
+
+
+def retry_candidate_indices(target: int, requested: int, seed: int) -> np.ndarray:
+    """Select retry candidates from the frozen full scenario horizon."""
+    if target <= 0:
+        raise ValueError("target must be positive")
+    if requested <= 0 or requested > target:
+        raise ValueError("requested must be in [1, target]")
+    generator = np.random.Generator(np.random.PCG64(int(seed)))
+    return np.sort(generator.choice(target, size=requested, replace=False))
 
 
 def successful_scenario_count(raw: Path) -> int:
@@ -60,6 +73,7 @@ def complete_pf_pool(
     *,
     resume: bool = False,
     max_retry_rounds: int = MAX_RETRY_ROUNDS,
+    candidate_policy: str | None = None,
 ) -> dict:
     """Run or resume a topology pool until the frozen success count is met."""
     if base_config.get("settings", {}).get("mode") != "pf":
@@ -149,6 +163,8 @@ def complete_pf_pool(
             "successful_before": observed,
             "successful_after": None,
         }
+        if candidate_policy is not None:
+            attempt["candidate_policy"] = candidate_policy
         attempts.append(attempt)
         _write_state(state_path, state)
         generate(retry_config)

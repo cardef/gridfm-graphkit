@@ -11,8 +11,10 @@ import yaml
 
 from experiments.fm_scaling.datakit_topology import prune_declared_inert_buses
 from experiments.fm_scaling.datakit_retry import (
+    RETRY_CANDIDATE_POLICY,
     RETRY_POLICY,
     complete_pf_pool,
+    retry_candidate_indices,
     retry_seed,
 )
 from experiments.fm_scaling.finalize_data import RAW_FILES, finalize
@@ -69,6 +71,15 @@ def test_datakit_retry_chunk_seeds_are_disjoint_for_frozen_bounds():
     assert min(gaps) > 2331
 
 
+def test_datakit_retry_candidates_cover_the_frozen_full_horizon():
+    first = retry_candidate_indices(target=512, requested=19, seed=20260751)
+    second = retry_candidate_indices(target=512, requested=19, seed=20260751)
+    assert np.array_equal(first, second)
+    assert len(first) == len(np.unique(first)) == 19
+    assert first.min() >= 0 and first.max() < 512
+    assert first.max() >= 19
+
+
 def test_datakit_retry_policy_completes_the_frozen_success_count(tmp_path):
     raw = tmp_path / "case" / "raw"
     config = {
@@ -90,12 +101,18 @@ def test_datakit_retry_policy_completes_the_frozen_success_count(tmp_path):
         calls.append(attempt_config)
         (raw / "n_scenarios.txt").write_text(str(before + increment))
 
-    state = complete_pf_pool(config, raw, generate)
+    state = complete_pf_pool(
+        config,
+        raw,
+        generate,
+        candidate_policy=RETRY_CANDIDATE_POLICY,
+    )
     assert [attempt["successful_after"] for attempt in state["attempts"]] == [2, 4, 5]
     assert [call["load"]["scenarios"] for call in calls] == [5, 3, 1]
     assert calls[1]["settings"]["overwrite"] is False
     assert calls[1]["settings"]["seed"] == retry_seed(17, 1)
     assert state["retry_policy"] == RETRY_POLICY
+    assert state["attempts"][1]["candidate_policy"] == RETRY_CANDIDATE_POLICY
 
 
 def test_declared_inert_type4_bus_is_dropped_without_reading_outcomes():

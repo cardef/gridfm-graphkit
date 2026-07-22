@@ -28,9 +28,11 @@ multiprocessing.set_start_method("spawn", force=True)
 # documented segfault risk in mixed Julia/PyTorch processes.
 import juliacall  # noqa: F401
 from experiments.fm_scaling.datakit_retry import (
+    RETRY_CANDIDATE_POLICY,
     RETRY_POLICY,
     RETRY_STATE_FILE,
     complete_pf_pool,
+    retry_candidate_indices,
     successful_scenario_count,
 )
 
@@ -81,6 +83,46 @@ def _install_topology_preprocessing_shim() -> None:
     generate.load_net_from_pglib = load_net_from_pglib
 
 
+def _install_retry_candidate_shim(target_scenarios: int) -> None:
+    """Keep retries on the frozen full aggregate-profile horizon."""
+    from gridfm_datakit import generate
+
+    current = generate.get_load_scenario_generator
+    if getattr(current, "_gridfm_retry_candidate_policy", None) is not None:
+        return
+
+    def get_load_scenario_generator(args):
+        base_generator = current(args)
+
+        def generate_candidates(net, n_scenarios, scenarios_log, max_iter, seed):
+            if n_scenarios == target_scenarios:
+                return base_generator(
+                    net,
+                    n_scenarios,
+                    scenarios_log,
+                    max_iter,
+                    seed,
+                )
+            full_horizon = base_generator(
+                net,
+                target_scenarios,
+                scenarios_log,
+                max_iter,
+                seed,
+            )
+            indices = retry_candidate_indices(
+                target_scenarios,
+                n_scenarios,
+                seed,
+            )
+            return full_horizon[:, indices, :]
+
+        return generate_candidates
+
+    get_load_scenario_generator._gridfm_retry_candidate_policy = RETRY_CANDIDATE_POLICY
+    generate.get_load_scenario_generator = get_load_scenario_generator
+
+
 def _recorded_dropped_bus_ids() -> list[int]:
     if len(_TOPOLOGY_PREPROCESSING) != 1:
         raise RuntimeError(
@@ -121,9 +163,6 @@ def main() -> int:
     os.environ[_CHUNK_SEED_SHIM] = "1"
     _install_uint32_chunk_seed_shim()
     _install_topology_preprocessing_shim()
-    import gridfm_datakit
-    from gridfm_datakit.generate import generate_power_flow_data_distributed
-
     config_path = args.config.resolve()
     config_sha256 = file_sha256(config_path)
     prior = None
@@ -140,6 +179,10 @@ def main() -> int:
             raise RuntimeError("resume provenance does not match frozen inputs")
 
     config = yaml.safe_load(config_path.read_text())
+    _install_retry_candidate_shim(int(config["load"]["scenarios"]))
+    import gridfm_datakit
+    from gridfm_datakit.generate import generate_power_flow_data_distributed
+
     raw = (
         Path(config["settings"]["data_dir"]).resolve()
         / config["network"]["name"]
@@ -150,6 +193,7 @@ def main() -> int:
         raw,
         generate_power_flow_data_distributed,
         resume=args.resume_incomplete,
+        candidate_policy=RETRY_CANDIDATE_POLICY,
     )
     topology_preprocessing = (
         {
@@ -175,6 +219,7 @@ def main() -> int:
         "inventory_sha256": args.inventory_sha256,
         "topology_preprocessing": topology_preprocessing,
         "retry_policy": RETRY_POLICY,
+        "retry_candidate_policy": RETRY_CANDIDATE_POLICY,
         "requested_scenario_count": int(config["load"]["scenarios"]),
         "successful_scenario_count": successful_scenario_count(raw),
         "generation_attempts": retry_state["attempts"],
