@@ -1,8 +1,8 @@
 # Experiment Tracker: Kron–Schur GridFM Scaling
 
-**Date:** 2026-07-21
+**Date:** 2026-07-24
 
-**Proposal SHA-256:** `d9a3b6d3810eaeb13cb1bbe24cff457a7bcacda038f517c7a4d90cc9e95ea1b7`
+**Proposal SHA-256:** `d58776c404f7d3db3a7499520caf68dd3eaafa918f89a943255b61e0229e767f`
 
 **Campaign status:** BLOCKED until I001–I010 and R014 are PASS.
 
@@ -19,7 +19,7 @@ authentication before a verdict. No treatment is authorized.
 |---|---|---|---|---|---|---|---|---|
 | I001 | M0 | Freeze fork/upstream provenance | repository | n/a | origin, upstream ref, merge base, clean-clone instructions, exact environment/datakit source, artifact-store ownership | MUST | PASS | formal typed record at clean reachable GraphKit `c690d6d`, editable Datakit `b0d55d0`, pinned upstream/merge base `b3d663b`; MLflow child-store smoke passes |
 | I002 | M1 | Define immutable geometry contracts | common | topology only | typed partition/operator/graph/provenance schemas; no scenario fields | MUST | PASS | formal typed hashed `contract-tests` record at clean reachable `93815a6`; 3/3 selected tests pass (job 54416) |
-| I003 | M1 | Implement deterministic partition | Kron + Quotient | source topology only | stable-ID ordering, fixed METIS seed, anchor tie-break, permutation test | MUST | PASS | formal typed hashed `partition-tests` record at clean reachable `93815a6`; 2/2 selected tests pass (job 54416) |
+| I003 | M1 | Implement deterministic partition | Kron + Quotient | source topology only | stable-ID ordering, fixed METIS seed, connected-cardinality repair, anchor tie-break, permutation test | MUST | PASS | amended `metis-contiguous-repair-v1` code is clean and reachable at `14abdf2`; formal typed gate passes all 5 selected tests including missing/disconnected labels and tiny-grid cardinality (job 55095) |
 | I004 | M1 | Implement Kron builder | Kron | source/target topology only | dense-reference Schur parity, coverage-or-fail, residual, conditioning, resource gates | MUST | PASS | formal typed hashed `kron-tests` record at clean reachable `93815a6`; 2/2 selected tests pass (job 54416); source policy calibration remains R003 |
 | I005 | M1 | Implement Quotient builder | Quotient | source/target topology only | one-hot assignment, complex cut sums, four-channel schema, no Schur fill | MUST | PASS | formal typed hashed `quotient-tests` record at clean reachable `93815a6`; 2/2 selected tests pass (job 54416) |
 | I006 | M1 | Implement content-addressed registry | all | multi-topology | immutable cache key/hash/device tests; no sample paths or copied operators | MUST | PASS | formal typed hashed `registry-tests` record at clean reachable `93815a6`; 2/2 selected tests pass (job 54416) |
@@ -34,7 +34,7 @@ authentication before a verdict. No treatment is authorized.
 |---|---|---|---|---|---|---|---|---|
 | R001 | M0 | Build candidate topology inventory | data | all available cases | case IDs, provenance groups, bus counts, `baseMVA`, integrity status | MUST | PASS | formal record at clean reachable `93815a6` (job 54414); PGLib v23 commit `dc6be4b`: 66 cases, 65 eligible, 15 conservative provenance groups, 3–78,484 buses; one preserved integrity warning |
 | R002 | M0 | Freeze source-development split rules | data | source candidates | G8⊂G16⊂G26 rule, fixed `S_total`, source-dev groups, no outage pseudo-systems | MUST | PASS | formal topology-only audit at clean reachable `93815a6` (job 54414): `S_total=11,655`; G26 maximal; PSERC/ACTIV source development; six target groups and 27 targets |
-| R003 | M1 | Evaluate geometry candidates | Kron | source-development topology only | ≤12-policy table: residual, conditioning, nnz, FLOPs, build time, host peak | MUST | PASS | typed gate at clean `8706bac` from job 54699; both source-development pools pass integrity; all 12 frozen candidates pass; selected policy hash `e17a2551d54cc78678f6ca55c056e149f01d52b9081e0b2793d3eea2bea35ec2`; evidence SHA-256 `a3baa58a66bf01b37adb7864ea4eeed15930d3bec6557970c57c664baa61b9a3` |
+| R003 | M1 | Evaluate geometry candidates | Kron | source-development topology only | ≤12-policy table: residual, conditioning, nnz, FLOPs, build time, host peak | MUST | RUNNING | prior typed gate at `8706bac` selected policy hash `e17a2551d54cc78678f6ca55c056e149f01d52b9081e0b2793d3eea2bea35ec2`; topology-only partition amendment requires a clean rerun of all 12 candidates before downstream freeze |
 | R004 | M2 | Match common capacity | all | source topology only | widths and Flat `q`; all parameter counts within 2% | MUST | PASS | formal typed record at clean reachable `93815a6` (job 54414): Flat 122/q1=898,655; Global 118=898,101; Kron/Quotient 123=897,657; relative gap 0.1112% |
 | R005 | M4 | Freeze `C_cal` | Flat | source-development | treatment-blind throughput probe and 3-hour aggregate upper bound | MUST | TODO | probe is charged to Flat calibration bucket |
 | C001 | M4 | Loss candidate 1 | Flat seed 0 | source-development | `C_cal` checkpoint, error, residual, GPU-hours | MUST | BLOCKED | waits for R005 |

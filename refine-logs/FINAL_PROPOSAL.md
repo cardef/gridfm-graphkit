@@ -3,6 +3,8 @@
 > **Repository scope:** this proposal explicitly targets [`cardef/gridfm-graphkit`](https://github.com/cardef/gridfm-graphkit), a research fork of upstream [`gridfm/gridfm-graphkit`](https://github.com/gridfm/gridfm-graphkit). The fork is the implementation and reproducibility boundary; it is not a claimed contribution.
 
 > **2026-07-17 source-development amendment (pending external re-review):** the previous `G28` feasibility audit omitted the requirement that calibration use at least two disjoint whole-provenance source-development groups. An exhaustive topology-only audit of the pinned PGLib v23 inventory found no `G28` assignment and found `G26` is the largest source set compatible with two source-development groups, at least six held-out target groups, the frozen 0.5k–13.7k target envelope, and at least four size-extrapolative targets across at least two groups. The deterministic tie-break reserves PSERC and ACTIV for source development. No PF outcome or treatment result informed this amendment. The earlier G28 review remains historical and does not authorize this G26 contract.
+> **2026-07-24 topology-only partition amendment (pending external re-review):** the first all-topology build exposed two fail-closed implementation gaps before any treatment run or target efficacy read: `ceil(0.2 N)` gives only one cell for the frozen 3- and 5-bus sources, and contiguous METIS returned missing or disconnected cell labels on 36 frozen topologies. The single global rule now uses `m = max(2, ceil(rho N))` for the eligible inventory, then deterministically repairs the seeded METIS assignment to exactly `m` connected cells. No policy candidate, topology membership, target label, operating point, or per-grid override informed this amendment; R003 and all affected implementation/system gates must be rerun at the amended commit before R014.
+
 
 ## Problem Anchor
 
@@ -73,11 +75,14 @@ A dedicated pytest subprocess installs a `MetaPathFinder` deny-list for the lega
 Both hierarchy arms use the same deterministic partition:
 
 1. order buses by stable case bus ID;
-2. run contiguous METIS on the unweighted bus graph with a fixed seed and `m = ceil(rho N)` cells;
-3. choose one anchor per cell by maximum fine-graph degree, breaking ties by minimum bus ID; and
-4. restore tensor order.
+2. set `m = max(2, ceil(rho N))` (the eligible frozen inventory has `N >= 3`) and run contiguous METIS on the unweighted bus graph with the fixed seed;
+3. deterministically repair the seeded membership to exactly `m` connected cells when METIS returns an empty label or a disconnected label;
+4. choose one anchor per cell by maximum fine-graph degree, breaking ties by minimum bus ID; and
+5. restore tensor order.
 
 `rho` is selected by the bounded source-only geometry calibration defined below. The partitioner cannot read PF labels, operating points, solver bus classes, target results, or per-grid overrides. Let anchors be `B` and remaining buses be `I`.
+
+The repair first splits every raw METIS label into connected components. If there are too many components, it repeatedly merges the adjacent pair with the smallest combined size, breaking ties by minimum then maximum stable bus ID. If there are too few, it repeatedly splits a deterministic breadth-first-tree leaf from the largest splittable cell, breaking ties by minimum stable bus ID. The repair rule is versioned, topology-only, identical for every grid, and fails closed if exact connected cardinality cannot be achieved.
 
 ### Kron–Schur construction
 
