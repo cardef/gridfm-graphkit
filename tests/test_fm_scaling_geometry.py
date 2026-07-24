@@ -230,7 +230,7 @@ def test_real_pymetis_backend_is_contiguous_and_deterministic():
     first = partitioner.partition(topology, rho=0.5, seed=17)
     second = partitioner.partition(topology, rho=0.5, seed=17)
     assert first == second
-    assert first.algorithm == "metis-contiguous-covered-repair-v2"
+    assert first.algorithm == "metis-contiguous-covered-repair-v3"
     for cell in range(3):
         members = {
             index for index, value in enumerate(first.cell_of_bus) if value == cell
@@ -285,6 +285,27 @@ def test_partition_repairs_disconnected_backend_cells():
     )
 
     assert partition.cell_of_bus == (0, 0, 1, 1, 2, 2)
+
+
+def test_partition_splits_dense_missing_labels_into_covered_cells():
+    def one_label_backend(adjacency, num_parts, seed):
+        del adjacency, seed
+        assert num_parts == 3
+        return [0, 0, 0, 0, 0, 0]
+
+    dense_edges = tuple(
+        (source, target)
+        for source in range(6)
+        for target in range(source + 1, 6)
+    )
+    topology = replace(synthetic_topology(), fine_edges=dense_edges)
+    partition = DeterministicPartitioner(one_label_backend).partition(
+        topology,
+        rho=0.5,
+        seed=17,
+    )
+
+    assert [partition.cell_of_bus.count(cell) for cell in range(3)] == [2, 2, 2]
 
 
 def test_partition_preserves_ceiling_cardinality_for_small_positive_rho():

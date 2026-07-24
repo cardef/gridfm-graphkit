@@ -104,16 +104,18 @@ def _split_connected_region(
         raise ContractError("partition cell is too small for a covered split")
 
     root = min(members)
-    parent = {root: None}
-    queue = deque([root])
+    parent = {}
+    stack = [(root, None)]
     order = []
-    while queue:
-        node = queue.popleft()
+    while stack:
+        node, predecessor = stack.pop()
+        if node in parent:
+            continue
+        parent[node] = predecessor
         order.append(node)
-        for neighbor in adjacency[node]:
+        for neighbor in reversed(adjacency[node]):
             if neighbor in members and neighbor not in parent:
-                parent[neighbor] = node
-                queue.append(neighbor)
+                stack.append((neighbor, node))
     if set(parent) != members:
         raise ContractError("cannot split a disconnected partition cell")
 
@@ -130,7 +132,7 @@ def _split_connected_region(
     selected = min(
         candidates,
         key=lambda node: (
-            abs(len(members) - 2 * len(subtrees[node])),
+            len(subtrees[node]),
             min(subtrees[node]),
             node,
         ),
@@ -164,9 +166,9 @@ def _repair_membership(
         regions.extend(_connected_components(members, adjacency))
 
     # A coarse cell needs at least one non-anchor bus so both Kron and
-    # Quotient transports cover every coarse column. Absorb singleton
-    # fragments into a deterministic adjacent cell before restoring the
-    # requested cardinality.
+    # Quotient transports cover every coarse column. First borrow a removable
+    # adjacent bus without changing cardinality; only merge a singleton when
+    # no connectivity-preserving local move exists.
     while any(len(members) == 1 for members in regions):
         _, singleton_index = min(
             (min(members), index)
@@ -180,6 +182,29 @@ def _repair_membership(
             for region_index, members in enumerate(regions)
             for member in members
         }
+        borrowable = []
+        for neighbor in adjacency[node]:
+            donor_index = region_of[neighbor]
+            if donor_index == singleton_index:
+                continue
+            donor = regions[donor_index]
+            remainder = donor - {neighbor}
+            if len(remainder) >= 2 and _is_connected(remainder, adjacency):
+                borrowable.append((donor_index, neighbor))
+        if borrowable:
+            donor_index, neighbor = min(
+                borrowable,
+                key=lambda item: (
+                    len(regions[item[0]]),
+                    item[1],
+                    min(regions[item[0]]),
+                    max(regions[item[0]]),
+                ),
+            )
+            regions[singleton_index] = singleton | {neighbor}
+            regions[donor_index] = regions[donor_index] - {neighbor}
+            continue
+
         adjacent = {
             region_of[neighbor]
             for neighbor in adjacency[node]
@@ -239,20 +264,23 @@ def _repair_membership(
         regions.append(merged)
 
     while len(regions) < num_parts:
-        splittable = [
-            (index, members)
-            for index, members in enumerate(regions)
-            if len(members) >= 4
-        ]
+        splittable = []
+        for index, members in enumerate(regions):
+            if len(members) < 4:
+                continue
+            try:
+                left, right = _split_connected_region(members, adjacency)
+            except ContractError:
+                continue
+            splittable.append((index, members, left, right))
         if not splittable:
             raise ContractError(
                 "partition cells cannot be split to requested covered count",
             )
-        index, members = min(
+        index, members, left, right = min(
             splittable,
             key=lambda item: (-len(item[1]), min(item[1])),
         )
-        left, right = _split_connected_region(members, adjacency)
         regions[index] = left
         regions.append(right)
 
@@ -337,5 +365,5 @@ class DeterministicPartitioner:
             cell_of_bus=tuple(original_cells),
             anchors=tuple(anchors),
             seed=seed,
-            algorithm="metis-contiguous-covered-repair-v2",
+            algorithm="metis-contiguous-covered-repair-v3",
         )
