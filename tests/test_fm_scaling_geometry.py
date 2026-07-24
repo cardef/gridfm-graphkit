@@ -230,7 +230,7 @@ def test_real_pymetis_backend_is_contiguous_and_deterministic():
     first = partitioner.partition(topology, rho=0.5, seed=17)
     second = partitioner.partition(topology, rho=0.5, seed=17)
     assert first == second
-    assert first.algorithm == "metis-contiguous"
+    assert first.algorithm == "metis-contiguous-repair-v1"
     for cell in range(3):
         members = {
             index for index, value in enumerate(first.cell_of_bus) if value == cell
@@ -248,6 +248,52 @@ def test_real_pymetis_backend_is_contiguous_and_deterministic():
                 if target == node and source in members:
                     frontier.add(source)
         assert reached == members
+
+
+def test_partition_repairs_empty_backend_cells_deterministically():
+    def missing_cell_backend(adjacency, num_parts, seed):
+        del adjacency, seed
+        assert num_parts == 3
+        return [0, 0, 0, 0, 1, 1]
+
+    partitioner = DeterministicPartitioner(missing_cell_backend)
+    topology = synthetic_topology()
+    first = partitioner.partition(topology, rho=0.5, seed=17)
+    second = partitioner.partition(topology, rho=0.5, seed=17)
+
+    assert first == second
+    assert first.cell_of_bus == (0, 0, 0, 1, 2, 2)
+    assert len(first.anchors) == 3
+
+
+def test_partition_repairs_disconnected_backend_cells():
+    def disconnected_backend(adjacency, num_parts, seed):
+        del adjacency, seed
+        assert num_parts == 3
+        return [0, 1, 0, 1, 2, 2]
+
+    partition = DeterministicPartitioner(disconnected_backend).partition(
+        synthetic_topology(),
+        rho=0.5,
+        seed=17,
+    )
+
+    assert partition.cell_of_bus == (0, 0, 1, 1, 2, 2)
+
+
+def test_partition_uses_two_cells_for_small_positive_rho():
+    def two_cell_backend(adjacency, num_parts, seed):
+        del adjacency, seed
+        assert num_parts == 2
+        return [0, 0, 0, 1, 1, 1]
+
+    partition = DeterministicPartitioner(two_cell_backend).partition(
+        synthetic_topology(),
+        rho=0.01,
+        seed=17,
+    )
+
+    assert partition.num_cells == 2
 
 
 def test_geometry_bundle_round_trip_and_device_cache(tmp_path):

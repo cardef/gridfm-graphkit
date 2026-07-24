@@ -73,6 +73,139 @@ def _is_connected(members: set[int], adjacency: Sequence[Sequence[int]]) -> bool
     return reached == members
 
 
+def _connected_components(
+    members: set[int],
+    adjacency: Sequence[Sequence[int]],
+) -> list[set[int]]:
+    """Return deterministically ordered connected components of ``members``."""
+    remaining = set(members)
+    components = []
+    while remaining:
+        start = min(remaining)
+        reached = {start}
+        queue = deque([start])
+        while queue:
+            node = queue.popleft()
+            for neighbor in adjacency[node]:
+                if neighbor in remaining and neighbor not in reached:
+                    reached.add(neighbor)
+                    queue.append(neighbor)
+        remaining.difference_update(reached)
+        components.append(reached)
+    return components
+
+
+def _split_connected_region(
+    members: set[int],
+    adjacency: Sequence[Sequence[int]],
+) -> tuple[set[int], set[int]]:
+    """Split a connected region while preserving connectivity on both sides."""
+    if len(members) < 2:
+        raise ContractError("cannot split a singleton partition cell")
+
+    root = min(members)
+    parent = {root: None}
+    queue = deque([root])
+    while queue:
+        node = queue.popleft()
+        for neighbor in adjacency[node]:
+            if neighbor in members and neighbor not in parent:
+                parent[neighbor] = node
+                queue.append(neighbor)
+    if set(parent) != members:
+        raise ContractError("cannot split a disconnected partition cell")
+
+    parents = {value for value in parent.values() if value is not None}
+    leaf = max(node for node in members if node not in parents)
+    remainder = members - {leaf}
+    if not _is_connected(remainder, adjacency):
+        raise ContractError("deterministic partition split broke connectivity")
+    return remainder, {leaf}
+
+
+def _repair_membership(
+    raw: Sequence[int],
+    adjacency: Sequence[Sequence[int]],
+    num_parts: int,
+) -> tuple[int, ...]:
+    """Repair empty or disconnected METIS cells deterministically.
+
+    METIS may leave labels empty when ``nparts`` is large relative to a sparse
+    graph, and some library versions have returned disconnected labels despite
+    ``contig=1``. Start from the seeded METIS assignment, split labels into
+    their connected components, then merge adjacent fragments or split
+    connected cells until the requested cardinality is exact.
+    """
+    if any(cell < 0 for cell in raw):
+        raise ContractError("partition backend returned a negative cell label")
+
+    regions = []
+    for cell in sorted(set(raw)):
+        members = {index for index, assigned in enumerate(raw) if assigned == cell}
+        regions.extend(_connected_components(members, adjacency))
+
+    while len(regions) > num_parts:
+        region_of = {
+            node: region_index
+            for region_index, members in enumerate(regions)
+            for node in members
+        }
+        adjacent_pairs = set()
+        for source, neighbors in enumerate(adjacency):
+            for target in neighbors:
+                left = region_of[source]
+                right = region_of[target]
+                if left != right:
+                    adjacent_pairs.add(tuple(sorted((left, right))))
+        if not adjacent_pairs:
+            raise ContractError(
+                "partition fragments cannot be merged without breaking connectivity",
+            )
+        left, right = min(
+            adjacent_pairs,
+            key=lambda pair: (
+                len(regions[pair[0]]) + len(regions[pair[1]]),
+                min(regions[pair[0]] | regions[pair[1]]),
+                max(regions[pair[0]] | regions[pair[1]]),
+            ),
+        )
+        merged = regions[left] | regions[right]
+        regions = [
+            members
+            for index, members in enumerate(regions)
+            if index not in {left, right}
+        ]
+        regions.append(merged)
+
+    while len(regions) < num_parts:
+        splittable = [
+            (index, members)
+            for index, members in enumerate(regions)
+            if len(members) > 1
+        ]
+        if not splittable:
+            raise ContractError("partition cells cannot be split to requested count")
+        index, members = min(
+            splittable,
+            key=lambda item: (-len(item[1]), min(item[1])),
+        )
+        remainder, leaf = _split_connected_region(members, adjacency)
+        regions[index] = remainder
+        regions.append(leaf)
+
+    if len(regions) != num_parts or any(
+        not _is_connected(members, adjacency) for members in regions
+    ):
+        raise ContractError("deterministic partition repair failed")
+
+    ordered = sorted(regions, key=min)
+    membership = [0] * len(raw)
+    for cell, members in enumerate(ordered):
+        for node in members:
+            membership[node] = cell
+    return tuple(membership)
+
+
 class DeterministicPartitioner:
     """Stable-ID wrapper around a partition backend such as contiguous METIS."""
 
@@ -81,7 +214,7 @@ class DeterministicPartitioner:
 
     def partition(self, topology: GridTopology, rho: float, seed: int) -> Partition:
         adjacency, stable_order = _stable_adjacency(topology)
-        num_parts = math.ceil(rho * len(stable_order))
+        num_parts = max(2, math.ceil(rho * len(stable_order)))
         if not 1 < num_parts < len(stable_order):
             raise ContractError(
                 f"rho={rho} yields {num_parts} cells for {len(stable_order)} buses",
@@ -92,19 +225,12 @@ class DeterministicPartitioner:
             raise ContractError(
                 "partition backend returned the wrong membership length",
             )
-        raw_cells = set(raw)
-        if len(raw_cells) != num_parts or min(raw_cells) < 0:
-            raise ContractError("partition backend returned empty or invalid cells")
-
+        repaired = _repair_membership(raw, adjacency, num_parts)
+        raw_cells = set(repaired)
         members_by_raw = {
-            cell: {i for i, assigned in enumerate(raw) if assigned == cell}
+            cell: {i for i, assigned in enumerate(repaired) if assigned == cell}
             for cell in raw_cells
         }
-        if any(
-            not _is_connected(members, adjacency) for members in members_by_raw.values()
-        ):
-            raise ContractError("partition backend violated contiguous-cell policy")
-
         # Backend cell labels carry no meaning. Canonicalize them by the
         # minimum stable bus ID in each cell before restoring tensor order.
         ordered_raw = sorted(
@@ -114,7 +240,7 @@ class DeterministicPartitioner:
             ),
         )
         canonical = {raw_cell: cell for cell, raw_cell in enumerate(ordered_raw)}
-        stable_cells = [canonical[cell] for cell in raw]
+        stable_cells = [canonical[cell] for cell in repaired]
         original_cells = [0] * len(stable_order)
         for stable_index, original_index in enumerate(stable_order):
             original_cells[original_index] = stable_cells[stable_index]
@@ -143,4 +269,5 @@ class DeterministicPartitioner:
             cell_of_bus=tuple(original_cells),
             anchors=tuple(anchors),
             seed=seed,
+            algorithm="metis-contiguous-repair-v1",
         )
