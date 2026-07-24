@@ -260,10 +260,15 @@ def test_partition_repairs_empty_backend_cells_deterministically():
     topology = synthetic_topology()
     first = partitioner.partition(topology, rho=0.5, seed=17)
     second = partitioner.partition(topology, rho=0.5, seed=17)
+    permuted = synthetic_topology(order=[3, 0, 5, 2, 1, 4])
+    third = partitioner.partition(permuted, rho=0.5, seed=17)
+    first_by_id = dict(zip(topology.bus_ids, first.cell_of_bus))
+    third_by_id = dict(zip(permuted.bus_ids, third.cell_of_bus))
 
     assert first == second
     assert first.cell_of_bus == (0, 0, 0, 1, 2, 2)
     assert len(first.anchors) == 3
+    assert first_by_id == third_by_id
 
 
 def test_partition_repairs_disconnected_backend_cells():

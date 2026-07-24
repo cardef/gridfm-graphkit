@@ -45,6 +45,9 @@ GATE_SPECS = {
         tests=(
             "tests/test_fm_scaling_geometry.py::test_partition_is_stable_id_permutation_invariant",
             "tests/test_fm_scaling_geometry.py::test_real_pymetis_backend_is_contiguous_and_deterministic",
+            "tests/test_fm_scaling_geometry.py::test_partition_repairs_empty_backend_cells_deterministically",
+            "tests/test_fm_scaling_geometry.py::test_partition_repairs_disconnected_backend_cells",
+            "tests/test_fm_scaling_geometry.py::test_partition_uses_two_cells_for_small_positive_rho",
         ),
         inputs=(
             "gridfm_graphkit/fm_scaling/contracts.py",
