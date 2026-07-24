@@ -230,7 +230,7 @@ def test_real_pymetis_backend_is_contiguous_and_deterministic():
     first = partitioner.partition(topology, rho=0.5, seed=17)
     second = partitioner.partition(topology, rho=0.5, seed=17)
     assert first == second
-    assert first.algorithm == "metis-contiguous-repair-v1"
+    assert first.algorithm == "metis-contiguous-covered-repair-v2"
     for cell in range(3):
         members = {
             index for index, value in enumerate(first.cell_of_bus) if value == cell
@@ -266,8 +266,9 @@ def test_partition_repairs_empty_backend_cells_deterministically():
     third_by_id = dict(zip(permuted.bus_ids, third.cell_of_bus))
 
     assert first == second
-    assert first.cell_of_bus == (0, 0, 0, 1, 2, 2)
+    assert first.cell_of_bus == (0, 0, 1, 1, 2, 2)
     assert len(first.anchors) == 3
+    assert all(first.cell_of_bus.count(cell) >= 2 for cell in range(3))
     assert first_by_id == third_by_id
 
 
@@ -286,19 +287,41 @@ def test_partition_repairs_disconnected_backend_cells():
     assert partition.cell_of_bus == (0, 0, 1, 1, 2, 2)
 
 
-def test_partition_uses_two_cells_for_small_positive_rho():
-    def two_cell_backend(adjacency, num_parts, seed):
+def test_partition_preserves_ceiling_cardinality_for_small_positive_rho():
+    def one_cell_backend(adjacency, num_parts, seed):
         del adjacency, seed
-        assert num_parts == 2
-        return [0, 0, 0, 1, 1, 1]
+        assert num_parts == 1
+        return [0, 0, 0, 0, 0, 0]
 
-    partition = DeterministicPartitioner(two_cell_backend).partition(
+    partition = DeterministicPartitioner(one_cell_backend).partition(
         synthetic_topology(),
         rho=0.01,
         seed=17,
     )
 
-    assert partition.num_cells == 2
+    assert partition.num_cells == 1
+
+
+def test_kron_and_quotient_support_one_cell_coarse_graph():
+    def one_cell_backend(adjacency, num_parts, seed):
+        del adjacency, seed
+        assert num_parts == 1
+        return [0, 0, 0, 0, 0, 0]
+
+    partitioner = DeterministicPartitioner(one_cell_backend)
+    tiny_budget = replace(budget(), rho=0.01)
+    kron = KronGeometryBuilder(partitioner).build(
+        synthetic_topology(),
+        tiny_budget,
+    )
+    quotient = QuotientGeometryBuilder(partitioner).build(
+        synthetic_topology(),
+        tiny_budget,
+    )
+
+    assert kron.partition.num_cells == quotient.partition.num_cells == 1
+    assert kron.coarse_graph.nnz == quotient.coarse_graph.nnz == 0
+    assert kron.restrict.nnz == quotient.restrict.nnz == 5
 
 
 def test_geometry_bundle_round_trip_and_device_cache(tmp_path):

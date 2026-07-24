@@ -99,15 +99,17 @@ def _split_connected_region(
     members: set[int],
     adjacency: Sequence[Sequence[int]],
 ) -> tuple[set[int], set[int]]:
-    """Split a connected region while preserving connectivity on both sides."""
-    if len(members) < 2:
-        raise ContractError("cannot split a singleton partition cell")
+    """Split a connected region into two cells of at least two buses."""
+    if len(members) < 4:
+        raise ContractError("partition cell is too small for a covered split")
 
     root = min(members)
     parent = {root: None}
     queue = deque([root])
+    order = []
     while queue:
         node = queue.popleft()
+        order.append(node)
         for neighbor in adjacency[node]:
             if neighbor in members and neighbor not in parent:
                 parent[neighbor] = node
@@ -115,12 +117,29 @@ def _split_connected_region(
     if set(parent) != members:
         raise ContractError("cannot split a disconnected partition cell")
 
-    parents = {value for value in parent.values() if value is not None}
-    leaf = max(node for node in members if node not in parents)
-    remainder = members - {leaf}
-    if not _is_connected(remainder, adjacency):
+    subtrees = {node: {node} for node in members}
+    for node in reversed(order[1:]):
+        subtrees[parent[node]].update(subtrees[node])
+    candidates = [
+        node
+        for node in order[1:]
+        if 2 <= len(subtrees[node]) <= len(members) - 2
+    ]
+    if not candidates:
+        raise ContractError("connected partition cell has no covered tree split")
+    selected = min(
+        candidates,
+        key=lambda node: (
+            abs(len(members) - 2 * len(subtrees[node])),
+            min(subtrees[node]),
+            node,
+        ),
+    )
+    right = subtrees[selected]
+    left = members - right
+    if not _is_connected(left, adjacency) or not _is_connected(right, adjacency):
         raise ContractError("deterministic partition split broke connectivity")
-    return remainder, {leaf}
+    return left, right
 
 
 def _repair_membership(
@@ -143,6 +162,48 @@ def _repair_membership(
     for cell in sorted(set(raw)):
         members = {index for index, assigned in enumerate(raw) if assigned == cell}
         regions.extend(_connected_components(members, adjacency))
+
+    # A coarse cell needs at least one non-anchor bus so both Kron and
+    # Quotient transports cover every coarse column. Absorb singleton
+    # fragments into a deterministic adjacent cell before restoring the
+    # requested cardinality.
+    while any(len(members) == 1 for members in regions):
+        _, singleton_index = min(
+            (min(members), index)
+            for index, members in enumerate(regions)
+            if len(members) == 1
+        )
+        singleton = regions[singleton_index]
+        node = next(iter(singleton))
+        region_of = {
+            member: region_index
+            for region_index, members in enumerate(regions)
+            for member in members
+        }
+        adjacent = {
+            region_of[neighbor]
+            for neighbor in adjacency[node]
+            if region_of[neighbor] != singleton_index
+        }
+        if not adjacent:
+            raise ContractError(
+                "singleton partition fragment has no adjacent repair cell",
+            )
+        neighbor_index = min(
+            adjacent,
+            key=lambda index: (
+                len(regions[index]),
+                min(regions[index]),
+                max(regions[index]),
+            ),
+        )
+        merged = singleton | regions[neighbor_index]
+        regions = [
+            members
+            for index, members in enumerate(regions)
+            if index not in {singleton_index, neighbor_index}
+        ]
+        regions.append(merged)
 
     while len(regions) > num_parts:
         region_of = {
@@ -181,20 +242,23 @@ def _repair_membership(
         splittable = [
             (index, members)
             for index, members in enumerate(regions)
-            if len(members) > 1
+            if len(members) >= 4
         ]
         if not splittable:
-            raise ContractError("partition cells cannot be split to requested count")
+            raise ContractError(
+                "partition cells cannot be split to requested covered count",
+            )
         index, members = min(
             splittable,
             key=lambda item: (-len(item[1]), min(item[1])),
         )
-        remainder, leaf = _split_connected_region(members, adjacency)
-        regions[index] = remainder
-        regions.append(leaf)
+        left, right = _split_connected_region(members, adjacency)
+        regions[index] = left
+        regions.append(right)
 
     if len(regions) != num_parts or any(
-        not _is_connected(members, adjacency) for members in regions
+        len(members) < 2 or not _is_connected(members, adjacency)
+        for members in regions
     ):
         raise ContractError("deterministic partition repair failed")
 
@@ -214,10 +278,14 @@ class DeterministicPartitioner:
 
     def partition(self, topology: GridTopology, rho: float, seed: int) -> Partition:
         adjacency, stable_order = _stable_adjacency(topology)
-        num_parts = max(2, math.ceil(rho * len(stable_order)))
-        if not 1 < num_parts < len(stable_order):
+        num_parts = math.ceil(rho * len(stable_order))
+        if not 0 < num_parts < len(stable_order):
             raise ContractError(
                 f"rho={rho} yields {num_parts} cells for {len(stable_order)} buses",
+            )
+        if num_parts > 1 and 2 * num_parts > len(stable_order):
+            raise ContractError(
+                f"{num_parts} covered cells require at least {2 * num_parts} buses",
             )
 
         raw = tuple(int(cell) for cell in self.backend(adjacency, num_parts, seed))
@@ -269,5 +337,5 @@ class DeterministicPartitioner:
             cell_of_bus=tuple(original_cells),
             anchors=tuple(anchors),
             seed=seed,
-            algorithm="metis-contiguous-repair-v1",
+            algorithm="metis-contiguous-covered-repair-v2",
         )

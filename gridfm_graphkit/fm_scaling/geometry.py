@@ -167,7 +167,7 @@ def _sparsify_coarse_graph(
         candidates[row] = 0
         for col in _topk_indices(candidates, k, anchor_ids):
             selected.add((row, col))
-    if not selected:
+    if not selected and dense.shape[0] != 1:
         raise ContractError("coarse graph has no off-diagonal edge")
     return sorted(selected)
 
@@ -365,9 +365,8 @@ class QuotientGeometryBuilder:
             assignment[row, cell] = 1 + 0j
             coordinates.append((row, cell))
 
-        # Empty-interior cells still have their anchor state, but the common
-        # conservative restriction requires each coarse column to receive at
-        # least one interior message. Fail rather than silently changing policy.
+        # Covered partition repair guarantees at least one non-anchor member
+        # in every cell, including the legitimate one-cell coarse graph.
         restrict, prolong = _transport_operators(assignment, coordinates)
 
         cut_sums: dict[tuple[int, int], complex] = {}
@@ -386,7 +385,7 @@ class QuotientGeometryBuilder:
             cut_sums[key] = cut_sums.get(key, 0j) + value
         cut_sums = {key: value for key, value in cut_sums.items() if abs(value) > 0}
         coarse_coordinates = sorted(cut_sums)
-        if not coarse_coordinates:
+        if not coarse_coordinates and partition.num_cells != 1:
             raise ContractError("quotient construction produced no coarse edge")
 
         runtime_nnz = len(coordinates) + len(coarse_coordinates)
