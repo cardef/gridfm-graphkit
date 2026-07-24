@@ -123,6 +123,28 @@ def _read_scenario_zero(path: Path) -> pd.DataFrame:
     return frame
 
 
+def _merge_generator_q_limits(
+    bus: pd.DataFrame,
+    gen: pd.DataFrame,
+) -> pd.DataFrame:
+    """Reproduce the dataset raw-loader's bus-level generator-Q aggregate."""
+    bus_keys = {"scenario", "bus"}
+    q_columns = {"min_q_mvar", "max_q_mvar"}
+    if not bus_keys.issubset(bus.columns) or not (bus_keys | q_columns).issubset(
+        gen.columns,
+    ):
+        raise ContractError("generated PF tables lack generator-Q merge columns")
+    if q_columns & set(bus.columns):
+        raise ContractError("generated PF bus table already contains generator-Q limits")
+    aggregated = (
+        gen.groupby(["scenario", "bus"])[sorted(q_columns)].sum().reset_index()
+    )
+    merged = bus.merge(aggregated, on=["scenario", "bus"], how="left").fillna(0)
+    if len(merged) != len(bus):
+        raise ContractError("generator-Q merge changed the bus row count")
+    return merged
+
+
 def _load_sample(
     data_root: Path,
     network: str,
@@ -132,6 +154,7 @@ def _load_sample(
     raw = data_root / network / "raw"
     bus = _read_scenario_zero(raw / "bus_data.parquet")
     gen = _read_scenario_zero(raw / "gen_data.parquet")
+    bus = _merge_generator_q_limits(bus, gen)
     branch = _read_scenario_zero(raw / "branch_data.parquet")
     data = HeteroGridDatasetDisk._build_scenario(
         0,

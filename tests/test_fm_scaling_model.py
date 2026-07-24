@@ -8,11 +8,13 @@ from copy import deepcopy
 from dataclasses import replace
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 import torch
 import yaml
 from torch_geometric.data import Batch, HeteroData
 
+from experiments.fm_scaling.check_gpu_compatibility import _merge_generator_q_limits
 from gridfm_graphkit.datasets.globals import (
     PG_H,
     PQ_H,
@@ -33,6 +35,28 @@ from gridfm_graphkit.fm_scaling.task import (
     graph_family_balanced_error,
 )
 from tests.test_fm_scaling_geometry import budget, builders, synthetic_topology
+
+
+def test_gpu_probe_reproduces_generator_q_limit_merge():
+    bus = pd.DataFrame(
+        {
+            "scenario": [0, 0, 0],
+            "bus": [0, 1, 2],
+            "Pd": [1.0, 2.0, 3.0],
+        },
+    )
+    gen = pd.DataFrame(
+        {
+            "scenario": [0, 0, 0],
+            "bus": [0, 0, 2],
+            "min_q_mvar": [-2.0, -3.0, -4.0],
+            "max_q_mvar": [5.0, 7.0, 11.0],
+        },
+    )
+    merged = _merge_generator_q_limits(bus, gen)
+
+    assert merged["min_q_mvar"].tolist() == [-5.0, 0.0, -4.0]
+    assert merged["max_q_mvar"].tolist() == [12.0, 0.0, 11.0]
 
 
 def _manifest(tmp_path):

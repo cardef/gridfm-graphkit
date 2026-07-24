@@ -96,6 +96,7 @@ def check_cpu_compatibility(
                 "pytest",
                 "-q",
                 "tests/test_fm_scaling_model.py::test_all_cores_share_output_schema_and_ignore_targets[flat]",
+                "tests/test_fm_scaling_model.py::test_gpu_probe_reproduces_generator_q_limit_merge",
                 "tests/test_fm_scaling_analysis.py::test_output_gradient_parity_and_first_crossing_checkpoint",
             ],
             cwd=clone,
