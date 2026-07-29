@@ -8,6 +8,7 @@ import pytest
 
 from experiments.fm_scaling.freeze_calibration import freeze_loss
 from experiments.fm_scaling.run_calibration import (
+    _subprocess_python,
     aggregate_calibration_metrics,
     build_calibration_config,
 )
@@ -57,6 +58,16 @@ def test_build_calibration_config_is_flat_source_only(tmp_path):
     assert config["training"]["flop_checkpoints"] == [62_000_000_000_000]
     assert config["evaluation"]["vm_scale"] == 0.01
     assert config["evaluation"]["va_scale"] == pytest.approx(math.pi / 180)
+
+
+def test_subprocess_python_preserves_virtualenv_symlink(tmp_path):
+    base_python = tmp_path / "base-python"
+    base_python.touch()
+    venv_python = tmp_path / "venv-python"
+    venv_python.symlink_to(base_python)
+
+    assert _subprocess_python(venv_python) == venv_python
+    assert _subprocess_python(venv_python) != venv_python.resolve()
 
 
 def test_aggregate_calibration_metrics_is_group_balanced():

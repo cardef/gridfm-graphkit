@@ -266,6 +266,11 @@ def _run(command: list[str], repo_root: Path) -> None:
         )
 
 
+def _subprocess_python(path: Path) -> Path:
+    """Return an absolute interpreter path without dereferencing venv symlinks."""
+    return Path(os.path.abspath(path.expanduser()))
+
+
 def run_calibration(args) -> dict:
     repo_root = args.repo_root.resolve()
     if _git(repo_root, "status", "--short"):
@@ -307,7 +312,7 @@ def run_calibration(args) -> dict:
     with config_path.open("x") as handle:
         yaml.safe_dump(config, handle, sort_keys=False)
 
-    python = args.python.resolve()
+    python = _subprocess_python(args.python)
     common = [
         "--config",
         str(config_path),
