@@ -37,7 +37,7 @@ def freeze_capacity(payload: dict) -> dict:
 
 def freeze_loss(payload: dict) -> dict:
     candidates = payload.get("candidates", [])
-    if len(candidates) != 3 or any(
+    if [item.get("id") for item in candidates] != ["C001", "C002", "C003"] or any(
         item.get("status") != "FINISHED" for item in candidates
     ):
         raise ContractError(
@@ -50,17 +50,23 @@ def freeze_loss(payload: dict) -> dict:
         for item in candidates
         if math.isfinite(float(item["error"]))
         and math.isfinite(float(item["residual"]))
+        and float(item["error"]) >= 0
+        and float(item["residual"]) >= 0
     ]
     if not feasible:
         raise ContractError("no finite loss candidate")
+    best_error = min(float(item["error"]) for item in feasible)
+    within_one_percent = [
+        item for item in feasible if float(item["error"]) <= 1.01 * best_error
+    ]
     selected = min(
-        feasible,
-        key=lambda item: (float(item["error"]), float(item["residual"]), item["id"]),
+        within_one_percent,
+        key=lambda item: (float(item["residual"]), float(item["error"]), item["id"]),
     )
     return {
         "schema_version": "fm-scaling-r006-v1",
         "status": "PASS",
-        "selection_rule": "min_error_then_residual_then_id",
+        "selection_rule": "min_residual_within_one_percent_of_best_error_then_id",
         "selected": selected,
         "candidates": candidates,
     }
