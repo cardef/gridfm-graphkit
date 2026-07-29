@@ -1,0 +1,12 @@
+schema_version: fm-scaling-calibration-evaluation-policy-v1
+communication_core: flat
+compile_mode: default
+candidate_count: 3
+metric_scales:
+  vm_pu: 0.01
+  va_rad: 0.017453292519943295
+aggregation_order:
+  - scenario
+  - topology
+  - provenance_group
+selection_rule: min_residual_within_one_percent_of_best_error_then_id

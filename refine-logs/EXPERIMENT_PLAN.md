@@ -119,7 +119,7 @@ Seeds and scenarios are never inferential replicates. Report scenario P95 and be
 | Geometry policy | At most 12 joint `(rho, k_P, k_C, kappa)` policies; exact `m=ceil(rho N)` on the eligible inventory; one versioned topology-only connected-cardinality repair with at least two buses per cell after seeded contiguous METIS; a one-cell hierarchy has zero coarse edges; deterministic residual/FLOP choice from source topology only. | candidate table, repair-rule version, and selected-policy hash |
 | Capacity | Common model-size tier; widths and Flat depth `q` chosen deterministically to match trainable parameters within 2%. | parameter report |
 | Loss weights | Exactly three preregistered Flat-HGNS seed-0 candidates `[1,0.01]`, `[1,0.1]`, and `[1,1]`, common `C_cal`, total Flat calibration bucket at most 3 GPU-hours. The immutable candidate table is `experiments/fm_scaling/frozen/loss_candidates.yaml`. | calibration table and config hash |
-| Metric scales | Frozen before calibration: VM `0.01` p.u.; VA `pi/180` rad (one degree). These scale the two RMSE families before their Euclidean combination. | calibration-policy hash |
+| Metric scales | Frozen before calibration: VM `0.01` p.u.; VA `pi/180` rad (one degree). These scale the two RMSE families before their Euclidean combination. | calibration-evaluation-policy hash |
 | Design effect | `delta_min = -log(0.95)`. | analysis-config hash |
 | Design dispersion | `sigma_design = sqrt(2) s_Flat` from the selected-loss Flat seed-0 `C_cal` checkpoint on held-out source-development groups. | power report |
 | Power simulation | PCG64 seed `20260714`, 1,000,000 draws; smallest available group count at least 6 with at least 80% power. | power-report hash |

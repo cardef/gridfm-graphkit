@@ -65,11 +65,11 @@ def _candidate(loss_candidates_path: Path, candidate_id: str) -> dict:
     return {"id": candidate_id, "loss_weights": weights}
 
 
-def _calibration_policy(policy_path: Path) -> dict:
+def _evaluation_policy(policy_path: Path) -> dict:
     payload = yaml.safe_load(policy_path.read_text())
     scales = payload.get("metric_scales", {})
     expected = {
-        "schema_version": "fm-scaling-r005-policy-v1",
+        "schema_version": "fm-scaling-calibration-evaluation-policy-v1",
         "communication_core": "flat",
         "compile_mode": "default",
         "candidate_count": 3,
@@ -84,7 +84,7 @@ def _calibration_policy(policy_path: Path) -> dict:
             abs_tol=1e-15,
         )
     ):
-        raise ContractError("calibration policy or metric scales are not frozen")
+        raise ContractError("calibration evaluation policy is not frozen")
     return payload
 
 def _r005_budget(r005_evidence_path: Path) -> int:
@@ -279,7 +279,7 @@ def run_calibration(args) -> dict:
 
     candidate = _candidate(args.loss_candidates.resolve(), args.candidate_id)
     c_cal = _r005_budget(args.r005_evidence.resolve())
-    policy = _calibration_policy(args.calibration_policy.resolve())
+    policy = _evaluation_policy(args.evaluation_policy.resolve())
     topology_manifest = args.topology_manifest.resolve()
     topology_payload = load_topology_manifest(topology_manifest)
     geometry_bundle = args.geometry_bundle.resolve()
@@ -402,7 +402,7 @@ def run_calibration(args) -> dict:
             _file_record(args.r005_evidence),
             _file_record(args.loss_candidates),
             _file_record(topology_manifest),
-            _file_record(args.calibration_policy),
+            _file_record(args.evaluation_policy),
             _file_record(geometry_bundle),
             _file_record(split_manifest),
             _file_record(config_path),
@@ -450,7 +450,7 @@ def main() -> int:
     parser.add_argument("--r005-evidence", type=Path, required=True)
     parser.add_argument("--loss-candidates", type=Path, required=True)
     parser.add_argument("--topology-manifest", type=Path, required=True)
-    parser.add_argument("--calibration-policy", type=Path, required=True)
+    parser.add_argument("--evaluation-policy", type=Path, required=True)
     parser.add_argument("--geometry-bundle", type=Path, required=True)
     parser.add_argument("--split-root", type=Path, required=True)
     parser.add_argument("--split-manifest", type=Path, required=True)
