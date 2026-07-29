@@ -26,7 +26,7 @@ authentication before a verdict. No treatment is authorized.
 | I007 | M2 | Extract one communication seam | Flat/Global/Kron/Quotient | synthetic + source | shared encoder/stem/slot/readout; output/gradient schemas; parameter report | MUST | PASS | formal typed hashed `seam-tests` record at clean reachable `93815a6`; 8/8 selected tests pass (job 54416); R004 is frozen |
 | I008 | M3 | Implement portable PF data contract | all | source + target metadata | case-declared `baseMVA`, source-only optional stats, target-output unreadability test | MUST | PASS | formal typed hashed `data-tests` record at clean reachable `93815a6`; 8/8 selected tests pass (job 54416); no target outcomes were read |
 | I009 | M3 | Implement balanced training/evaluation | all | G8/G16/G26 | provenance/case sampler, per-graph/component loss, known-value projection, metric unit tests | MUST | PASS | formal typed hashed `training-tests` record at clean reachable `93815a6`; 22/22 selected tests pass (job 54414) |
-| I010 | M3 | Implement compute and compatibility gates | all | synthetic + largest grids | cumulative-FLOP checkpoint tests, profiler cross-check, compile parity, upstream-flat load, clean clone, MLflow child-store create/search smoke | MUST | BLOCKED | CPU-side checks pass at `0c088bd` (55125); non-authoritative A4000 diagnostic 55129 failed before model execution because scenario-zero loading omitted the dataset generator-Q aggregation; focused repair tests pass (55130), and clean CPU plus authoritative A40 checks must rerun at the repair commit |
+| I010 | M3 | Implement compute and compatibility gates | all | synthetic + largest grids | cumulative-FLOP checkpoint tests, profiler cross-check, compile parity, upstream-flat load, clean clone, MLflow child-store create/search smoke | MUST | PASS | clean CPU job 55131 and authoritative NVIDIA A40 job 55133 pass at `aa373a6`; all seven GPU checks pass on `case13659_pegase`, with default compile mode and profiler relative gap 0.1193% |
 
 ## Readiness and Freeze Gates
 
@@ -36,7 +36,7 @@ authentication before a verdict. No treatment is authorized.
 | R002 | M0 | Freeze source-development split rules | data | source candidates | G8⊂G16⊂G26 rule, fixed `S_total`, source-dev groups, no outage pseudo-systems | MUST | PASS | formal topology-only audit at clean reachable `93815a6` (job 54414): `S_total=11,655`; G26 maximal; PSERC/ACTIV source development; six target groups and 27 targets |
 | R003 | M1 | Evaluate geometry candidates | Kron | source-development topology only | ≤12-policy table: residual, conditioning, nnz, FLOPs, build time, host peak | MUST | PASS | job 55124 authoritatively reran all 12 candidates at clean `0c088bd`; all passed and retained policy hash `e17a2551d54cc78678f6ca55c056e149f01d52b9081e0b2793d3eea2bea35ec2` |
 | R004 | M2 | Match common capacity | all | source topology only | widths and Flat `q`; all parameter counts within 2% | MUST | PASS | formal typed record at clean reachable `93815a6` (job 54414): Flat 122/q1=898,655; Global 118=898,101; Kron/Quotient 123=897,657; relative gap 0.1112% |
-| R005 | M4 | Freeze `C_cal` | Flat | source-development | treatment-blind throughput probe and 3-hour aggregate upper bound | MUST | TODO | probe is charged to Flat calibration bucket |
+| R005 | M4 | Freeze `C_cal` | Flat | source-development | treatment-blind throughput probe and 3-hour aggregate upper bound | MUST | RUNNING | fixed source-development-only timing rule and three loss candidates are preregistered; implementation validation and authoritative A40 probe pending |
 | C001 | M4 | Loss candidate 1 | Flat seed 0 | source-development | `C_cal` checkpoint, error, residual, GPU-hours | MUST | BLOCKED | waits for R005 |
 | C002 | M4 | Loss candidate 2 | Flat seed 0 | source-development | `C_cal` checkpoint, error, residual, GPU-hours | MUST | BLOCKED | waits for R005 |
 | C003 | M4 | Loss candidate 3 | Flat seed 0 | source-development | `C_cal` checkpoint, error, residual, GPU-hours | MUST | BLOCKED | waits for R005 |
@@ -99,12 +99,11 @@ authentication before a verdict. No treatment is authorized.
 | Legacy M0 summaries | CPU wiring, profiling, overfit, reconstruction, mmap, and prototype hierarchy checks completed | engineering hints only; no status change |
 | Legacy M1 MLflow experiment `702378410004452588` | 30 records: 11 finished, 19 stale; only Flat/case2000 finished; 238.675 one-GPU elapsed hours across finished records | not confirmatory; no I/R/E credit |
 | Legacy M1 SLURM logs | 40 `.stfolder`/MLflow discovery failures plus cancellation, OOM, and Triton resource failures | adds fail-closed store smoke to I010 |
-| Current Abacus backend | every PF pool and freeze is complete; diagnostic geometry failures 55090/55100/55114 remain recorded; clean v3 gates 55119–55125 and all-55 geometry build 55126 passed; A4000 diagnostic 55129 exposed the I010 scenario-loader merge gap and focused repair job 55130 passed | geometry bundle covers 55/55 with hash `ca7caa5f8a14db489b4977f1487af56f8e71530a564be36ef47b36426ffe71d0`; authoritative A40 I010 still blocks readiness; no target efficacy was read and no treatment launch is authorized |
+| Current Abacus backend | every PF pool and freeze is complete; diagnostic geometry failures 55090/55100/55114 remain recorded; clean v3 gates 55119–55125 and all-55 geometry build 55126 passed; A4000 diagnostic 55129 exposed the I010 scenario-loader merge gap and focused repair job 55130 passed; repaired CPU 55131 and authoritative A40 55133 pass all I010 checks | geometry bundle covers 55/55 with hash `ca7caa5f8a14db489b4977f1487af56f8e71530a564be36ef47b36426ffe71d0`; R005 calibration now blocks readiness; no target efficacy was read and no treatment launch is authorized |
 
-1. **I010 repair:** run the clean CPU gate and non-authoritative A4000 diagnostic at the generator-Q merge commit, then queue the authoritative A40 gate against geometry bundle `ca7caa5…71d0`.
-2. **I010:** run the A40 compile/profiler/all-core largest-grid gate against that audited geometry bundle and refresh CPU evidence at the same commit.
-3. **Calibration/readiness:** execute R005–R013 without treatment or target-efficacy reads, then obtain the required external R014 review.
-4. **R014:** only after every required I/R/C/P/S record is hashed PASS, materialize the explicit E001–E020 campaign and launch by manifest ID.
+1. **R005:** validate the treatment-blind Flat throughput probe, run it on the authoritative A40, and freeze `C_cal` under the three-hour aggregate guard.
+2. **Calibration/readiness:** execute C001–C003 and R006–R013 without treatment or target-efficacy reads, then obtain the required external R014 review.
+3. **R014:** only after every required I/R/C/P/S record is hashed PASS, materialize the explicit E001–E020 campaign and launch by manifest ID.
 
 
 No GPU treatment job is authorized.

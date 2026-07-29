@@ -6,10 +6,10 @@
 
 **Date:** 2026-07-24
 
-**Implementation boundary:** `cardef/gridfm-graphkit`, amended freeze commit `93815a67b9e7f4db1b3677f8480400a5425cb0b4`, partitioned-audit base commit `c5256579cc6f5f41f6be0cea5f1558ff51d94ced`; every recovery and gate artifact records its exact later execution commit. Upstream `gridfm/gridfm-graphkit` reference and merge base remain `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. Formal clean-commit receipts at `93815a6` pass I002–I009 and R001/R002/R004; I001 remains bound to its earlier clean provenance record, and I010 remains incomplete.
+**Implementation boundary:** `cardef/gridfm-graphkit`, amended freeze commit `93815a67b9e7f4db1b3677f8480400a5425cb0b4`, partitioned-audit base commit `c5256579cc6f5f41f6be0cea5f1558ff51d94ced`; every recovery and gate artifact records its exact later execution commit. Upstream `gridfm/gridfm-graphkit` reference and merge base remain `b3d663b62179222c1ebec00ee29f67ea50e68c0b`. Formal clean-commit receipts at `93815a6` pass I002–I009 and R001/R002/R004; I001 remains bound to its earlier clean provenance record, and I010 passed at repair commit `aa373a6`.
 
 **Proposal source:** `refine-logs/FINAL_PROPOSAL.md`, SHA-256 `78bf9ceb97e60bef6b522fc5f5de72fa525d1dc20d6efbf85527445a1d5dfd5f`.
-**Current status:** every frozen pool is complete at its exact preregistered successful count and contains PF-mode outputs; the internal OPF solve is used only to choose generator setpoints. The full audit, target/split freezes, and materialization passed in jobs 55081 and 55087–55089. Three diagnostic geometry failures (55090, 55100, 55114) remain in the denominator. At clean v3 commit `0c088bd`, I002–I006, all 12 R003 candidates, and I010 CPU checks passed in jobs 55119–55125; R003 retained policy `e17a2551d54cc78678f6ca55c056e149f01d52b9081e0b2793d3eea2bea35ec2`. Job 55126 then built all 55 Kron/Quotient geometries with zero failures; bundle SHA-256 is `ca7caa5f8a14db489b4977f1487af56f8e71530a564be36ef47b36426ffe71d0`. Non-authoritative A4000 job 55129 exposed a missing generator-Q aggregation in the I010 sample loader before any model execution; the exact dataset-loader merge was restored and focused tests pass in 55130. I010 GPU, R005–R014, and all confirmatory runs remain BLOCKED until their typed PASS records exist.
+**Current status:** every frozen pool is complete at its exact preregistered successful count and contains PF-mode outputs; the internal OPF solve is used only to choose generator setpoints. The full audit, target/split freezes, and materialization passed in jobs 55081 and 55087–55089. Three diagnostic geometry failures (55090, 55100, 55114) remain in the denominator. At clean v3 commit `0c088bd`, I002–I006, all 12 R003 candidates, and I010 CPU checks passed in jobs 55119–55125; R003 retained policy `e17a2551d54cc78678f6ca55c056e149f01d52b9081e0b2793d3eea2bea35ec2`. Job 55126 then built all 55 Kron/Quotient geometries with zero failures; bundle SHA-256 is `ca7caa5f8a14db489b4977f1487af56f8e71530a564be36ef47b36426ffe71d0`. Non-authoritative A4000 job 55129 exposed a missing generator-Q aggregation in the I010 sample loader before any model execution; the exact dataset-loader merge was restored in 55130. Clean CPU job 55131 and authoritative NVIDIA A40 job 55133 pass all I010 checks. R005–R014 and all confirmatory runs remain BLOCKED until their typed PASS records exist.
 
 **Partition amendment:** before any treatment run or target-efficacy read, three all-topology builds failed closed. The final global topology-only rule preserves exact `m=ceil(rho N)`, applies versioned deterministic connected-cardinality repair with at least two buses per cell, and permits the valid one-cell/zero-coarse-edge geometry on tiny grids. R003 and every affected I/R/system gate must be rerun at the final clean commit; no treatment is authorized by any diagnostic rebuild.
 
@@ -118,7 +118,7 @@ Seeds and scenarios are never inferential replicates. Report scenario P95 and be
 | Size extrapolation | `N_target > N_source_max`; at least 4 such targets across at least 2 target groups for the claim. | source extrema and target manifest |
 | Geometry policy | At most 12 joint `(rho, k_P, k_C, kappa)` policies; exact `m=ceil(rho N)` on the eligible inventory; one versioned topology-only connected-cardinality repair with at least two buses per cell after seeded contiguous METIS; a one-cell hierarchy has zero coarse edges; deterministic residual/FLOP choice from source topology only. | candidate table, repair-rule version, and selected-policy hash |
 | Capacity | Common model-size tier; widths and Flat depth `q` chosen deterministically to match trainable parameters within 2%. | parameter report |
-| Loss weights | At most 3 candidates, Flat-HGNS seed 0 only, common `C_cal`, total Flat calibration bucket at most 3 GPU-hours. | calibration table and config hash |
+| Loss weights | Exactly three preregistered Flat-HGNS seed-0 candidates `[1,0.01]`, `[1,0.1]`, and `[1,1]`, common `C_cal`, total Flat calibration bucket at most 3 GPU-hours. The immutable candidate table is `experiments/fm_scaling/frozen/loss_candidates.yaml`. | calibration table and config hash |
 | Design effect | `delta_min = -log(0.95)`. | analysis-config hash |
 | Design dispersion | `sigma_design = sqrt(2) s_Flat` from the selected-loss Flat seed-0 `C_cal` checkpoint on held-out source-development groups. | power report |
 | Power simulation | PCG64 seed `20260714`, 1,000,000 draws; smallest available group count at least 6 with at least 80% power. | power-report hash |
@@ -239,6 +239,17 @@ mean run cap  = 183.33 / 20 = 9.17 GPU-hours.
 ```
 
 The mean is diagnostic, not a per-run quota; R012 uses the sum of core-specific upper bounds. The Flat throughput probe, `C_cal`, and three loss candidates share the 3-hour Flat calibration bucket. G26 profiles and S001 share the remaining 7-hour pre-campaign bucket. CPU data generation and geometry construction are measured separately.
+
+R005 uses only the Flat core and every audited `source_dev` topology. It times
+20 compiled full-objective optimizer steps after three warm-up steps per
+topology, converts each topology's higher-order empirical 95th-percentile step
+time to seconds per eagerly counted training FLOP, and uses the slowest value.
+Each candidate receives a fixed 600-second non-training reserve; the remaining
+time is divided by a `1.25` throughput guard. `C_cal` is the two-significant-
+digit floor of the largest common counted-FLOP budget whose three guarded
+one-hour candidate bounds sum to at most three GPU-hours. The probe records no
+loss values or target efficacy. The full immutable rule is
+`experiments/fm_scaling/frozen/calibration_policy.yaml`.
 
 If the largest common `C` satisfying the equation is below the preregistered source-only learning horizon, R014 fails. Do not delete a seed, baseline, diversity level, Quotient control, or reserve.
 

@@ -1,0 +1,15 @@
+schema_version: fm-scaling-r005-policy-v1
+gate_id: R005
+communication_core: flat
+allowed_split: source_dev
+seed: 20260714
+compile_mode: default
+warmup_steps: 3
+measured_steps: 20
+timing_quantile: 0.95
+quantile_method: higher
+candidate_count: 3
+aggregate_gpu_hours: 3
+nontraining_reserve_seconds_per_candidate: 600
+throughput_guard: 1.25
+budget_rounding: floor_two_significant_digits

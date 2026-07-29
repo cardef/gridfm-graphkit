@@ -1,0 +1,14 @@
+schema_version: fm-scaling-loss-candidates-v1
+candidate_count: 3
+selection_system: flat
+training_seed: 0
+calibration_checkpoint: C_cal
+aggregate_gpu_hour_limit: 3
+selection_rule: lowest_family_balanced_source_dev_error_then_residual_within_one_percent
+candidates:
+  - id: C001
+    loss_weights: [1.0, 0.01]
+  - id: C002
+    loss_weights: [1.0, 0.1]
+  - id: C003
+    loss_weights: [1.0, 1.0]
