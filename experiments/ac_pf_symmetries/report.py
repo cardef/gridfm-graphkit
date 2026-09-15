@@ -16,7 +16,12 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 OUT = Path(__file__).resolve().parent / "results"
-LABEL = {"m0": "M0 (baseline)", "aug": "M0+Aug", "canon": "M-canon (exact S1+S3)"}
+LABEL = {
+    "m0": "M0 (baseline)",
+    "aug": "M0+Aug wide (k 0.1-10, α ±π)",
+    "augmild": "M0+Aug mild (k 0.5-2, α ±0.5)",
+    "canon": "M-canon (exact S1+S3)",
+}
 DEG = 180.0 / math.pi
 
 

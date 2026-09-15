@@ -41,7 +41,11 @@ S1 and S3 but not S4, and (v) `Canonicalize` is equivariant to float precision.
 * `m0`: `GNS_heterogeneous` with the official `HGNS_PF_datakit_case14.yaml`
   hyper-parameters (12 layers, hidden 48, 8 heads, physics + masked-MSE loss).
 * `aug`: same, trained with random S1 (`alpha ~ U(-pi, pi)`) and S3
-  (`k ~ logU(0.1, 10)`) actions applied per sample.
+  (`k ~ logU(0.1, 10)`) actions applied per sample ("wide": covers the
+  audited range).
+* `augmild`: as `aug` with `alpha ~ U(-0.5, 0.5)`, `k ~ logU(0.5, 2)`: keeps
+  the physics-loss scale within 2x, isolating optimization difficulty from
+  range coverage.
 * `canon`: same network wrapped in `Canonicalize`: per graph, subtract the
   reference angle and divide power-like inputs by `mean |Yff|` (relative to a
   constant fitted on the training set), undo on the outputs. Exact S1+S3
@@ -49,8 +53,11 @@ S1 and S3 but not S4, and (v) `Canonicalize` is equivariant to float precision.
 
 Protocol: random 80/10/10 scenario split per grid, normalizer fitted on the
 train split (the framework's own `fit_on_train` convention, which also reads
-`Pg`/`Qg` of the target grid), early stopping on validation loss (patience 15,
-max 150 epochs), best-validation weights. Reported per model and seed:
+`Pg`/`Qg` of the target grid), early stopping on validation loss (patience 40,
+max 150 epochs), best-validation weights. With the framework's usual patience
+of 15 the wide-augmentation run stops at epoch 16 with a validation loss 100x
+above the baseline (kept under `results/case14_ieee/_protocol_p15/`); the
+longer patience gives every model the same 150-epoch budget. Reported per model and seed:
 in-distribution RMSE of the predicted quantities and power-balance residual;
 `EE_g` for `alpha in {0.1, 0.5, 1, pi}`, `k in {0.01, 0.1, 0.5, 2, 10, 100}`
 and a 50% line flip; accuracy on each transformed test set `T_g`; zero-shot on

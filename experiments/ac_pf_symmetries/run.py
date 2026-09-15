@@ -144,7 +144,10 @@ def audit(model, loader, device):
 def run_one(variant, seed, a, device):
     L.seed_everything(seed, workers=True)
     args = make_args(a)
-    augment = RandomSymmetryAugment() if variant == "aug" else None
+    augment = {
+        "aug": RandomSymmetryAugment(),
+        "augmild": RandomSymmetryAugment(alpha_max=0.5, k_range=(0.5, 2.0)),
+    }.get(variant)
     grid = build_grid(a.case, args, seed, augment)
     train_loader = DataLoader(grid["train"], batch_size=a.batch_size, shuffle=True)
     val_loader = eval_loader(grid["val"], a.batch_size)
@@ -212,14 +215,14 @@ def main():
     p.add_argument(
         "--variant",
         nargs="+",
-        default=["m0", "aug", "canon"],
-        choices=["m0", "aug", "canon"],
+        default=["m0", "aug", "augmild", "canon"],
+        choices=["m0", "aug", "augmild", "canon"],
     )
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     p.add_argument("--case", default="case14_ieee")
     p.add_argument("--zero-shot", nargs="*", default=["case30_ieee", "case57_ieee"])
     p.add_argument("--epochs", type=int, default=150)
-    p.add_argument("--patience", type=int, default=15)
+    p.add_argument("--patience", type=int, default=40)
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--layers", type=int, default=12)
     p.add_argument("--hidden", type=int, default=48)
