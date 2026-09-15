@@ -147,6 +147,8 @@ def run_one(variant, seed, a, device):
     augment = {
         "aug": RandomSymmetryAugment(),
         "augmild": RandomSymmetryAugment(alpha_max=0.5, k_range=(0.5, 2.0)),
+        "augphase": RandomSymmetryAugment(alpha_max=0.5, k_range=(1.0, 1.0)),
+        "augscale": RandomSymmetryAugment(alpha_max=0.0, k_range=(0.5, 2.0)),
     }.get(variant)
     grid = build_grid(a.case, args, seed, augment)
     train_loader = DataLoader(grid["train"], batch_size=a.batch_size, shuffle=True)
@@ -216,7 +218,7 @@ def main():
         "--variant",
         nargs="+",
         default=["m0", "aug", "augmild", "canon"],
-        choices=["m0", "aug", "augmild", "canon"],
+        choices=["m0", "aug", "augmild", "augphase", "augscale", "canon"],
     )
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     p.add_argument("--case", default="case14_ieee")

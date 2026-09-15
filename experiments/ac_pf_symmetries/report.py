@@ -20,6 +20,8 @@ LABEL = {
     "m0": "M0 (baseline)",
     "aug": "M0+Aug wide (k 0.1-10, α ±π)",
     "augmild": "M0+Aug mild (k 0.5-2, α ±0.5)",
+    "augphase": "M0+Aug phase only (α ±0.5)",
+    "augscale": "M0+Aug scale only (k 0.5-2)",
     "canon": "M-canon (exact S1+S3)",
 }
 DEG = 180.0 / math.pi
