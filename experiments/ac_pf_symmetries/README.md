@@ -46,6 +46,8 @@ S1 and S3 but not S4, and (v) `Canonicalize` is equivariant to float precision.
 * `augmild`: as `aug` with `alpha ~ U(-0.5, 0.5)`, `k ~ logU(0.5, 2)`: keeps
   the physics-loss scale within 2x, isolating optimization difficulty from
   range coverage.
+* `augphase` / `augscale`: the two axes of `augmild` separately (ablation of
+  its in-distribution regularization effect).
 * `canon`: same network wrapped in `Canonicalize`: per graph, subtract the
   reference angle and divide power-like inputs by `mean |Yff|` (relative to a
   constant fitted on the training set), undo on the outputs. Exact S1+S3
