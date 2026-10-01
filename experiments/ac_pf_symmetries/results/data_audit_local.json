@@ -1,0 +1,114 @@
+{
+  "case14_ieee": {
+    "scenarios": 2048,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 6144,
+    "branches_out_of_service": 0,
+    "mean_abs_Yff": 6.522888686649067,
+    "mean_abs_Yff_cv_across_scenarios": 1.3619661200023824e-16
+  },
+  "case30_ieee": {
+    "scenarios": 2048,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 8192,
+    "branches_out_of_service": 0,
+    "mean_abs_Yff": 8.065622603466652,
+    "mean_abs_Yff_cv_across_scenarios": 2.2029181955388022e-16
+  },
+  "case57_ieee": {
+    "scenarios": 2048,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 30720,
+    "branches_out_of_service": 0,
+    "mean_abs_Yff": 10.245582623508202,
+    "mean_abs_Yff_cv_across_scenarios": 1.7342016988626658e-16
+  },
+  "case118_ieee": {
+    "scenarios": 1024,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 9216,
+    "branches_out_of_service": 0,
+    "mean_abs_Yff": 18.521278941258352,
+    "mean_abs_Yff_cv_across_scenarios": 1.919116754914154e-16
+  },
+  "case500_goc": {
+    "scenarios": 512,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 53248,
+    "branches_out_of_service": 2560,
+    "mean_abs_Yff": 81.52735410360098,
+    "mean_abs_Yff_cv_across_scenarios": 0.0
+  },
+  "case2000_goc": {
+    "scenarios": 64,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 35904,
+    "branches_out_of_service": 384,
+    "mean_abs_Yff": 115.83381048243925,
+    "mean_abs_Yff_cv_across_scenarios": 2.4730594938024283e-16
+  },
+  "Texas2k_case1_2016summerpeak": {
+    "scenarios": 254,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 0,
+    "branches_out_of_service": 0,
+    "mean_abs_Yff": 57.26583394153231,
+    "mean_abs_Yff_cv_across_scenarios": 0.0
+  }
+}
