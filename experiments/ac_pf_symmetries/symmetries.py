@@ -6,10 +6,15 @@ model output layout ``bus=[VM, VA, PG, QG]``, ``gen=[PG]``.
 S1 phase : theta_i -> theta_i + alpha (per graph). Flows invariant.
 S3 scale : new MVA base = k * old base: every power-like and admittance-like
            quantity divides by k, voltages unchanged.
-S4 flip  : re-declare from/to of a line. In the bidirectional edge
-           representation this is a permutation of edge rows (attrs of the
-           two directed rows coincide for lines), so it must be exact.
-S2 (local gauge) needs phase shifters; none of the local datasets has any.
+S4 flip  : re-declare from/to of a branch. Each directed row stores its own
+           (flow, Y_self, Y_mutual), so swapping the two rows already applies the
+           transformer rule (tau, phi, z, b) -> (1/tau, -phi, tau^2 z, b/tau^2); the
+           columns stored in the from->to convention on both rows transform too
+           (tap -> 1/tap, angle limits negated and swapped). For lines it is a pure
+           row permutation, exact by construction. AC branch flows swap
+           (S_ft <-> S_tf), they do not negate: S_ft + S_tf are the losses.
+S2 (local gauge) acts on any grid (it creates virtual phase shifts on lines), but on
+data without phase shifters its constraint reduces to S1 (Piano A, Prop. 6): not implemented.
 """
 
 import math
@@ -19,6 +24,8 @@ from torch import nn
 from torch_geometric.transforms import BaseTransform
 
 from gridfm_graphkit.datasets.globals import (
+    ANG_MAX,
+    ANG_MIN,
     BS,
     GS,
     MAX_PG,
@@ -51,7 +58,7 @@ BUS_POWER = [PD_H, QD_H, QG_H, MIN_QG_H, MAX_QG_H, GS, BS]
 BUS_Y_POWER = [PD_H, QD_H, QG_H]
 GEN_POWER = [PG_H, MIN_PG, MAX_PG]
 EDGE_POWER = [P_E, Q_E, YFF_TT_R, YFF_TT_I, YFT_TF_R, YFT_TF_I, RATE_A]
-SYMMETRIES = ("phase", "scale", "flip")
+SYMMETRIES = ("phase", "scale", "flip", "fliptrafo")
 
 
 def num_graphs(data):
@@ -115,12 +122,10 @@ def line_pairs(data):
     return partner, is_fwd, is_line
 
 
-def act_flip(data, p=0.5, seed=0):
+def _flip_rows(data, flip):
+    """Re-declare from/to of the branches whose forward row is set in `flip` (see S4 above)."""
     d = data.clone()
-    partner, is_fwd, is_line = line_pairs(d)
-    gen = torch.Generator().manual_seed(seed)
-    draw = (torch.rand(partner.numel(), generator=gen) < p).to(partner.device)
-    flip = draw & is_fwd & is_line
+    partner, _, _ = line_pairs(d)
     flip = flip | flip[partner]
     perm = torch.where(
         flip,
@@ -130,7 +135,31 @@ def act_flip(data, p=0.5, seed=0):
     d[E].edge_index = d[E].edge_index[:, perm]
     d[E].edge_attr = d[E].edge_attr[perm]
     d[E].y = d[E].y[perm]
+    if (
+        "branch" in d.mask_dict
+    ):  # row-aligned; rebuilt, not mutated: clone() shares the dict
+        d.mask_dict = {**d.mask_dict, "branch": d.mask_dict["branch"][perm]}
+    a = d[E].edge_attr
+    a[flip, TAP] = 1.0 / a[flip, TAP]
+    a[flip, ANG_MIN], a[flip, ANG_MAX] = -a[flip, ANG_MAX], -a[flip, ANG_MIN]
     return d
+
+
+def act_flip(data, p=0.5, seed=0, branches="lines"):
+    """S4 on a random subset (probability p) of the lines, the transformers or all branches."""
+    partner, is_fwd, is_line = line_pairs(data)
+    kind = {"lines": is_line, "trafos": ~is_line, "all": torch.ones_like(is_line)}[
+        branches
+    ]
+    gen = torch.Generator().manual_seed(seed)
+    draw = (torch.rand(partner.numel(), generator=gen) < p).to(partner.device)
+    return _flip_rows(data, draw & is_fwd & kind)
+
+
+def orient_trafos(data):
+    """S4 frame: declare every transformer with tap <= 1 (identity on case14: taps 0.93-0.98)."""
+    _, is_fwd, is_line = line_pairs(data)
+    return _flip_rows(data, is_fwd & ~is_line & (data[E].edge_attr[:, TAP] > 1))
 
 
 def act(data, sym, param):
@@ -140,6 +169,8 @@ def act(data, sym, param):
         return act_scale(data, param)
     if sym == "flip":
         return act_flip(data, p=param)
+    if sym == "fliptrafo":
+        return act_flip(data, p=param, branches="trafos")
     raise ValueError(sym)
 
 
@@ -153,9 +184,14 @@ def act_output(out, sym, param, data):
         o["bus"][:, [PG_OUT, QG_OUT]] /= k[node_batch(data, "bus")][:, None]
         if "gen" in o:
             o["gen"][:, [PG_OUT_GEN]] /= k[node_batch(data, "gen")][:, None]
-    elif sym != "flip":
+    elif sym not in ("flip", "fliptrafo"):
         raise ValueError(sym)
     return o
+
+
+def wrap_angle(x):
+    """Angles live on the circle: map a difference to [-pi, pi)."""
+    return torch.remainder(x + math.pi, 2 * math.pi) - math.pi
 
 
 def pred_masks(data):
@@ -172,7 +208,12 @@ def pred_masks(data):
 
 @torch.no_grad()
 def equivariance_error(model, loader, sym, param, device="cpu"):
-    """EE_g(f) = ||f(g u) - rho(g) f(u)|| / ||f(u)||, per predicted quantity, over a loader."""
+    """EE_g(f) = ||f(g u) - rho(g) f(u)||, per predicted quantity, over a loader.
+
+    `rmse`: absolute, in the output's own unit (VA differences wrapped to [-pi, pi)); Piano A §5 reports it
+    relative to the in-distribution RMSE of the same channel (report.py). `rel`: divided by ||rho(g) f(u)||
+    (the *transformed* output): for S1 it saturates near 1 for a model that ignores alpha.
+    """
     acc = {q: torch.zeros(3, dtype=torch.float64) for q in ("VM", "VA", "PG", "QG")}
     for data in loader:
         data = data.to(device)
@@ -181,6 +222,8 @@ def equivariance_error(model, loader, sym, param, device="cpu"):
         expected = act_output(out, sym, param, data)
         for q, (col, m) in pred_masks(data).items():
             diff = (out_g["bus"][m, col] - expected["bus"][m, col]).cpu().double()
+            if q == "VA":
+                diff = wrap_angle(diff)
             ref = expected["bus"][m, col].cpu().double()
             acc[q] += torch.stack(
                 [(diff**2).sum(), (ref**2).sum(), m.sum().cpu().double()],
@@ -195,20 +238,24 @@ def equivariance_error(model, loader, sym, param, device="cpu"):
 
 
 class Canonicalize(nn.Module):
-    """Exact S1+S3 equivariance by canonicalization around any bus/gen PF model.
+    """Exact S1+S3+S4 equivariance by canonicalization around any bus/gen PF model.
 
-    Phase: subtract each graph's reference angle from the inputs, add it back to
-    the predicted angles. Scale: divide power/admittance inputs by a degree-1
+    A frame per symmetry, computed from the inputs only (Piano A, Prop. 5), so the
+    class of functions is exactly the equivariant one. Orientation: declare every
+    transformer with tap <= 1 (outputs are bus quantities, invariant: nothing to
+    undo). Phase: subtract each graph's reference angle from the inputs, add it back
+    to the predicted angles. Scale: divide power/admittance inputs by a degree-1
     homogeneous statistic of the inputs (mean |Yff| per graph, relative to a
     constant fitted on the training set so in-distribution scale is unchanged),
     multiply predicted powers back.
     """
 
-    def __init__(self, model, phase=True, scale=True):
+    def __init__(self, model, phase=True, scale=True, orient=True):
         super().__init__()
         self.model = model
         self.phase = phase
         self.scale = scale
+        self.orient = orient
         self.register_buffer("scale_ref", torch.ones(()))
 
     @property
@@ -239,7 +286,7 @@ class Canonicalize(nn.Module):
         return self
 
     def forward(self, data, return_embeddings=False):
-        d = data
+        d = orient_trafos(data) if self.orient else data
         if self.phase:
             theta = self.ref_angle(d)
             d = act_phase(d, -theta)
@@ -257,7 +304,12 @@ class Canonicalize(nn.Module):
 
 
 class RandomSymmetryAugment(BaseTransform):
-    """Training-time data augmentation with random S1 phase and S3 scale actions."""
+    """Training-time data augmentation with random S1 phase and S3 scale actions.
+
+    The loss then sees the augmented sample: power residuals and PG/QG errors scale
+    like 1/k, so their weight drifts across samples (why the wide `aug` arm fails;
+    `CovariantAugment` is the fair baseline).
+    """
 
     def __init__(self, alpha_max=math.pi, k_range=(0.1, 10.0)):
         super().__init__()
@@ -268,3 +320,49 @@ class RandomSymmetryAugment(BaseTransform):
         alpha = (torch.rand(()) * 2 - 1) * self.alpha_max
         k = torch.exp(self.log_k[0] + torch.rand(()) * (self.log_k[1] - self.log_k[0]))
         return act_scale(act_phase(data, alpha), k)
+
+
+class CovariantAugment(nn.Module):
+    """M0+Aug with every loss term in the sample's own frame (Piano A §6).
+
+    Training only: act on the batch with g = (alpha ~ U(-alpha_max, alpha_max) per
+    graph, one k ~ logU(k_range) per batch), run the model, undo rho(g) on its
+    outputs and multiply its physics residuals by k (a power residual scales like
+    1/k under S3). The task's losses therefore compare de-augmented predictions
+    with the original labels and physics. k is shared by the batch because the
+    model stores one residual scalar per layer (mean over the batch's buses).
+    Identity at evaluation.
+    """
+
+    def __init__(self, model, alpha_max=math.pi, k_range=(0.1, 10.0)):
+        super().__init__()
+        self.model = model
+        self.alpha_max = alpha_max
+        self.log_k = (math.log(k_range[0]), math.log(k_range[1]))
+
+    @property
+    def layer_residuals(self):
+        return self.model.layer_residuals
+
+    def draw(self, n_graphs):
+        alpha = (torch.rand(n_graphs) * 2 - 1) * self.alpha_max
+        k = math.exp(
+            self.log_k[0] + float(torch.rand(())) * (self.log_k[1] - self.log_k[0]),
+        )
+        return alpha, k
+
+    def forward(self, data, return_embeddings=False):
+        if not self.training:
+            return self.model(data, return_embeddings=return_embeddings)
+        alpha, k = self.draw(num_graphs(data))
+        out = self.model(
+            act_scale(act_phase(data, alpha), k),
+            return_embeddings=return_embeddings,
+        )
+        if return_embeddings:
+            out, emb = out
+        res = self.model.layer_residuals
+        for i in res:
+            res[i] = res[i] * k
+        out = act_output(act_output(out, "scale", 1.0 / k, data), "phase", -alpha, data)
+        return (out, emb) if return_embeddings else out

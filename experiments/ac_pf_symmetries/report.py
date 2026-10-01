@@ -1,6 +1,6 @@
 """Aggregate results/<case>/<variant>_seed*/result.json into poster tables and figures.
 
-python -m experiments.ac_pf_symmetries.report --case case14_ieee
+python -m experiments.ac_pf_symmetries.report --case case14_ieee [--result-file result_eval.json]
 """
 
 import argparse
@@ -22,21 +22,24 @@ LABEL = {
     "augmild": "M0+Aug mild (k 0.5-2, α ±0.5)",
     "augphase": "M0+Aug phase only (α ±0.5)",
     "augscale": "M0+Aug scale only (k 0.5-2)",
-    "canon": "M-canon (exact S1+S3)",
+    "augcov": "M0+Aug wide, loss in the sample frame (k 0.1-10, α ±π)",
+    "canon": "M-canon (canonicalized S1+S3+S4)",
 }
 DEG = 180.0 / math.pi
 
 
-def load(case):
+def load(case, result_file):
     runs = defaultdict(list)
-    for f in sorted((OUT / case).glob("*_seed*/result.json")):
+    for f in sorted((OUT / case).glob(f"*_seed*/{result_file}")):
         r = json.load(open(f))
         runs[r["variant"]].append(r)
     return runs
 
 
 def ms(values):
-    a = np.asarray(values, dtype=float)
+    a = np.asarray([v for v in values if v is not None], dtype=float)
+    if not len(a):
+        return "n/a"
     return f"{a.mean():.3g} ± {a.std():.2g}" if len(a) > 1 else f"{a.mean():.3g}"
 
 
@@ -70,42 +73,41 @@ def table_accuracy(runs, pick, title):
 
 
 def audit_rows(r, sym, param):
+    """The audit entry for (sym, param), or None (results older than the `fliptrafo` probe)."""
     return next(
-        a for a in r["audit"] if a["sym"] == sym and abs(a["param"] - param) < 1e-9
+        (a for a in r["audit"] if a["sym"] == sym and abs(a["param"] - param) < 1e-9),
+        None,
     )
 
 
+def ee_ratio(r, sym, param, q):
+    """EE_g in units of the model's own in-distribution RMSE on the same channel (Piano A §5)."""
+    a = audit_rows(r, sym, param)
+    return None if a is None else a["ee"][q]["rmse"] / r["in_dist"][q]
+
+
 def table_ee(runs, probes):
-    lines = ["### Equivariance error EE_g (relative, on predicted entries)", ""]
+    lines = [
+        "### Equivariance error EE_g / in-distribution RMSE, same channel (> 1: symmetry breaking dominates)",
+        "",
+    ]
     lines.append(
         "| model | " + " | ".join(f"{s} {p:g} ({q})" for s, p, q in probes) + " |",
     )
     lines.append("|---" * (len(probes) + 1) + "|")
     for v, rs in runs.items():
-        cells = [
-            ms([audit_rows(r, s, p)["ee"][q]["rel"] for r in rs]) for s, p, q in probes
-        ]
+        cells = [ms([ee_ratio(r, s, p, q) for r in rs]) for s, p, q in probes]
         lines.append(f"| {LABEL[v]} | " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"
 
 
-def figure(runs, case):
+def figure(runs, case, suffix=""):
     fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
     for v, rs in runs.items():
         phases = sorted({a["param"] for a in rs[0]["audit"] if a["sym"] == "phase"})
         scales = sorted({a["param"] for a in rs[0]["audit"] if a["sym"] == "scale"})
-        ee_ph = np.array(
-            [
-                [audit_rows(r, "phase", p)["ee"]["VA"]["rel"] for p in phases]
-                for r in rs
-            ],
-        )
-        ee_sc = np.array(
-            [
-                [audit_rows(r, "scale", k)["ee"]["VM"]["rel"] for k in scales]
-                for r in rs
-            ],
-        )
+        ee_ph = np.array([[ee_ratio(r, "phase", p, "VA") for p in phases] for r in rs])
+        ee_sc = np.array([[ee_ratio(r, "scale", k, "VM") for k in scales] for r in rs])
         err_sc = np.array(
             [
                 [audit_rows(r, "scale", k)["acc"]["VA"] * DEG for k in scales]
@@ -128,13 +130,13 @@ def figure(runs, case):
             )
     axes[0].set(
         xlabel="phase shift α (rad)",
-        ylabel="EE_S1 on VA (relative)",
+        ylabel="EE_S1 on VA / in-dist RMSE",
         yscale="log",
         title="S1: global phase",
     )
     axes[1].set(
         xlabel="MVA base factor k",
-        ylabel="EE_S3 on VM (relative)",
+        ylabel="EE_S3 on VM / in-dist RMSE",
         xscale="log",
         yscale="log",
         title="S3: scale",
@@ -155,18 +157,28 @@ def figure(runs, case):
     fig.tight_layout()
     path = OUT / case / "figures"
     path.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path / "ee_audit.png", dpi=200)
-    fig.savefig(path / "ee_audit.pdf")
-    return path / "ee_audit.png"
+    fig.savefig(path / f"ee_audit{suffix}.png", dpi=200)
+    fig.savefig(path / f"ee_audit{suffix}.pdf")
+    return path / f"ee_audit{suffix}.png"
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--case", default="case14_ieee")
+    p.add_argument(
+        "--result-file",
+        default="result.json",
+        help="result_eval.json: run.py --eval-only output",
+    )
     a = p.parse_args()
-    runs = load(a.case)
+    runs = load(a.case, a.result_file)
     if not runs:
-        raise SystemExit(f"no results under {OUT / a.case}")
+        raise SystemExit(f"no {a.result_file} under {OUT / a.case}")
+    suffix = (
+        ""
+        if a.result_file == "result.json"
+        else "_" + Path(a.result_file).stem.removeprefix("result_")
+    )
     md = [f"# AC-PF symmetry audit — trained on {a.case}", ""]
     md.append(
         f"Seeds per model: {{ {', '.join(f'{LABEL[v]}: {len(rs)}' for v, rs in runs.items())} }}\n",
@@ -188,8 +200,13 @@ def main():
                 ("scale", 100.0, "VM"),
                 ("scale", 0.01, "VM"),
                 ("flip", 0.5, "VA"),
+                ("fliptrafo", 1.0, "VM"),
             ],
         ),
+    )
+    # results written before the zero-shot fix have no field: they refit the normalizer on the target
+    norms = "/".join(
+        sorted({r.get("zero_shot_norm", "refit") for rs in runs.values() for r in rs}),
     )
     for case in runs[next(iter(runs))][0]["zero_shot"]:
         md.append(
@@ -199,12 +216,12 @@ def main():
                     r["zero_shot"][c]["acc"],
                     r["zero_shot"][c]["baseMVA"],
                 ),
-                f"Zero-shot test RMSE on {case} (never seen in training)",
+                f"Zero-shot test RMSE on {case} (never seen in training; normalizer: {norms})",
             ),
         )
-    fig = figure(runs, a.case)
+    fig = figure(runs, a.case, suffix)
     md.append(f"![EE audit]({fig.relative_to(OUT / a.case)})\n")
-    out = OUT / a.case / "REPORT.md"
+    out = OUT / a.case / f"REPORT{suffix}.md"
     out.write_text("\n".join(md))
     print(out.read_text())
     print(f"figure: {fig}")

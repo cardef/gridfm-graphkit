@@ -1,67 +1,173 @@
 # Piano A — Simmetrie della mappa AC power flow come bias induttivi per Grid Foundation Models
 
-*Bozza di piano di ricerca — settembre 2026*
+*Bozza di piano di ricerca — settembre 2026 · rivista il 30 settembre 2026*
+
+> **Revisione del 30/09/2026** (dopo la revisione critica e il PoC in `experiments/ac_pf_symmetries/`):
+> (1) S4 corretta: in AC l'inversione from/to *scambia* i flussi, non li nega; il decoder antisimmetrico di M4 imponeva
+> perdite nulle; la regola dei trasformatori include il riporto dell'impedenza τ²z.
+> (2) La scelta casuale del bus di riferimento non è una simmetria finché REF è anche lo slack.
+> (3) Ogni simmetria del catalogo ammette una canonicalizzazione esatta in forma chiusa (Prop. 5): la domanda
+> "equivarianza esatta vs augmentation" diventa "quale rappresentazione della sezione canonica", con M0+Canon come
+> baseline di ogni confronto.
+> (4) Senza sfasatori S2 si riduce a S1 sui dati (Prop. 6): H3 passa da ipotesi a proposizione.
+> (5) H1, H2, H4 riformulate; aggiunto R7.
+> (6) EE per canale e relativo all'RMSE; M0+Aug con loss nel frame del campione; zero-shot senza etichette del target.
+> (7) M1 con proiezione di Hodge; condizione di iniettività per M3.
 
 ---
 
 ## 1. In una frase
 
-Catalogare le trasformazioni che lasciano invariante la soluzione del power flow, dimostrare quali di esse le pipeline neurali standard rompono, misurare quanto quella rottura spiega il fallimento del transfer zero-shot, e costruire layer esattamente equivarianti che la eliminano.
+Catalogare le trasformazioni che lasciano invariante la soluzione del power flow come un unico gruppo di gauge,
+mostrare che ogni convenzione di modellazione ne è un gauge fixing e che ogni simmetria ammette una canonicalizzazione
+esatta (quindi la sua rottura è eliminabile a costo zero), usare l'errore di equivarianza come test di consistenza delle
+pipeline, e spostare la domanda sperimentale su ciò che la simmetria non decide: quale rappresentazione della sezione
+canonica trasferisce a reti non viste.
 
 ## 2. Motivazione e posizionamento nella roadmap GridFM
 
-La roadmap identifica il transfer zero-shot a reti non viste come il collo di bottiglia che separa un "shared grid model" (livello 1) da un "transferable GridFM" (livello 2), e riporta che le reti a valori complessi migliorano la predizione OOD degli angoli di circa due ordini di grandezza *attribuendo il guadagno al bias induttivo e non alla capacità* (§4.2). Quel risultato è un caso particolare di un principio più generale — la mappa AC-PF ha simmetrie esatte — che nessuno ha ancora enumerato e sfruttato sistematicamente.
+La roadmap identifica il transfer zero-shot a reti non viste come il collo di bottiglia che separa uno "shared grid
+model" (livello 1) da un "transferable GridFM" (livello 2), e riporta che le reti a valori complessi migliorano la
+predizione OOD degli angoli di circa due ordini di grandezza *attribuendo il guadagno al bias induttivo e non alla
+capacità* (§4.2). Quale bias sia non è stabilito: con θ_ref fisso nei dati la simmetria di fase U(1) non può esserne la
+causa (Prop. 5); restano l'algebra bilineare complessa di S = V ⊙ conj(YV) e le coordinate rettangolari (equazioni
+quadratiche, niente wrap degli angoli). Il piano separa le due spiegazioni (M2 contro il suo controllo split, §6).
 
 Il piano copre:
-- **§4.2 (architetture)**: layer equivarianti come alternativa strutturata all'augmentation.
-- **§4.4 (pretraining e transfer)**: le simmetrie sono augmentation esatte e gratuite per il pretraining multi-rete, e spiegano perché le convenzioni di modellazione (base p.u., slack, orientamento) ostacolano il transfer.
-- **§4.6 (introspezione)**: l'*errore di equivarianza* di un modello addestrato è un test di consistenza fisica calcolabile senza etichette.
+- **§4.2 (architetture)**: canonicalizzazione esatta come baseline gratuito; layer equivarianti e scelte di
+  rappresentazione confrontati a parità di simmetria.
+- **§4.4 (pretraining e transfer)**: le convenzioni (base p.u., riferimento, orientamento) si canonicalizzano per campione,
+  quindi il pretraining multi-rete non ha bisogno di augmentation per esse; ciò che resta dello shift tra reti vive in
+  quantità invarianti (R/X, carico, topologia).
+- **§4.6 (introspezione)**: l'*errore di equivarianza* di un modello addestrato è un test di consistenza della pipeline
+  calcolabile senza etichette (scova input mai variati e normalizzatori congelati); non è un predittore dell'errore OOD (H2).
 
 ## 3. Stato dell'arte e gap
 
 | Lavoro | Cosa fa | Cosa manca |
 |---|---|---|
-| Okoyomon, Yaniv, Goebel 2025 (arXiv:2509.25158) | Ablazione controllata di tre bias (PF-loss, reti complesse, riformulazione residuale) su ENGAGE; reti complesse battono DC-PF di un ordine di grandezza sugli angoli OOD | Un solo bias legato alla simmetria (fase); nessun catalogo; nessuna misura dell'equivarianza |
+| Okoyomon, Yaniv, Goebel 2025 (arXiv:2509.25158) | Ablazione controllata di tre bias (PF-loss, reti complesse, riformulazione residuale) su ENGAGE; reti complesse battono DC-PF di un ordine di grandezza sugli angoli OOD | Il bias "reti complesse" non è separato in simmetria di fase vs algebra complessa; nessun catalogo; nessuna misura dell'equivarianza |
 | Stiasny & Cremer 2026, *Residual Power Flow* (arXiv:2601.09533) | Angoli di ramo invece di angoli di bus: elimina il bus di riferimento; mostra che la relazione angolo-potenza diventa quasi lineare e più facile da apprendere | 9 bus, MLP; la KVL diventa un residuo; gli autori stessi indicano architetture graph-based come passo successivo |
 | Dogoulis et al. 2025, KCLNet (arXiv:2506.12902); Flow-Attentional GNN (arXiv:2506.06127) | Vincoli di conservazione (KCL) imposti strutturalmente | Non trattano simmetrie di fase, scala, orientamento |
 | GNN gauge-equivarianti U(1) (arXiv:2511.16062); Cohen et al. 2019; Favoni et al. 2021 (L-CNN) | Teoria e layer per equivarianza di gauge locale su grafi e reticoli | Mai applicati a reti elettriche |
-| Puech et al. 2026, GENCO (arXiv:2608.09921) | Backbone eterogeneo PF/OPF/SE, decoder fisici, correzione iterativa; dataset multi-rete | Rappresentazione real-valued, angoli di nodo rispetto allo slack, input p.u. a base fissa: rompe le simmetrie S1–S4 sotto |
+| Kaba et al. 2023; Puny et al. 2022 (frame averaging); Dym et al. 2024 | Canonicalizzazione e frame: una funzione equivariante equivale a una funzione arbitraria su una sezione; per alcuni gruppi (es. rotazioni di nuvole di punti) una canonicalizzazione continua non esiste | Mai applicati a reti elettriche; qui tutti i gruppi ammettono frame continui (Prop. 5) |
+| Puech et al. 2026, GENCO (arXiv:2608.09921) | Backbone eterogeneo PF/OPF/SE, decoder fisici, correzione iterativa; dataset multi-rete | Angoli di nodo rispetto allo slack con θ_ref ≡ 0 nei dati (S1 mai esercitata); il normalizzatore fissa per rete una base data-driven (P95 delle iniezioni): è già un'azione S3 esatta per rete, ma la statistica legge Qg e il Pg dello slack, che nel PF sono output; il tap entra come feature nel verso from→to: S4 esatta sulle linee, rotta sui trasformatori, debolmente (misurato su M0, stessa architettura di GENCO Base: EE/RMSE ≈ 0.02 da addestrato) |
 
-**Gap:** non esiste (i) un catalogo formale delle simmetrie della mappa AC-PF, (ii) una diagnostica dell'errore di equivarianza per modelli addestrati, (iii) un confronto controllato "equivarianza esatta vs augmentation" su più reti, task e regimi.
+**Gap:** non esistono (i) un catalogo formale delle simmetrie della mappa AC-PF come gruppo di gauge, con i frame che le
+canonicalizzano, (ii) una diagnostica dell'errore di equivarianza per modelli addestrati, (iii) una separazione
+controllata tra ciò che è attribuibile alla simmetria (eliminabile per canonicalizzazione) e ciò che è attribuibile alla
+rappresentazione (angoli di nodo vs di ramo, algebra reale vs complessa, normalizzazione globale vs locale).
 
 ## 4. Domande di ricerca e ipotesi
 
-**RQ1.** Quali trasformazioni lasciano invariante/equivariante la soluzione AC-PF, e quali sono rotte dalle scelte di rappresentazione standard?
+**RQ1.** Quali trasformazioni lasciano invariante/equivariante la soluzione AC-PF, quali sono rotte dalle scelte di
+rappresentazione standard, e con quale frame si ripristinano esattamente?
 
-**RQ2.** L'errore di equivarianza dei modelli addestrati predice il loro errore su reti non viste?
+**RQ2.** L'errore di equivarianza dei modelli addestrati predice il loro errore su reti non viste, e in quali condizioni?
 
-**RQ3.** Architetture esattamente equivarianti battono l'augmentation in efficienza dati e in generalizzazione OOD?
+**RQ3.** A parità di simmetria esatta (M0+Canon), quali scelte di rappresentazione (angoli di ramo con proiezione di
+Hodge, algebra complessa, feature adimensionali locali, rappresentante lungo l'orbita S3) migliorano efficienza dati e
+generalizzazione OOD?
 
-- **H1.** I modelli equivarianti eguagliano l'augmentation con meno dati e la battono zero-shot su reti non viste; il guadagno è concentrato su angoli e flussi (S1/S2) e sul transfer trasmissione→distribuzione (S3).
-- **H2.** Esiste una correlazione forte (ρ > 0,7 tra modelli e seed) tra errore di equivarianza e errore OOD.
-- **H3.** Il gauge locale (S2) conta solo in presenza di sfasatori; fase globale (S1) e scala (S3) contano ovunque.
-- **H4 (negativa, da controllare).** Fissare le convenzioni a priori (100 MVA, θ_slack = 0) *non* recupera i benefici, perché nel pretraining multi-rete le convenzioni si mescolano e perché la rappresentazione relativa generalizza meglio anche a convenzione fissa.
+- **H1 (rappresentazione).** Almeno una scelta di rappresentazione (M1–M3) migliora lo zero-shot su reti non viste
+  rispetto a M0+Canon di più della variabilità tra seed. Il vincolo di simmetria in sé non contribuisce sulla sezione
+  (Prop. 5): ogni guadagno di M1–M4 su M0+Canon è per costruzione un guadagno di rappresentazione. Fuori sezione
+  (convenzioni diverse) M0+Canon eguaglia per costruzione i modelli equivarianti e batte l'augmentation, che copre solo
+  il range campionato (PoC: EE_S1 6·10⁻³ dentro il range, ≈ 1 fuori).
+- **H2 (diagnostica).** Dentro una classe di modelli non equivarianti (es. al variare dell'intensità dell'augmentation),
+  EE_g correla con l'errore OOD solo se lo shift OOD ha una componente lungo le orbite (convenzioni diverse tra sorgente e
+  target); per shift sulla sezione (stesse convenzioni) la previsione è ρ ≈ 0. I modelli canonicalizzati hanno EE ≡ 0 per
+  costruzione e vanno esclusi: su una popolazione mista ρ misurerebbe la classe, non l'equivarianza.
+- **H3 (S2, residua).** Senza sfasatori S2 si riduce a S1 sui dati (Prop. 6): nessun guadagno possibile. Con sfasatori
+  reali (PEGASE, ACTIVSg), M2 non batte la stessa rete complessa con gauge di Coulomb, perché gli sfasatori stanno in
+  anelli e le direzioni di gauge non compaiono nei dati.
+- **H4 (sezione S3; nulla per la parte di simmetria).** Una canonicalizzazione adattiva per campione, con frame dei soli
+  input, recupera tutti i benefici attribuibili a S1–S4 (lo prevede la Prop. 5); resta la scelta del rappresentante
+  lungo l'orbita S3. La famiglia s_a = (P95 delle iniezioni di input)^a · (mean|Y|)^(1−a), a ∈ [0, 1], è tutta esatta;
+  ipotesi: la scelta di a cambia l'errore zero-shot più della variabilità tra seed. PoC, seed 0, normalizzatore della
+  sorgente: canon (allineato in ammettenza) ha VM 0.012 contro 0.023 di M0 su case30 e 0.017 contro 0.032 su case57, e
+  dà gli stessi numeri anche col normalizzatore rifittato sul target, perché il suo frame S3 rende irrilevante la base
+  scelta dal normalizzatore (Prop. 5 su un modello addestrato); M0 invece si sposta fino a 2×. Un solo seed: da
+  estendere. Fissare 100 MVA è solo una sezione mal scelta per il cross-dominio, non un test di H4.
 
 ## 5. Formalizzazione
 
-Rete G = (N, B), matrice di ammettenza Y (con tap r_ij e sfasamenti φ_ij sui trasformatori), setpoint u (P, Q ai bus PQ; P, V ai PV; V, θ allo slack). Mappa soluzione Φ: (G, Y, u) ↦ x = (V, θ).
+Rete G = (N, B), matrice di ammettenza Y nella convenzione MATPOWER (trasformatore ideale al lato from, tap τ_ij,
+sfasamento φ_ij): Y_ff = (y_s + j b/2)/τ², Y_ft = −y_s e^{jφ}/τ, Y_tf = −y_s e^{−jφ}/τ, Y_tt = y_s + j b/2; setpoint u
+(P, Q ai bus PQ; P, V ai PV; V, θ allo slack). Mappa soluzione Φ: (G, Y, u) ↦ x = (V, θ), con S = diag(V)·conj(YV).
 
-Simmetrie (ciascuna diventa una proposizione con dimostrazione di due righe nel paper):
+Simmetrie (ciascuna una proposizione con dimostrazione di due righe nel paper; tutte verificate numericamente):
 
-- **S1 — U(1) globale.** g_α: θ_i ↦ θ_i + α ∀i. Tutti i flussi e le iniezioni sono invarianti; Φ è equivariante. Con θ_slack fissato a 0 la simmetria riappare come libertà di scelta del bus di riferimento r: l'output fisicamente significativo è θ_i − θ_r, oppure le differenze θ_i − θ_j sugli archi.
-- **S2 — gauge U(1) locale.** Per ogni bus j e φ ∈ ℝ: θ_j ↦ θ_j + φ e, per ogni ramo incidente, φ_ij ↦ φ_ij ∓ φ (segno per orientamento). La fisica è invariante. È esatta sulla famiglia di reti parametrizzata dagli sfasamenti: gli sfasatori sono una *connessione* sugli archi, e il message passing complesso con trasportatori U_ij = e^{jφ_ij} è gauge-covariante. S1 è il caso φ costante.
-- **S3 — scala (analisi dimensionale).** Cambio di base MVA k > 0: (P, Q, Y, shunt) ↦ (P, Q, Y, shunt)/k con V_pu invariato. Φ è invariante. Estensione: cambio di base di tensione per livello, che riscala V e Y e lascia S invariata; i rapporti di tap ne assorbono l'effetto attraverso i trasformatori.
-- **S4 — orientamento dei rami (Z₂ per arco).** Invertire from/to nega flusso e differenza angolare; per le linee i parametri sono simmetrici, per i trasformatori il lato tap si scambia (r ↦ 1/r, φ ↦ −φ nella convenzione Π). I decoder sugli archi devono essere antisimmetrici sulle linee e direzionali solo sui trasformatori.
+- **S1 — U(1) globale.** g_α: θ_i ↦ θ_i + α ∀i. Flussi e iniezioni sono invarianti; Φ è equivariante rispetto a
+  (θ_ref in ingresso, θ in uscita). Il riferimento angolare è un gauge solo se è separato dal ruolo di slack
+  (bilanciamento): spostare lo slack cambia chi assorbe le perdite, quindi la soluzione. "Bus di riferimento casuale" è
+  una simmetria solo come ri-riferimento degli output (θ_i − θ_r) a slack invariato; la codifica GridFM, in cui REF è
+  anche lo slack, non la esprime.
+- **S2 — gauge U(1) locale.** Per ψ ∈ ℝᴺ: V_i ↦ e^{jψ_i} V_i e φ_ft ↦ φ_ft + ψ_f − ψ_t. Iniezioni e flussi sono
+  invarianti. Gli sfasatori sono una *connessione* sugli archi, e il message passing complesso con trasportatori
+  U_ij = e^{jφ_ij} è gauge-covariante; S1 è il caso ψ costante. Invarianti: le olonomie Σ_ciclo φ, una per anello
+  indipendente (|B| − |N| + 1). La differenza d'arco invariante è θ_f − θ_t − φ_ft.
+- **S3 — scala (analisi dimensionale).** Cambio di base MVA k > 0: (P, Q, Y, shunt) ↦ (P, Q, Y, shunt)/k con V_pu
+  invariato; Φ è invariante (PG, QG equivarianti). Forma locale: S = diag(V)·conj(YV) è invariante sotto V ↦ CV,
+  Y ↦ C̄⁻¹YC⁻¹, con C diagonale in (ℂ*)ᴺ. La fase di C è S2; il modulo è il cambio di base di tensione per livello, con
+  i tap come connessione ℝ₊ (τ_ft ↦ τ_ft s_f/s_t, impedenze riportate e setpoint/limiti di tensione riscalati).
+  **Invarianti fisici, non toccati da S3:** R/X, carico P|Z|/V², rapporto di charging, topologia. Lo shift
+  trasmissione → distribuzione vive in questi.
+- **S4 — orientamento dei rami (Z₂ per arco).** Invertire from/to **scambia** (S_ft, S_tf) e nega la differenza
+  angolare; i flussi AC non si negano, perché S_ft + S_tf sono le perdite serie più il charging. Per le linee i
+  parametri sono simmetrici. Per i trasformatori (τ, φ, z_s, b_c) ↦ (1/τ, −φ, τ² z_s, b_c/τ²): impedenza e shunt vanno
+  riportati attraverso il tap (senza il riporto, Y cambia di 2.2 p.u. con τ = 0.95). I decoder di arco devono essere
+  direzionali: lo stesso decoder valutato nei due versi, oppure parte antisimmetrica (trasferimento) più parte simmetrica
+  (perdite); mai antisimmetrici sui flussi AC.
 - **S5 — permutazione dei nodi.** Già garantita dalle GNN; inclusa per completezza.
-- **S6 (estensione) — invarianze di modellazione.** Fusione di rami paralleli (Y₁ + Y₂), bus-splitting a impedenza nulla, aggregazione di generatori sullo stesso bus. Non sono simmetrie di gruppo ma raffinamenti che non cambiano la fisica; la roadmap le chiama "modeling conventions".
+- **S6 (estensione) — invarianze di modellazione.** Fusione di rami paralleli (somma dei blocchi 2×2 di Y; con tap
+  diversi il risultato non è in generale un singolo ramo con tap), bus-splitting a impedenza nulla, aggregazione di
+  generatori sullo stesso bus. Non sono simmetrie di gruppo ma raffinamenti che non cambiano la fisica; la roadmap le
+  chiama "modeling conventions".
 
-**Diagnostica.** Errore di equivarianza per il modello f e la simmetria g:
+**Gruppo complessivo.** Le convenzioni standard (basi p.u. per livello, θ_ref = 0, tap al lato from, posizione degli
+sfasatori) sono gauge fixing del gruppo generato da (ℂ*)ᴺ locale, ℝ₊ globale (base MVA), Z₂^B e S_N.
 
-EE_g(f) = E_{u, g} ‖ f(g·u) − g·f(u) ‖ / ‖ f(u) ‖
+**Prop. 5 (canonicalizzazione).** Se esiste un frame γ: U → G con γ(g·u) = g·γ(u), allora f è equivariante ⇔
+f(u) = γ(u)·f̃(γ(u)⁻¹·u) con f̃ arbitraria sulla sezione Σ = {γ(u) = e}. (⇐: si sostituisce g·u e si usa
+γ(g·u) = g·γ(u); ⇒: si scrive u = γ(u)·(γ(u)⁻¹u).) Ogni simmetria del catalogo ha un frame chiuso, continuo,
+equivariante per permutazione e dipendente dai soli input:
 
-calcolabile senza etichette su qualsiasi caso, incluso quelli fuori distribuzione.
+| | frame |
+|---|---|
+| S1 | γ = θ_ref |
+| S3 | γ = s(u)/s₀, con s omogenea di grado 1 (mean\|Y\|, P95 delle iniezioni di input) |
+| S2 | gauge di Coulomb: ψ* = −L⁺Bᵀφ ⇒ φ_c = (I − BL⁺Bᵀ)φ (proiezione sullo spazio dei cicli) |
+| S4 | orientamento fissato dai parametri del dispositivo (τ ≤ 1); le linee sono già invarianti nella rappresentazione bidirezionale |
 
-**Nota sul rischio di banalizzazione.** S1 e S3 sono "eliminabili" fissando convenzioni. Il piano le tratta comunque perché: (a) dataset di reti diverse usano convenzioni diverse e il pretraining multi-rete le mescola; (b) la distribuzione lavora a scale p.u. incompatibili con la trasmissione, quindi S3 è la chiave per un backbone unico; (c) RPF mostra che la rappresentazione relativa (angoli di ramo) è più facile da apprendere anche a convenzione fissa. H4 testa esplicitamente questa obiezione.
+Conseguenze: (i) se train e test stanno sulla sezione (θ_ref = 0, base fissa, orientamento fisso, φ = 0), il vincolo di
+simmetria non restringe il modello sui dati: il guadagno è nullo per costruzione, in distribuzione e zero-shot a
+convenzioni uguali; (ii) fuori sezione M0+Canon realizza già tutta la classe equivariante: un layer equivariante può
+differire da M0+Canon solo per parametrizzazione, cioè per rappresentazione. PoC: `Canonicalize` applicato post hoc
+cambia l'RMSE in distribuzione di 2·10⁻⁷ relativo.
+
+**Prop. 6 (S2).** Il contenuto gauge-invariante di una configurazione di sfasatori sono le olonomie. Su un albero
+φ_c ≡ 0: gli sfasatori di una rete radiale sono puro gauge e non toccano P, Q, |V|. Senza sfasatori il vincolo S2 si
+riduce a S1 sui dati; con sfasatori agisce solo lungo direzioni di gauge presenti nei dati (uno sfasatore su un ponte,
+che non si installa), mentre uno sfasatore in un anello ne cambia l'olonomia.
+
+**Diagnostica.** Errore di equivarianza per il modello f, la simmetria g e il canale c:
+
+EE_{g,c}(f) = RMS_c[ f(g·u) − ρ(g)·f(u) ]
+
+nell'unità del canale (per VA la differenza è ridotta a [−π, π)), riportato relativo all'RMSE in distribuzione dello
+stesso canale, EE_{g,c}/RMSE_c: oltre 1, la rottura di simmetria domina l'errore su T_g. Una norma unica su
+[VM, VA, PG, QG] dipenderebbe dalla scelta arbitraria delle unità, e per S1 il numeratore cresce con α in un modello che
+ignora θ_ref. Calcolabile senza etichette su qualsiasi caso, inclusi quelli fuori distribuzione. È un test di
+consistenza, non di accuratezza: un modello canonicalizzato ha EE ≡ 0 qualunque sia il suo errore.
+
+**Nota sul rischio di banalizzazione (confermato).** S1–S4 sono eliminabili esattamente, e il piano lo assume invece di
+combatterlo: (a) le convenzioni miste del pretraining multi-rete si canonicalizzano per campione; (b) la scala p.u. della
+distribuzione è già allineata per rete dal normalizzatore, e per campione da M0+Canon, mentre ciò che resta sono gli
+invarianti di S3; (c) il vantaggio della rappresentazione relativa (RPF) è una questione di rappresentazione, non di
+simmetria. L'argomento di località ("le differenze d'arco sono più facili per un message passing a K hop") è falsificato
+su toy: il miglior filtro lineare a K hop non è più accurato sulle differenze d'arco (scala 2×30, K = 12: errore
+relativo 0.33 sugli angoli di nodo, 0.41 sulle differenze d'arco). Resta una domanda empirica (H1).
 
 ## 6. Cosa costruiamo
 
@@ -69,38 +175,53 @@ Backbone di riferimento: GENCO (grafo eterogeneo bus/generatori) e, come control
 
 | Variante | Simmetrie esatte | Meccanismo |
 |---|---|---|
-| M0 | S5 | Baseline real-valued, angoli di nodo rispetto allo slack, input p.u. |
-| M0+Aug | — | Augmentation casuale: α ∈ [0, 2π), bus di riferimento casuale, k ∈ [10⁻², 10²], orientamenti casuali, sfasamenti riassorbiti |
-| M1 | S1 | Output = differenze angolari sugli archi; ricostruzione θ per integrazione su albero ricoprente; KVL residuo sui cicli |
-| M2 | S1 + S2 | Feature di nodo complesse, message passing con trasportatori U_ij = e^{jφ_ij}, non-linearità modReLU/cardioid; output V e^{jθ} relativo |
-| M3 | S3 | Feature adimensionali: iniezioni normalizzate per Σ_j |Y_ij| (o per la potenza di corto circuito), ammettenze normalizzate per la loro media locale; layer con omogeneità di grado 0 |
-| M4 | S4 | Decoder di arco antisimmetrici f(h_i, h_j) = −f(h_j, h_i) sulle linee; feature direzionali solo sui trasformatori |
+| M0 | S5 (S4 sulle linee) | Baseline real-valued, angoli di nodo rispetto allo slack, normalizzatore per rete |
+| M0+Canon | S1, S3, S4 (+ S2 con Coulomb) | Frame dei soli input (Prop. 5), zero parametri: **baseline di ogni confronto** |
+| M0+Aug | — | Augmentation casuale: α ∈ [0, 2π), k ∈ [10⁻², 10²], orientamenti casuali, gauge locali casuali (sfasamenti virtuali sulle linee). **Loss valutata nel frame del campione** (predizioni de-aumentate, residuo fisico × k): altrimenti il peso della loss fisica varia di 10⁴ sul range e il baseline è handicappato (PoC: VA 3–9° contro 0.5° di M0) |
+| M1 | S1 | Output = differenze angolari invarianti θ_f − θ_t − φ_ft; θ ricostruito per proiezione di Hodge θ = L_w⁺BᵀWδ̂ + θ_ref (non per albero ricoprente, che rompe S5 e accumula errore lungo i cammini); il residuo è la violazione KVL |
+| M2 | S1 + S2 | Feature di nodo complesse, message passing con trasportatori U_ij = e^{jφ_ij}, non-linearità modReLU/cardioid; output V e^{jθ} relativo. **Controllo:** stessa rete con attivazione split Re/Im (non equivariante), per separare simmetria e algebra complessa |
+| M3 | S3 | Feature adimensionali p_i = P_i/D_i, q_i = Q_i/D_i, W_ij = \|Y_ij\|/D_i (diretta), D_i = Σ_j \|Y_ij\|. Iniettiva modulo la scala globale perché \|Y_ij\| = \|Y_ji\| dà D_j/D_i = W_ij/W_ji; una "media locale" simmetrica non è garantita iniettiva e imporrebbe invarianza a riscalature locali che non sono simmetrie. Con input adimensionali i layer di omogeneità di grado 0 sono ridondanti |
+| M4 | S4 | Decoder di arco direzionali (vedi S4); il tap come rapporto visto dal bus sorgente di ciascuna riga (τ nel verso from→to, 1/τ nel verso opposto), oppure il frame di orientamento |
 | M5 | S1–S5 | Combinazione |
 
-Tutte le varianti sono implementate come layer plug-in per il framework GridFM (PyTorch Geometric), rilasciati open source.
+Tutte le varianti sono implementate come layer plug-in per il framework GridFM (PyTorch Geometric), rilasciati open
+source. Il PoC implementa M0, M0+Canon (S1+S3+S4) e M0+Aug con entrambe le versioni della loss.
 
 ## 7. Piano sperimentale
 
 ### 7.1 Dati
-- **Trasmissione:** dataset PF/OPF generati con gridfm-datakit su IEEE 14/30/57/118/300, PEGASE 1354/2869, ACTIVSg 2000/10k (stessi casi dei rilasci GENCO per confrontabilità diretta).
-- **Distribuzione:** ENGAGE (LV/MV, reti multiple; è lo split "reti non viste" usato da Okoyomon et al., quindi confronto diretto).
-- **Test set trasformati T_g:** gli stessi casi con base MVA diversa (S3), slack/riferimento diverso (S1), rami riorientati (S4), sfasamenti ridistribuiti via gauge (S2). Servono sia per EE_g sia per verificare che i modelli equivarianti abbiano errore identico su T_g e sull'originale.
-- Un sottoinsieme con sfasatori reali (PEGASE, ACTIVSg) per testare H3.
+- **Trasmissione:** dataset PF/OPF generati con gridfm-datakit su IEEE 14/30/57/118/300, PEGASE 1354/2869, ACTIVSg
+  2000/10k. I checkpoint GENCO pubblicati coprono IEEE 14/30/57/118 e GOC 500/2000/10000.
+- **Distribuzione:** ENGAGE (LV/MV, reti multiple; è lo split "reti non viste" usato da Okoyomon et al., quindi confronto
+  diretto).
+- **Audit delle convenzioni (E0):** nelle 7 reti datakit locali θ_ref ≡ 0 e shift = 0, quindi S1 e S2 sono solo
+  sintetiche; da ripetere sui dati pubblici (E0p) prima di ogni affermazione su dati reali.
+- **Test set trasformati T_g:** riferimento angolare diverso a slack invariato (S1), base MVA diversa (S3), rami
+  riorientati, linee e trasformatori con la regola corretta (S4), sfasamenti ridistribuiti via gauge (S2). Servono per
+  EE_g e come unit test (errore identico su T_g e sull'originale per i modelli canonicalizzati).
+- Un sottoinsieme con sfasatori reali (PEGASE, ACTIVSg) per H3, se E0p li conferma.
 
 ### 7.2 Split
 1. In distribuzione.
 2. Regimi stressati (scaling di carico fuori dal range di training).
 3. Reti non viste, stessa famiglia (train su un sottoinsieme di reti di trasmissione, test sulle altre).
-4. Cross-dominio trasmissione → distribuzione (qui S3 è decisiva).
+4. Cross-dominio trasmissione → distribuzione.
 5. Few-shot: fine-tuning con 0 / 10 / 100 / 1000 campioni della rete target.
 
+Nello zero-shot il normalizzatore resta quello della sorgente, oppure si usa un frame dei soli input: rifittarlo sul
+target legge Qg e il Pg dello slack, cioè etichette (PoC, M0 seed 0: il cambio di convenzione sposta le metriche fino a
+2×, con segno variabile; M0+Canon ne è indipendente per costruzione).
+
 ### 7.3 Baseline e confronti
-M0, M0+Aug (con budget di campioni pari), DC-PF e fast-decoupled come riferimenti fisici (Okoyomon mostra che spesso battono le GNN OOD), GENCO pubblicato.
+M0+Canon come riferimento per ogni variante; M0; M0+Aug con loss nel frame del campione e budget di campioni pari; DC-PF
+e fast-decoupled come riferimenti fisici (Okoyomon mostra che spesso battono le GNN OOD); GENCO pubblicato.
 
 ### 7.4 Metriche
-- Accuratezza: MAE su V e θ (θ valutato come differenze sugli archi, per non premiare artefatti di riferimento), errore sui flussi.
-- Fisica (formato GridBench): distribuzione dei residui di power balance, tassi di violazione di tensione/termici, frazione di casi entro tolleranza ingegneristica, code (P95/P99).
-- **EE_g per ciascuna simmetria** (nuova).
+- Accuratezza: MAE su V e θ (θ valutato come θ_f − θ_t − φ_ft, invariante di gauge, per non premiare artefatti di
+  riferimento), errore sui flussi.
+- Fisica (formato GridBench): distribuzione dei residui di power balance, tassi di violazione di tensione/termici,
+  frazione di casi entro tolleranza ingegneristica, code (P95/P99).
+- **EE_{g,c}/RMSE_c per ciascuna simmetria e canale** (nuova).
 - Efficienza dati: curve di apprendimento vs numero di campioni.
 - Transfer: zero-shot e curve few-shot.
 
@@ -108,53 +229,74 @@ M0, M0+Aug (con budget di campioni pari), DC-PF e fast-decoupled come riferiment
 
 | ID | Modello | Training | Test | Verifica |
 |---|---|---|---|---|
-| R1 | M0, M0+Aug, M1–M5 | in-dist, ogni rete | in-dist + T_g | EE_g, H4 |
-| R2 | tutti | multi-rete trasmissione | reti tenute fuori | H1, H2 |
-| R3 | tutti | trasmissione | ENGAGE zero/few-shot | H1 (S3) |
-| R4 | M0, M2 | sottoinsieme con/senza sfasatori | idem | H3 |
+| R1 | M0, M0+Canon, M0+Aug, M1–M5 | in-dist, ogni rete | in-dist + T_g | EE_g; Prop. 5 (M0+Canon ≡ M0 in-dist) |
+| R2 | tutti | multi-rete trasmissione | reti tenute fuori | H1, H4 |
+| R3 | tutti | trasmissione | ENGAGE zero/few-shot | H1, H4 (rappresentante S3) |
+| R4 | M2, M2-split, rete complessa + Coulomb | sottoinsieme con/senza sfasatori | idem | H3 |
 | R5 | tutti | curve 10²–10⁵ campioni | in-dist e OOD | H1 (efficienza) |
-| R6 | tutti | analisi trasversale | — | correlazione EE_g ↔ errore OOD (H2) |
+| R6 | modelli non equivarianti | analisi trasversale | — | H2, dentro classe |
+| R7 | M0, M0+Aug fase | in-dist | in-dist | meccanismo del guadagno dell'augmentation di fase (PoC: VA 0.09° contro 0.51°, non spiegato dalla simmetria perché canon ≡ M0 in-dist): compare anche su θ_f − θ_t o solo sugli angoli di nodo (instradamento del riferimento)? |
 
 3 seed per configurazione; report con intervalli.
 
 ## 8. Componente teorica
-- Proposizioni 1–4: invarianza/equivarianza di Φ sotto S1–S4, con caratterizzazione di quali scelte di rappresentazione le rompono (angoli di nodo con slack fisso rompono S1 rispetto al riferimento; input p.u. senza normalizzazione rompono S3; feature di arco direzionali rompono S4).
-- Lemma: M2 è esattamente covariante sotto S2 per costruzione (dimostrazione standard di gauge-covarianza del message passing con trasportatori).
-- Collegamento ai risultati noti sul beneficio di generalizzazione dei modelli equivarianti (da verificare: Elesedy & Zaidi 2021) per motivare H1.
+- **Proposizioni 1–4:** invarianza/equivarianza di Φ sotto S1–S4, con S4 nella forma corretta (scambio dei flussi, regola
+  dei trasformatori), e caratterizzazione delle scelte di rappresentazione che le rompono: angoli di nodo con slack fisso
+  (S1), input p.u. senza frame (S3), il tap come feature del lato from (S4 sui trasformatori; M0 addestrato, seed 0:
+  EE/RMSE 0.02 sui trasformatori contro 3·10⁻⁵ sulle linee, e 290 su S1 a α = π, dove l'input θ_ref non ha mai variato).
+- **Prop. 5 (canonicalizzazione)** e **Prop. 6 (olonomie; S2 su alberi e senza sfasatori)**, §5.
+- **Lemma:** M2 è esattamente covariante sotto S2 per costruzione (dimostrazione standard di gauge-covarianza del message
+  passing con trasportatori).
+- **Elesedy & Zaidi 2021 non motiva H1:** il teorema (da verificare) assume G compatto e una distribuzione degli input
+  G-invariante; qui la distribuzione è concentrata su una sezione e ℝ₊ (S3) non è compatto.
 
 ## 9. Rischi e mitigazioni
 
 | Rischio | Mitigazione |
 |---|---|
-| Obiezione "basta fissare le convenzioni" | H4 come esperimento esplicito; enfasi su multi-rete e cross-dominio |
+| Obiezione "basta canonicalizzare" | Confermata dalla Prop. 5 per la parte di simmetria: il piano la assume (M0+Canon baseline); il contributo è il catalogo, i frame, EE come test di pipeline e i confronti di rappresentazione |
 | Instabilità del training complesso | modReLU, normalizzazione complessa, inizializzazione unitaria; confronto con M1 (real-valued, S1 esatta) come fallback |
-| Tutti i dataset a 100 MVA rendono S3 sintetica | Il test reale è trasmissione → distribuzione (ENGAGE); i T_g sintetici servono solo per EE_g |
-| Tap e sfasatori complicano S4 | Trattamento esplicito: antisimmetria solo sulle linee, feature direzionali sui trasformatori |
-| Guadagni piccoli in distribuzione | È atteso e coerente con H1: il paper è sul transfer, non sull'interpolazione |
+| Tre simmetrie su quattro solo sintetiche nei dati datakit (θ_ref ≡ 0, shift = 0, S4 esatta sulle linee) | Evidenza reale solo da convenzioni diverse (ENGAGE, dati pubblici: E0p); i T_g sintetici servono per EE_g |
+| Baseline M0+Aug handicappato dalla loss non covariante | Loss nel frame del campione (§6) |
+| Frame che legge etichette (normalizzatore rifittato sul target) | Zero-shot con normalizzatore della sorgente o frame dei soli input (§7.2) |
+| Tap e sfasatori complicano S4 | Regola corretta (1/τ, −φ, τ²z_s, b_c/τ²); nella rappresentazione GridFM (Y_self, Y_mutual per riga) lo scambio delle righe la realizza, e restano da trasformare solo tap e limiti angolari |
+| Guadagni piccoli in distribuzione | Attesi nulli per la parte di simmetria (Prop. 5): il paper è sul transfer e sulla rappresentazione |
 
 ## 10. Deliverable, fasi, calcolo
 
-**Deliverable:** (1) catalogo con dimostrazioni; (2) libreria di layer equivarianti compatibile con il framework GridFM; (3) tool per EE_g e i test set trasformati; (4) paper; (5) eventuale PR al framework GridFM.
+**Deliverable:** (1) catalogo con dimostrazioni e frame; (2) libreria di frame e layer compatibile con il framework
+GridFM; (3) tool per EE_g e i test set trasformati; (4) paper; (5) eventuale PR al framework GridFM (frame dei soli input
+nel normalizzatore, tap indipendente dall'orientamento).
 
 **Fasi (circa 5–6 mesi):**
-- F0 (4 settimane): formalizzazione; calcolo di EE_g sui checkpoint GENCO pubblici (risultato preliminare a costo quasi nullo).
-- F1 (6–8 settimane): M1–M4 su reti piccole/medie, R1 e R5.
+- F0 (4 settimane): formalizzazione; EE_g sui checkpoint GENCO pubblici (per S1 il risultato è prevedibile, input mai
+  variato: vale come test di pipeline, non come scoperta).
+- F1 (6–8 settimane): M0+Canon, M1–M4 su reti piccole/medie, R1, R5, R7.
 - F2 (8 settimane): scala e transfer, R2–R4, R6.
 - F3 (4 settimane): teoria, scrittura, rilascio codice.
 
-**Calcolo (stima grossolana):** GNN su reti ≤ 10k bus; 1–2 GPU classe A100 per 6–8 settimane complessive coprono la griglia di run con 3 seed. Il costo dominante è M2 (feature complesse ≈ 2× memoria).
+**Calcolo (stima grossolana):** GNN su reti ≤ 10k bus; 1–2 GPU classe A100 per 6–8 settimane complessive coprono la
+griglia di run con 3 seed. Il costo dominante è M2 (feature complesse ≈ 2× memoria).
 
 ## 11. Paper e venue
 
 Due possibili tagli, non esclusivi:
-- **Paper 1 (diagnostico):** "Le simmetrie del power flow AC e come i surrogati neurali le rompono" — catalogo, EE_g, correlazione con il transfer. Venue: PSCC 2027 / IEEE TPWRS / EPSR.
-- **Paper 2 (architetturale):** GNN complessa gauge-equivariante per reti elettriche, con la teoria di gauge U(1) come cornice unificante. Venue: NeurIPS/ICLR (track geometric DL o AI for science), oppure TPWRS se il taglio è più applicativo.
+- **Paper 1 (diagnostico):** "Le convenzioni del power flow come gauge fixing: catalogo, canonicalizzazione esatta e un
+  test di consistenza per surrogati neurali" — catalogo unificato con i frame, EE come unit test di pipeline, correzioni
+  pratiche (tap indipendente dall'orientamento, frame dei soli input, zero-shot senza etichette del target). Venue:
+  PSCC 2027 / IEEE TPWRS / EPSR.
+- **Paper 2 (rappresentazione):** subordinato a R2–R4; sostenibile solo se una scelta di rappresentazione (M1, M2 contro
+  M2-split, M3) batte M0+Canon oltre la variabilità tra seed. La simmetria di gauge da sola non lo giustifica
+  (Prop. 5–6). Venue: NeurIPS/ICLR (track geometric DL o AI for science), oppure TPWRS se il taglio è più applicativo.
 
-**Contributo al progetto GridFM:** layer riusabili nel backbone; EE_g come check di introspezione in §4.6; augmentation esatte per il pretraining multi-rete in §4.4.
+**Contributo al progetto GridFM:** frame e layer riusabili nel backbone; EE_g come check di introspezione in §4.6;
+canonicalizzazione per il pretraining multi-rete in §4.4.
 
 ## 12. Collegamento con il Piano B
 
-La loss Sobolev del Piano B va scritta in forma covariante: se f è equivariante, il suo Jacobiano soddisfa J_f(g·u) = ρ_out(g) J_f(u) ρ_in(g)⁻¹. Un modello equivariante ha meno gradi di libertà spuri da correggere con le sensitività; i due piani condividono backbone, dati e split.
+La loss Sobolev del Piano B va scritta in forma covariante: se f è equivariante, il suo Jacobiano soddisfa
+J_f(g·u) = ρ_out(g) J_f(u) ρ_in(g)⁻¹, con ρ la parte lineare dell'azione (per S1, affine su θ, il Jacobiano è
+invariante). Con M0+Canon basta scrivere la loss nel frame canonico. I due piani condividono backbone, dati e split.
 
 ## 13. Riferimenti (da verificare prima dell'uso)
 
@@ -165,11 +307,14 @@ La loss Sobolev del Piano B va scritta in forma covariante: se f è equivariante
 - "Gauge-Equivariant Graph Networks via Self-Interference Cancellation", arXiv:2511.16062, 2025.
 - T. Cohen, M. Weiler, B. Kicanaoglu, M. Welling, "Gauge Equivariant Convolutional Networks and the Icosahedral CNN", ICML 2019 (arXiv:1902.04615).
 - M. Favoni, A. Ipp, D. Müller, D. Schuh, "Lattice gauge equivariant convolutional neural networks", arXiv:2012.12901, 2021.
+- S.-O. Kaba, A. K. Mondal, Y. Zhang, Y. Bengio, S. Ravanbakhsh, "Equivariance with Learned Canonicalization Functions", ICML 2023.
+- O. Puny et al., "Frame Averaging for Invariant and Equivariant Network Design", ICLR 2022.
+- N. Dym, H. Lawrence, J. W. Siegel, "Equivariant Frames and the Impossibility of Continuous Canonicalization", ICML 2024.
 - A. Puech et al., "GENCO — A Unified Neural Solver Embedded in a Development Framework for Steady-State Grid Analysis", arXiv:2608.09921, 2026; gridfm-datakit, arXiv:2512.14658, 2025.
 - A. Yaniv, C. Goebel, "Benchmarking graph neural networks for power flow prediction in distribution systems", IEEE PowerTech 2025.
 - A. Varbella et al., "PowerGraph: a power grid benchmark dataset for graph neural networks", NeurIPS 2024.
 - B. Donon et al., "Neural networks for power flow: Graph neural solver", EPSR 189, 2020.
 - N. Lin et al., "PowerFlowNet", IJEPES 160, 2024.
 - S. Dhople et al., "Reexamining the Distributed Slack Bus", IEEE TPWRS 35(6), 2020.
-- B. Elesedy, S. Zaidi, "Provably strict generalisation benefit for equivariant models", ICML 2021 (da verificare).
+- B. Elesedy, S. Zaidi, "Provably strict generalisation benefit for equivariant models", ICML 2021 (da verificare; ipotesi: G compatto, distribuzione degli input G-invariante).
 - GridFM Roadmap, "Shared Foundations, Better Outcomes", §4.2, §4.4, §4.6.

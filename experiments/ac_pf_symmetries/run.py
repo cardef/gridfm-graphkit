@@ -1,6 +1,10 @@
 """Train M0 / M0+Aug / M-canon PF surrogates on one grid, audit S1/S3/S4 equivariance, test zero-shot.
 
 python -m experiments.ac_pf_symmetries.run --variant m0 aug canon --seeds 0 1 2
+python -m experiments.ac_pf_symmetries.run --eval-only --variant m0 canon  # saved models -> result_eval.json
+
+Zero-shot keeps the training grid's normalizer by default (`--zero-shot-norm source`): refitting it on the
+target reads the target's Qg and slack Pg, which are PF outputs.
 """
 
 import argparse
@@ -40,11 +44,13 @@ from gridfm_graphkit.training.callbacks import SaveBestModelStateDict
 from .symmetries import (
     E,
     Canonicalize,
+    CovariantAugment,
     RandomSymmetryAugment,
     act,
     act_output,
     equivariance_error,
     pred_masks,
+    wrap_angle,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -52,6 +58,12 @@ OUT = Path(__file__).resolve().parent / "results"
 BASE_CONFIG = ROOT / "examples/config/HGNS_PF_datakit_case14.yaml"
 PHASES = [0.1, 0.5, 1.0, math.pi]
 SCALES = [0.01, 0.1, 0.5, 2.0, 10.0, 100.0]
+
+
+def default_device():
+    if torch.cuda.is_available():
+        return "cuda"
+    return "mps" if torch.backends.mps.is_available() else "cpu"
 
 
 def make_args(a):
@@ -65,17 +77,21 @@ def make_args(a):
     return NestedNamespace(**cfg)
 
 
-def build_grid(case, args, seed, augment=None):
-    """Random 80/10/10 scenario split; normalizer fitted on the train split (framework convention)."""
+def build_grid(case, args, seed, augment=None, normalizer=None):
+    """Random 80/10/10 scenario split. Normalizer fitted on the train split (framework convention,
+    which also reads Qg and slack Pg), unless an already fitted one is given (fixed-convention zero-shot)."""
     root = ROOT / "data" / case
-    normalizer = load_normalizer(args)
+    fit = normalizer is None
+    if fit:
+        normalizer = load_normalizer(args)
     base = get_task_transforms(args)
     ds = HeteroGridDatasetDisk(str(root), normalizer, transform=base)
     ids = list(range(len(ds)))
     random.Random(seed).shuffle(ids)
     n = len(ids) // 10
     test, val, train = ids[:n], ids[n : 2 * n], ids[2 * n :]
-    normalizer.fit(str(root / "raw"), train)
+    if fit:
+        normalizer.fit(str(root / "raw"), train)
     train_ds = ds
     if augment is not None:
         train_ds = HeteroGridDatasetDisk(
@@ -110,6 +126,8 @@ def accuracy(model, loader, device, sym=None, param=None):
         out = model(data)
         for q, (col, m) in pred_masks(data).items():
             diff = (out["bus"][m, col] - target[m, col]).cpu().double()
+            if q == "VA":
+                diff = wrap_angle(diff)
             acc[q] += torch.stack([(diff**2).sum(), m.sum().cpu().double()])
         ev = _clamp_known_to_ground_truth(out["bus"], target, data, gen_to_bus, n)
         ei, attr = data[E].edge_index, data[E].edge_attr
@@ -128,7 +146,13 @@ def accuracy(model, loader, device, sym=None, param=None):
 
 def audit(model, loader, device):
     rows = []
-    for sym, params in (("phase", PHASES), ("scale", SCALES), ("flip", [0.5])):
+    probes = (
+        ("phase", PHASES),
+        ("scale", SCALES),
+        ("flip", [0.5]),
+        ("fliptrafo", [1.0]),
+    )
+    for sym, params in probes:
         for p in params:
             rows.append(
                 {
@@ -156,26 +180,36 @@ def run_one(variant, seed, a, device):
 
     task = get_task(args, [grid["normalizer"]])
     if variant == "canon":
-        task.model = Canonicalize(task.model).fit_scale_ref(train_loader)
+        c = Canonicalize(task.model)
+        task.model = (
+            c if a.eval_only else c.fit_scale_ref(train_loader)
+        )  # scale_ref is in the state dict
+    elif variant == "augcov":
+        task.model = CovariantAugment(task.model)
 
     run_dir = OUT / a.case / f"{variant}_seed{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
-    trainer = L.Trainer(
-        max_epochs=a.epochs,
-        accelerator=device,
-        devices=1,
-        logger=CSVLogger(save_dir=str(run_dir), name="logs"),
-        callbacks=[
-            EarlyStopping("Validation loss", patience=a.patience, mode="min"),
-            SaveBestModelStateDict("Validation loss"),
-        ],
-        enable_checkpointing=False,
-        enable_progress_bar=False,
-        log_every_n_steps=10,
-    )
-    t0 = time.perf_counter()
-    trainer.fit(task, train_loader, val_loader)
-    train_time = time.perf_counter() - t0
+    if a.eval_only:
+        f = run_dir / "result.json"
+        prev = json.load(open(f)) if f.exists() else {}
+        epochs_run, train_time = prev.get("epochs_run"), prev.get("train_time_s")
+    else:
+        trainer = L.Trainer(
+            max_epochs=a.epochs,
+            accelerator=device,
+            devices=1,
+            logger=CSVLogger(save_dir=str(run_dir), name="logs"),
+            callbacks=[
+                EarlyStopping("Validation loss", patience=a.patience, mode="min"),
+                SaveBestModelStateDict("Validation loss"),
+            ],
+            enable_checkpointing=False,
+            enable_progress_bar=False,
+            log_every_n_steps=10,
+        )
+        t0 = time.perf_counter()
+        trainer.fit(task, train_loader, val_loader)
+        epochs_run, train_time = trainer.current_epoch, time.perf_counter() - t0
     task.load_state_dict(
         torch.load(run_dir / "model" / "best_model_state_dict.pt", map_location="cpu"),
     )
@@ -186,23 +220,26 @@ def run_one(variant, seed, a, device):
         "variant": variant,
         "seed": seed,
         "case": a.case,
-        "epochs_run": trainer.current_epoch,
+        "epochs_run": epochs_run,
         "train_time_s": train_time,
         "baseMVA": float(grid["normalizer"].baseMVA),
         "scale_ref": float(model.scale_ref) if variant == "canon" else None,
+        "zero_shot_norm": a.zero_shot_norm,
         "in_dist": accuracy(model, test_loader, device),
         "audit": audit(model, test_loader, device),
         "zero_shot": {},
     }
+    source_norm = grid["normalizer"] if a.zero_shot_norm == "source" else None
     for case in a.zero_shot:
-        g = build_grid(case, args, seed)
+        g = build_grid(case, args, seed, normalizer=source_norm)
         loader = eval_loader(g["test"], a.batch_size)
         result["zero_shot"][case] = {
             "baseMVA": float(g["normalizer"].baseMVA),
             "acc": accuracy(model, loader, device),
             "audit": audit(model, loader, device),
         }
-    with open(run_dir / "result.json", "w") as f:
+    name = "result_eval.json" if a.eval_only else "result.json"
+    with open(run_dir / name, "w") as f:
         json.dump(result, f, indent=2)
     print(
         json.dumps(
@@ -218,24 +255,39 @@ def main():
         "--variant",
         nargs="+",
         default=["m0", "aug", "augmild", "canon"],
-        choices=["m0", "aug", "augmild", "augphase", "augscale", "canon"],
+        choices=["m0", "aug", "augmild", "augphase", "augscale", "augcov", "canon"],
     )
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     p.add_argument("--case", default="case14_ieee")
     p.add_argument("--zero-shot", nargs="*", default=["case30_ieee", "case57_ieee"])
+    p.add_argument(
+        "--zero-shot-norm",
+        choices=["source", "refit"],
+        default="source",
+        help="source: keep the training grid's normalizer; refit: fit on the target (reads its Qg/slack Pg labels)",
+    )
+    p.add_argument(
+        "--eval-only",
+        action="store_true",
+        help="re-evaluate saved models with the current code into result_eval.json (result.json untouched)",
+    )
     p.add_argument("--epochs", type=int, default=150)
     p.add_argument("--patience", type=int, default=40)
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--layers", type=int, default=12)
     p.add_argument("--hidden", type=int, default=48)
-    p.add_argument(
-        "--device",
-        default="mps" if torch.backends.mps.is_available() else "cpu",
-    )
+    p.add_argument("--device", default=default_device())
     a = p.parse_args()
     for seed in a.seeds:
         for variant in a.variant:
-            if (OUT / a.case / f"{variant}_seed{seed}" / "result.json").exists():
+            run_dir = OUT / a.case / f"{variant}_seed{seed}"
+            if (
+                a.eval_only
+                and not (run_dir / "model" / "best_model_state_dict.pt").exists()
+            ):
+                print(f"skip {variant} seed {seed}: no saved model")
+                continue
+            if not a.eval_only and (run_dir / "result.json").exists():
                 print(f"skip {variant} seed {seed}: result.json exists")
                 continue
             run_one(variant, seed, a, a.device)
