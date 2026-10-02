@@ -1,0 +1,24 @@
+{
+  "config": "data/genco_ckpt/case30_ieee/small/seed0/case30_ieee_small_seed0.yaml",
+  "model_path": "data/genco_ckpt/case30_ieee/small/seed0/best_model_state_dict.pt",
+  "source": "case30_ieee",
+  "network": "case14_ieee",
+  "target_stats": "refit",
+  "official_split": true,
+  "canon": true,
+  "scale_ref": 13.671934127807617,
+  "baseMVA": 84.71760417399844,
+  "n_test": 2000,
+  "in_dist": {
+    "VM": 0.0562554713880941,
+    "VA": 0.09705533122172666,
+    "PG": 0.6566266088136191,
+    "QG": 1.0410648330240628,
+    "VA_cm": 0.09260136596413011,
+    "VA_diff": 0.029064141074092987,
+    "dVA": 0.02931836993950189,
+    "PBE": 0.20733906827654158
+  },
+  "audit": null,
+  "scale_probes": []
+}

@@ -1,0 +1,21 @@
+{
+  "case30_ieee": {
+    "scenarios": 217778,
+    "ref_per_graph_unique": [
+      1
+    ],
+    "ref_va_deg": [
+      0.0,
+      0.0
+    ],
+    "shift_nonzero_branches": 0,
+    "shift_abs_max_deg": 0.0,
+    "tap_ne_1_branches": 850897,
+    "tap_gt_1_branches": 0,
+    "branches_out_of_service": 192816,
+    "scenarios_with_branch_outage": 192816,
+    "gens_out_of_service": 24962,
+    "mean_abs_Yff": 8.133578653876016,
+    "mean_abs_Yff_cv_across_scenarios": 0.03169483386428372
+  }
+}

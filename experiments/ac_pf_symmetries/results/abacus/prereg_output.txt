@@ -1,0 +1,16 @@
+runs per arm (all seeds): {'m0': 5, 'aug': 3, 'augmild': 3, 'augphase': 3, 'augscale': 3, 'augcov': 3, 'augcovphase': 3, 'augcovscale': 3, 'augnophys': 3, 'm0nophys': 3, 'm0warm': 3, 'canon': 5, 'canonmix': 3, 'canonp95': 3, 'm1canon': 5}
+
+P1 FAIL: ranges overlap per channel {'VM': True, 'VA': False, 'PG': True, 'QG': True, 'PBE': True}
+   extension, all seeds of canon/m0 (exploratory): {'VM': True, 'VA': True, 'PG': True, 'QG': True, 'PBE': True}
+P2 FAIL: VA deg augcov [4.227, 7.508] mean 5.74, augmild mean 0.164, aug mean 6
+P3 FAIL: VA deg augnophys mean 4.97 [3.692, 5.974], m0nophys mean 0.182 [0.1369, 0.2279]
+P4 gain PASS (VA deg augphase [0.08493, 0.1449] vs m0 [0.1834, 0.4414]); reference routing FAIL: augphase/m0 ratios VA 0.42, VA_cm 0.42, VA_diff 0.48, dVA 0.41
+P5 FAIL: zero-shot VM canon vs m0 case30_ieee [0.01156, 0.01839] vs [0.01384, 0.02863]; case57_ieee [0.01442, 0.02266] vs [0.0209, 0.05631]
+P6 as registered FAIL, frame-consistent PASS: canon worst EE/RMSE 1.5e-02 (frame-consistent 1.5e-04); m0 EE_S1(pi)/RMSE min 387, flip max 9.0e-05, fliptrafo ['0.031', '0.075', '0.11']
+P7 FAIL: case30_ieee span 0.00759 vs 2 sd 0.019 (means a=0/0.5/1: 0.0161, 0.0165, 0.0237); case57_ieee span 0.00505 vs 2 sd 0.0099 (means a=0/0.5/1: 0.0187, 0.0238, 0.0198)
+P9 FAIL: in-dist VA deg augcovscale [0.9017, 1.082] mean 1 (predicted > 1), augcovphase [0.2997, 0.6091] mean 0.472 (predicted < 1)
+P11 FAIL: in-dist VA deg m1canon [0.3836, 0.9452] vs canon [0.1514, 0.3273] (predicted overlap)
+P12 PASS: zero-shot m1canon vs canon case30 VA [1.121, 2.771] vs [0.781, 2.696]; case30 VM [0.01106, 0.01966] vs [0.01156, 0.01839]; case57 VA [6.872, 10.32] vs [8.42, 11.72]; case57 VM [0.01948, 0.0364] vs [0.01442, 0.04382]
+P13 PASS: m1canon worst frame-consistent EE/RMSE 5.8e-05
+   R7 split, means: m1canon offset/rest/branch 0.704/0.207/0.193, canon 0.209/0.054/0.059
+P10 (exploratory): canon < m0 in 4/5 seeds; VA deg per seed s0 canon 0.151 m0 0.183 m0warm 0.191, s1 canon 0.174 m0 0.441 m0warm 0.200, s2 canon 0.183 m0 0.201 m0warm 0.140, s3 canon 0.245 m0 0.322, s4 canon 0.327 m0 0.303

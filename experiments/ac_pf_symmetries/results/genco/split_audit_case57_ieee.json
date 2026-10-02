@@ -1,0 +1,62 @@
+{
+  "scenarios": 216960,
+  "distinct": 191891,
+  "duplicate_groups_spanning_load_scenarios": 0,
+  "largest_group": 5,
+  "splits": {
+    "base_seed0": {
+      "test": 21694,
+      "test_distinct": 19161,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "base_seed1": {
+      "test": 21686,
+      "test_distinct": 19202,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "base_seed42": {
+      "test": 21670,
+      "test_distinct": 19160,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "small_seed0": {
+      "test": 21694,
+      "test_distinct": 19161,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "small_seed1": {
+      "test": 21686,
+      "test_distinct": 19202,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "small_seed42": {
+      "test": 21670,
+      "test_distinct": 19160,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "tiny_seed0": {
+      "test": 21694,
+      "test_distinct": 19161,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "tiny_seed1": {
+      "test": 21686,
+      "test_distinct": 19202,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    },
+    "tiny_seed42": {
+      "test": 21670,
+      "test_distinct": 19160,
+      "test_with_train_twin": 0,
+      "load_scenarios_shared_train_test": 0
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "config": "data/genco_ckpt/case14_ieee/tiny/seed42/case14_ieee_tiny_seed42.yaml",
+  "model_path": "data/genco_ckpt/case14_ieee/tiny/seed42/best_model_state_dict.pt",
+  "source": "case14_ieee",
+  "network": "case118_ieee",
+  "target_stats": "refit",
+  "official_split": true,
+  "canon": false,
+  "scale_ref": null,
+  "baseMVA": 138.41560330898668,
+  "n_test": 2000,
+  "in_dist": {
+    "VM": 0.24993132497126322,
+    "VA": 0.2324792439306322,
+    "PG": 8.164102862922615,
+    "QG": 18.720666376401454,
+    "VA_cm": 0.19707190080623946,
+    "VA_diff": 0.12332584803323404,
+    "dVA": 0.07898594162031043,
+    "PBE": 2.822482814982786
+  },
+  "audit": null,
+  "scale_probes": []
+}
