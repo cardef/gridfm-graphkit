@@ -245,17 +245,20 @@ class Canonicalize(nn.Module):
     transformer with tap <= 1 (outputs are bus quantities, invariant: nothing to
     undo). Phase: subtract each graph's reference angle from the inputs, add it back
     to the predicted angles. Scale: divide power/admittance inputs by a degree-1
-    homogeneous statistic of the inputs (mean |Yff| per graph, relative to a
-    constant fitted on the training set so in-distribution scale is unchanged),
-    multiply predicted powers back.
+    homogeneous statistic of the inputs, s_a = P95(|input injections|)^a *
+    mean(|Yff|)^(1-a) per graph (Piano A H4: every a in [0, 1] is an exact frame;
+    a = 0 is the PoC's), relative to a constant fitted on the training set so the
+    in-distribution scale is unchanged on average; multiply predicted powers back.
     """
 
-    def __init__(self, model, phase=True, scale=True, orient=True):
+    def __init__(self, model, phase=True, scale=True, orient=True, scale_a=0.0):
         super().__init__()
+        assert 0.0 <= scale_a <= 1.0
         self.model = model
         self.phase = phase
         self.scale = scale
         self.orient = orient
+        self.scale_a = scale_a
         self.register_buffer("scale_ref", torch.ones(()))
 
     @property
@@ -263,12 +266,38 @@ class Canonicalize(nn.Module):
         return self.model.layer_residuals
 
     @staticmethod
-    def graph_scale(data):
+    def admittance_scale(data):
         eb = edge_batch(data)
         y = data[E].edge_attr[:, [YFF_TT_R, YFF_TT_I]].norm(dim=1)
         g = num_graphs(data)
         total = torch.zeros(g, device=y.device).index_add_(0, eb, y)
         return total / torch.bincount(eb, minlength=g).clamp(min=1)
+
+    @staticmethod
+    def injection_scale(data):
+        """P95 of the nonzero |Pd|, |Qd| (every bus) and |Pg| (generators whose Pg is an input), per graph.
+
+        The framework's normalizer takes the same quantile but also reads Qg and the slack Pg, which are PF
+        outputs; this one reads inputs only.
+        """
+        bus = data["bus"].x[:, [PD_H, QD_H]].abs()
+        known = ~data.mask_dict["gen"][:, PG_H]
+        v = torch.cat([bus.reshape(-1), data["gen"].x[known, PG_H].abs()])
+        b = torch.cat(
+            [node_batch(data, "bus").repeat_interleave(2), node_batch(data, "gen")[known]],
+        )
+        v, b = v[v > 0], b[v > 0]
+        return torch.stack(
+            [torch.quantile(v[b == i], 0.95) for i in range(num_graphs(data))],
+        )
+
+    def graph_scale(self, data):
+        a = self.scale_a
+        if a == 0.0:
+            return self.admittance_scale(data)
+        if a == 1.0:
+            return self.injection_scale(data)
+        return self.injection_scale(data) ** a * self.admittance_scale(data) ** (1 - a)
 
     @staticmethod
     def ref_angle(data):

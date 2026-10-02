@@ -23,17 +23,48 @@ LABEL = {
     "augphase": "M0+Aug phase only (α ±0.5)",
     "augscale": "M0+Aug scale only (k 0.5-2)",
     "augcov": "M0+Aug wide, loss in the sample frame (k 0.1-10, α ±π)",
+    "augcovphase": "M0+Aug phase wide (α ±π), loss in the sample frame",
+    "augcovscale": "M0+Aug scale wide (k 0.1-10), loss in the sample frame",
+    "augnophys": "M0+Aug wide, physics loss weight 0",
+    "m0nophys": "M0, physics loss weight 0",
+    "m0warm": "M0 on canon's RNG path (one loader pass first)",
     "canon": "M-canon (canonicalized S1+S3+S4)",
+    "canonmix": "M-canon, S3 frame P95^0.5 · mean|Y|^0.5",
+    "canonp95": "M-canon, S3 frame P95 of input injections",
+    "m1canon": "M1 + canon: branch differences, Hodge reconstruction",
 }
 DEG = 180.0 / math.pi
 
 
-def load(case, result_file):
+def load(root, result_file):
     runs = defaultdict(list)
-    for f in sorted((OUT / case).glob(f"*_seed*/{result_file}")):
+    for f in sorted(root.glob(f"*_seed*/{result_file}")):
         r = json.load(open(f))
         runs[r["variant"]].append(r)
-    return runs
+    return dict(sorted(runs.items(), key=lambda kv: list(LABEL).index(kv[0])))
+
+
+def table_angles(runs):
+    """R7: is a VA gain a common offset (reference routing) or also in the branch angles?"""
+    cols = {
+        "VA": "VA (deg)",
+        "VA_cm": "VA common offset (deg)",
+        "VA_diff": "VA minus offset (deg)",
+        "dVA": "θ_f − θ_t (deg)",
+    }
+    lines = [
+        "### In-distribution angle error split (R7): VA² = offset² + rest²",
+        "",
+        "| model | " + " | ".join(cols.values()) + " |",
+        "|---" * (len(cols) + 1) + "|",
+    ]
+    for v, rs in runs.items():
+        cells = [
+            ms([r["in_dist"][q] * DEG if q in r["in_dist"] else None for r in rs])
+            for q in cols
+        ]
+        lines.append(f"| {LABEL[v]} | " + " | ".join(cells) + " |")
+    return "\n".join(lines) + "\n"
 
 
 def ms(values):
@@ -81,9 +112,16 @@ def audit_rows(r, sym, param):
 
 
 def ee_ratio(r, sym, param, q):
-    """EE_g in units of the model's own in-distribution RMSE on the same channel (Piano A §5)."""
+    """EE_g in units of the model's own in-distribution RMSE on the same channel (Piano A §5).
+
+    Under S3 the PG/QG difference is measured in the transformed frame (powers / k); x k brings it back to the
+    frame of the RMSE (without it, an exact model at float precision reads 1e-2 at k = 0.01).
+    """
     a = audit_rows(r, sym, param)
-    return None if a is None else a["ee"][q]["rmse"] / r["in_dist"][q]
+    if a is None:
+        return None
+    frame = param if sym == "scale" and q in ("PG", "QG") else 1.0
+    return a["ee"][q]["rmse"] * frame / r["in_dist"][q]
 
 
 def table_ee(runs, probes):
@@ -101,7 +139,7 @@ def table_ee(runs, probes):
     return "\n".join(lines) + "\n"
 
 
-def figure(runs, case, suffix=""):
+def figure(runs, case, root, suffix=""):
     fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
     for v, rs in runs.items():
         phases = sorted({a["param"] for a in rs[0]["audit"] if a["sym"] == "phase"})
@@ -155,7 +193,7 @@ def figure(runs, case, suffix=""):
         f"{case}: exact symmetries vs. augmentation vs. baseline (mean ± std over seeds)",
     )
     fig.tight_layout()
-    path = OUT / case / "figures"
+    path = root / "figures"
     path.mkdir(parents=True, exist_ok=True)
     fig.savefig(path / f"ee_audit{suffix}.png", dpi=200)
     fig.savefig(path / f"ee_audit{suffix}.pdf")
@@ -170,10 +208,17 @@ def main():
         default="result.json",
         help="result_eval.json: run.py --eval-only output",
     )
+    p.add_argument(
+        "--results-dir",
+        type=Path,
+        default=OUT,
+        help="as in run.py (results/abacus for the cluster replicate)",
+    )
     a = p.parse_args()
-    runs = load(a.case, a.result_file)
+    root = a.results_dir / a.case
+    runs = load(root, a.result_file)
     if not runs:
-        raise SystemExit(f"no {a.result_file} under {OUT / a.case}")
+        raise SystemExit(f"no {a.result_file} under {root}")
     suffix = (
         ""
         if a.result_file == "result.json"
@@ -190,6 +235,7 @@ def main():
             "In-distribution test RMSE",
         ),
     )
+    md.append(table_angles(runs))
     md.append(
         table_ee(
             runs,
@@ -219,9 +265,9 @@ def main():
                 f"Zero-shot test RMSE on {case} (never seen in training; normalizer: {norms})",
             ),
         )
-    fig = figure(runs, a.case, suffix)
-    md.append(f"![EE audit]({fig.relative_to(OUT / a.case)})\n")
-    out = OUT / a.case / f"REPORT{suffix}.md"
+    fig = figure(runs, a.case, root, suffix)
+    md.append(f"![EE audit]({fig.relative_to(root)})\n")
+    out = root / f"REPORT{suffix}.md"
     out.write_text("\n".join(md))
     print(out.read_text())
     print(f"figure: {fig}")

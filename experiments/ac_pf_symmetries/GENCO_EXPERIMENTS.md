@@ -97,6 +97,49 @@ E1/E2 are run as raw and `--canon` on identical scenarios; `audit()` already rec
   feasible on MPS beyond ~10k scenarios.
 - ~~S4 on transformers~~ (done 2026-09-30, `fliptrafo`); S2 needs a grid with phase shifters (none in 7/7 datakit grids).
 
+### Amendment 2026-10-01 (cluster run, written before any audit result)
+
+Execution moved to the abacus cluster (`cluster/*.sbatch`): full public datasets on GPFS, so every checkpoint is
+audited on its *own* official test split. `subset_data.py official` copies, per grid, every seed's full test split
+plus the first 5000 train / 500 val ids (renumbered; `splits/<size>_seed<s>.json`), so G1 runs on the complete
+official test split and E1/E2 on its first 2000 graphs. All 36 released IEEE checkpoints (14/30/57/118 ×
+base/small/tiny × seeds 0/1/42), not 12 + 6: H2 lists size as a covariate. GOC500 and the Tier B partial-data
+shortcut are dropped.
+
+Corrections found while preparing it:
+- §4 G1 bullet is itself wrong: `pf_task.test_step` inverse-transforms batch and outputs *before* the residuals,
+  so the released "PBE Mean" is in MVA. G1 compares `accuracy()["PBE"] × baseMVA` with it (pass within 2%).
+- E5's kill criterion (|ρ| < 0.3 rejects H2) predates the 2026-09-30 revision of H2, which predicts ρ ≈ 0 when
+  the shift has no orbit component. Replaced by the three checks below.
+- The target refit is *exactly* an S3 action with k = baseMVA_refit / baseMVA_source on every model-visible input
+  (Pd, Qd, Qg, Gs, Bs, gen Pg, Y; all other rescaled columns, `vn_kv` included, are masked in PF). Hence for every
+  channel |RMSE_refit − RMSE_source| ≤ EE_S3(k) on the same graphs (triangle inequality), with no modelling
+  assumption. It is a consistency check of the pipeline, not a test of H2.
+
+E5 analysis, fixed now:
+- E5a (must hold): |ΔRMSE_c| ≤ EE_S3,c(k_pair) · (1 + 1e-4) for all 108 (checkpoint, target) pairs and channels.
+  A violation means the action, the normalizer or the scoring disagree: stop and debug.
+- E5b (must hold): canon zero-shot is identical under source and refit normalizers (relative difference < 1e-4).
+- E5c (H2, exploratory): Spearman ρ between EE_S3,VM(k = 10) on the target and the zero-shot VM RMSE (source
+  normalizer), over the 108 pairs, raw and with ranks residualized on (source grid, target grid, size). Revised H2
+  predicts |ρ_partial| < 0.3: the cross-grid shift is mostly physical (on the section), not along the S3 orbit.
+- E2 on N-1 data: if E0p finds CV(mean |Yff|) > 1e-3, post-hoc `Canonicalize` is not the identity in distribution
+  and its in-dist cost is reported, not assumed zero; its EE ≤ 1e-5 prediction is unaffected.
+
+### Amendment 2026-10-01 22:00, after seeing the 27 pairs with a case14 source (not the other 81)
+
+E5c on those 27 pairs: ρ = 0.99, residualized 0.99, against the predicted |ρ_partial| < 0.3. The assumption behind
+the prediction ("the cross-grid shift is mostly on the section") does not hold for these checkpoints: post-hoc
+canon lowers their zero-shot VM error in every case14-sourced row, i.e. the target sits far along the S3 orbit of
+a model whose EE_S3 is 40-2000x its in-dist RMSE. Two readings remain: the orbit mechanism of the revised H2
+(EE measures the part of the zero-shot error that the S3 frame removes) or generic instability (a model that is
+sensitive to any input change is also wrong on any shifted input). E5d separates them on the **81 held-out pairs**
+(sources case30/57/118), with EE = EE_S3,VM(k = 10) on the target and errors = zero-shot VM RMSE:
+- E5d-1: ρ_partial(EE, raw error) > 0.5 (E5c replicates on new sources);
+- E5d-2 (orbit): ρ_partial(EE, raw − canon error) > 0.5;
+- E5d-3 (orbit vs instability): ρ_partial(EE, canon error) < ρ_partial(EE, raw error). Instability predicts the
+  two are close (canon's input is just another shifted input); the orbit mechanism predicts the canon one is lower.
+
 ## 6. Consequences for the text of Piano A
 
 Applied in the plan revision of 2026-09-30, together with the conceptual corrections (canonicalization, Prop. 5-6).

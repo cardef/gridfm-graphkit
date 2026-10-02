@@ -22,10 +22,11 @@ import yaml
 from torch.utils.data import Subset
 
 from gridfm_graphkit.datasets.hetero_powergrid_datamodule import LitGridHeteroDataModule
+from gridfm_graphkit.io.config_version import upgrade_config
 from gridfm_graphkit.io.param_handler import NestedNamespace, get_task
 
 from .run import accuracy, audit, default_device, eval_loader
-from .symmetries import Canonicalize
+from .symmetries import Canonicalize, equivariance_error
 
 
 def main():
@@ -65,6 +66,13 @@ def main():
         default="source",
         help="source: keep the source grid's normalizer (fixed convention); refit: framework default, fitted on the target",
     )
+    p.add_argument(
+        "--scale-probe",
+        type=float,
+        nargs="*",
+        default=[],
+        help="extra S3 probes k; k = baseMVA_refit / baseMVA_source is exactly the refit normalizer's action",
+    )
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--device", default=default_device())
     p.add_argument("--out", required=True)
@@ -74,7 +82,7 @@ def main():
             "--canon with --target needs the source grid's --scale-ref (fitting it on the target would cancel the point)",
         )
 
-    cfg = yaml.safe_load(open(a.config))
+    cfg = upgrade_config(yaml.safe_load(open(a.config)))  # released YAMLs are v0
     cfg["data"]["workers"] = 0
     assert len(cfg["data"]["networks"]) == 1, "one network per audit"
     src = cfg["data"]["networks"][0]
@@ -153,6 +161,14 @@ def main():
         "in_dist": accuracy(model, loader, a.device),
         "audit": None if a.no_audit else audit(model, loader, a.device),
     }
+    result["scale_probes"] = [
+        {
+            "param": k,
+            "ee": equivariance_error(model, loader, "scale", k, a.device),
+            "acc": accuracy(model, loader, a.device, "scale", k),
+        }
+        for k in a.scale_probe
+    ]
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(result, indent=2))
     print(

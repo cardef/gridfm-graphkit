@@ -9,6 +9,7 @@ import os
 import pytest
 import torch
 import yaml
+from torch import nn
 from torch_geometric.loader import DataLoader
 
 from gridfm_graphkit.datasets.globals import (
@@ -39,6 +40,8 @@ from gridfm_graphkit.tasks.pf_task import (
     _clamp_known_to_ground_truth,
 )
 
+from experiments.ac_pf_symmetries.hodge import BranchAngleHead, reconstruct_angles
+from experiments.ac_pf_symmetries.run import angle_error_split
 from experiments.ac_pf_symmetries.symmetries import (
     Canonicalize,
     CovariantAugment,
@@ -188,9 +191,21 @@ def test_bare_model_breaks_phase_scale_and_trafo_flip_but_not_line_flip(loader, 
     assert equivariance_error(model, loader, "fliptrafo", 1.0)["VM"]["rel"] > 1e-3
 
 
-def test_canonical_model_is_exactly_equivariant(loader, args):
+@pytest.mark.parametrize("scale_a", [0.0, 0.5, 1.0])
+def test_scale_frame_is_degree_one_homogeneous_and_invariant(loader, scale_a):
+    """s_a(g u) = s_a(u) / k under S3, and s_a is unchanged by S1 and S4 (Piano A H4: every a is a frame)."""
+    c = Canonicalize(nn.Identity(), scale_a=scale_a)
+    data = next(iter(loader))
+    s = c.graph_scale(data)
+    assert torch.allclose(c.graph_scale(act(data, "scale", 4.0)), s / 4.0, rtol=1e-5)
+    for sym, param in (("phase", 0.7), ("flip", 0.5), ("fliptrafo", 1.0)):
+        assert torch.allclose(c.graph_scale(act(data, sym, param)), s, rtol=1e-6), sym
+
+
+@pytest.mark.parametrize("scale_a", [0.0, 0.5, 1.0])
+def test_canonical_model_is_exactly_equivariant(loader, args, scale_a):
     torch.manual_seed(0)
-    model = Canonicalize(load_model(args)).fit_scale_ref(loader).eval()
+    model = Canonicalize(load_model(args), scale_a=scale_a).fit_scale_ref(loader).eval()
     probes = (
         ("phase", math.pi / 2),
         ("scale", 10.0),
@@ -200,6 +215,31 @@ def test_canonical_model_is_exactly_equivariant(loader, args):
     for sym, param in probes:
         ee = equivariance_error(model, loader, sym, param)
         assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_angle_error_split_isolates_a_common_offset(loader):
+    """R7 metric: offsetting every predicted angle of a graph by c_g leaves VA_diff at 0, puts the whole
+    error in VA_cm, and moves theta_f - theta_t only on the branches incident to REF (clamped), by c_g."""
+    data = next(iter(loader))
+    n = data["bus"].x.size(0)
+    target, gen_to_bus, _ = _build_bus_target(data, n)
+    c = torch.linspace(0.1, 0.3, data.num_graphs)
+    va = 1  # VA_OUT
+    pred = data.mask_dict["bus"][:, VA_H]
+    out = {"bus": target.clone()}
+    out["bus"][pred, va] += c[data["bus"].batch][pred]
+    ev = _clamp_known_to_ground_truth(out["bus"], target, data, gen_to_bus, n)
+    s = {k: math.sqrt(float(sq) / float(m)) for k, (sq, m) in angle_error_split(out, ev, target, data).items()}
+    per_bus = c[data["bus"].batch][pred]
+    assert s["VA_diff"] < 1e-6
+    assert math.isclose(s["VA_cm"], float(per_bus.pow(2).mean().sqrt()), rel_tol=1e-5)
+    _, fwd, _ = line_pairs(data)
+    f, t = data[E_KEY].edge_index[:, fwd]
+    ref = data.mask_dict["REF"]
+    touches = ref[f] ^ ref[t]
+    assert touches.any() and not touches.all()
+    expected = (c[data["bus"].batch[f]] * touches).pow(2).mean().sqrt()
+    assert math.isclose(s["dVA"], float(expected), rel_tol=1e-5)
 
 
 @torch.no_grad()
@@ -221,3 +261,35 @@ def test_covariant_augment_evaluates_the_loss_in_the_sample_frame(loader, args):
     )
     wrapped.eval()
     assert torch.allclose(wrapped(data)["bus"], model(data)["bus"])
+
+
+def test_reconstruction_recovers_the_labelled_angles(loader):
+    """M1: the labelled branch differences theta_f - theta_t, projected back with REF anchored, are the labels."""
+    data = next(iter(loader))
+    target, _, _ = _build_bus_target(data, data["bus"].x.size(0))
+    _, fwd, _ = line_pairs(data)
+    f, t = data[E_KEY].edge_index[:, fwd]
+    va = target[:, 1]
+    w = data[E_KEY].edge_attr[fwd][:, [YFT_TF_R, YFT_TF_I]].norm(dim=1)
+    ref, batch = data.mask_dict["REF"], data["bus"].batch
+    theta_ref = torch.zeros(data.num_graphs)
+    theta_ref[batch[ref]] = va[ref]
+    theta = reconstruct_angles(va[f] - va[t], f, t, w, ref, theta_ref, batch, data.num_graphs)
+    assert torch.allclose(theta, va, atol=1e-5)
+
+
+def test_m1_inside_canonicalize_is_exactly_equivariant(loader, args):
+    torch.manual_seed(0)
+    model = Canonicalize(BranchAngleHead(load_model(args))).fit_scale_ref(loader).eval()
+    probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
+    for sym, param in probes:
+        ee = equivariance_error(model, loader, sym, param)
+        assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_m1_head_alone_is_invariant_to_line_orientation(loader, args):
+    """delta is antisymmetric in the two directed rows, so re-declaring lines leaves the reconstruction unchanged."""
+    torch.manual_seed(0)
+    model = BranchAngleHead(load_model(args)).eval()
+    ee = equivariance_error(model, loader, "flip", 0.5)
+    assert all(v["rel"] < 1e-4 for v in ee.values()), ee

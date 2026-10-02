@@ -117,3 +117,38 @@ available as `--zero-shot-norm refit`. Every `result.json` written before
   both zero-shot protocols. M0 moves by up to 2x between them (seed 0).
 * The `aug*` arms apply the augmentation per sample, `augcov` per batch.
 * Training is on case14 only; the zero-shot grids are small IEEE cases.
+
+## Cluster runs (abacus, from 2026-10-01)
+
+Everything below runs through `cluster/*.sbatch` in the shared env (`source SYSTEMICO/env/activate.sh
+<checkout>`); logs go to `cluster/logs/` (gitignored) and every job prints the sha1 of the code it ran, with a
+content-addressed copy in `SymmetricalFM/provenance/` (`cluster/provenance.sh`).
+
+**Case14 replicate** (`results/abacus/`: `PREREGISTRATION.md` before each batch, `VERDICTS.md`,
+`prereg_output.txt` from `prereg.py`, tables in `case14_ieee/REPORT.md`). Training data: 2048 random scenarios
+(seed 0) of HierarchicalFM's 10k-scenario datakit sets for case14/30/57 (`subset_data.py random`,
+`cluster/build_train_data.sbatch`); the Mac PoC data and weights are not on the cluster, so this is a replicate on
+independent draws. Arms added to the PoC's:
+
+* `augcov` (E6b), `augcovphase` / `augcovscale` (its two axes), `augnophys` and the control `m0nophys` (E6a,
+  physics loss weight 0);
+* `canonmix` / `canonp95`: `Canonicalize(scale_a=a)` with the S3 frame s_a = P95(|input injections|)^a ·
+  mean(|Yff|)^(1−a), a = 0.5 / 1 (Piano A H4; `canon` is a = 0);
+* `m0warm`: M0 with canon's RNG path (one shuffled train pass before training);
+* `m1canon` (F1, Piano A M1, `hodge.py`): `Canonicalize(BranchAngleHead(GNS))`, bus angles reconstructed by
+  REF-anchored weighted least squares (weights |Y_ft|) from antisymmetric per-branch predictions on the backbone's
+  final embeddings, PG/QG recomputed by the model's physics decoder; same frames as `canon`, so a difference
+  between the two is one of representation.
+
+`accuracy()` also returns the R7 split of the angle error: `VA_cm` (per-graph common offset of the predicted
+angles relative to the clamped REF angle), `VA_diff` (the rest; VA² = VA_cm² + VA_diff²) and `dVA` (θ_f − θ_t,
+each branch once). `report.ee_ratio` expresses the PG/QG error of an S3 probe in the original frame (× k).
+
+**Released GENCO checkpoints** (F0, `GENCO_EXPERIMENTS.md` with the 2026-10-01 amendments):
+`cluster/fetch_genco.sh` (login node: 36 IEEE checkpoints with their MLflow eval artifacts, full public datasets),
+`cluster/build_genco_data.sbatch` (E0p on the full data, then `subset_data.py official`: every seed's full test
+split plus the first 5000 train / 500 val ids, renumbered, with `splits/<size>_seed<s>.json`),
+`cluster/genco_audit.sbatch` (per checkpoint, CPU: G1-G3 on the full official test split, refit gate, E1 raw and E2
+post-hoc canon on 2000 test graphs, E5 on the three other grids with source / refit normalizer, the exact S3 probe
+of the refit, canon under both), `cluster/split_audit.sbatch` (`split_audit.py`: exact duplicates and train/test
+twins per released split). `genco_report.py` writes `results/genco/REPORT.md`.

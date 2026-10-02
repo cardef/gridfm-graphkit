@@ -28,9 +28,10 @@ def read(raw, table, max_partitions):
 
 
 def audit_case(raw, max_partitions):
-    bus, br = (
+    bus, br, gen = (
         read(raw, "bus_data", max_partitions),
         read(raw, "branch_data", max_partitions),
+        read(raw, "gen_data", max_partitions),
     )
     ref = bus[bus.REF == 1]
     on = br[br.br_status == 1]
@@ -43,7 +44,10 @@ def audit_case(raw, max_partitions):
         "shift_nonzero_branches": int((on["shift"].abs() > 1e-12).sum()),
         "shift_abs_max_deg": float(on["shift"].abs().max()),
         "tap_ne_1_branches": int(((on.tap - 1).abs() > 1e-12).sum()),
+        "tap_gt_1_branches": int((on.tap > 1 + 1e-12).sum()),
         "branches_out_of_service": int((br.br_status != 1).sum()),
+        "scenarios_with_branch_outage": int(br[br.br_status != 1].scenario.nunique()),
+        "gens_out_of_service": int((gen.in_service != 1).sum()),
         "mean_abs_Yff": float(y.mean()),
         "mean_abs_Yff_cv_across_scenarios": float(y.std() / y.mean()),
     }
@@ -59,6 +63,7 @@ def main():
     root = Path(a.root)
     cases = a.cases or sorted(d.name for d in root.iterdir() if (d / "raw").is_dir())
     res = {c: audit_case(root / c / "raw", a.max_partitions) for c in cases}
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(res, indent=2))
     print(json.dumps(res, indent=2))
 

@@ -41,6 +41,7 @@ from gridfm_graphkit.tasks.pf_task import (
 )
 from gridfm_graphkit.training.callbacks import SaveBestModelStateDict
 
+from .hodge import BranchAngleHead
 from .symmetries import (
     E,
     Canonicalize,
@@ -49,6 +50,9 @@ from .symmetries import (
     act,
     act_output,
     equivariance_error,
+    line_pairs,
+    node_batch,
+    num_graphs,
     pred_masks,
     wrap_angle,
 )
@@ -58,6 +62,21 @@ OUT = Path(__file__).resolve().parent / "results"
 BASE_CONFIG = ROOT / "examples/config/HGNS_PF_datakit_case14.yaml"
 PHASES = [0.1, 0.5, 1.0, math.pi]
 SCALES = [0.01, 0.1, 0.5, 2.0, 10.0, 100.0]
+# E6a: the same arm with the physics loss weight set to 0 (the masked MSE weight is unchanged)
+NOPHYS = {"m0nophys": "m0", "augnophys": "aug"}
+# M0 that iterates the train loader once before training, as Canonicalize.fit_scale_ref does: same RNG path
+# as `canon` (init, then one shuffled pass), so a canon/m0 gap that is only data order shows up as m0warm ~ canon
+WARM = {"m0warm": "m0"}
+# H4: canonicalized arms by exponent a of the S3 frame P95(injections)^a * mean|Yff|^(1-a)
+CANON_A = {"canon": 0.0, "canonmix": 0.5, "canonp95": 1.0}
+# M1 (Piano A §6, hodge.py) inside the same canonicalization as `canon`: only the angle output differs
+M1 = {"m1canon"}
+# loss in the sample frame (CovariantAugment): (alpha_max, k_range); the last two split augcov by axis
+COVARIANT = {
+    "augcov": (math.pi, (0.1, 10.0)),
+    "augcovphase": (math.pi, (1.0, 1.0)),
+    "augcovscale": (0.0, (0.1, 10.0)),
+}
 
 
 def default_device():
@@ -66,7 +85,7 @@ def default_device():
     return "mps" if torch.backends.mps.is_available() else "cpu"
 
 
-def make_args(a):
+def make_args(a, physics_weight=None):
     cfg = yaml.safe_load(open(BASE_CONFIG))
     cfg["data"]["workers"] = 0
     cfg["training"]["epochs"] = a.epochs
@@ -74,6 +93,9 @@ def make_args(a):
     cfg["callbacks"]["patience"] = a.patience
     cfg["model"]["num_layers"] = a.layers
     cfg["model"]["hidden_size"] = a.hidden
+    if physics_weight is not None:
+        assert cfg["training"]["losses"][0] == "LayeredWeightedPhysics"
+        cfg["training"]["loss_weights"][0] = physics_weight
     return NestedNamespace(**cfg)
 
 
@@ -111,10 +133,40 @@ def eval_loader(subset, batch_size):
     return DataLoader(subset, batch_size=batch_size, shuffle=False)
 
 
+def angle_error_split(out, ev, target, data):
+    """R7: the node VA error split into a per-graph common offset and the rest, and the branch-angle error.
+
+    Over the predicted buses of each graph, VA_cm is the error's mean (an offset of all of them relative to
+    the REF angle, which only the branches incident to REF see) and VA_diff the deviation from it, so
+    VA^2 = VA_cm^2 + VA_diff^2 exactly. dVA is the error of theta_f - theta_t, each branch once, with the
+    REF angle clamped to its known value. Returns {key: (sum of squares, count)}.
+    """
+    col, m = pred_masks(data)["VA"]
+    e = wrap_angle(out["bus"][m, col] - target[m, col]).double()
+    b = node_batch(data, "bus")[m]
+    g = num_graphs(data)
+    cnt = torch.zeros(g, dtype=e.dtype, device=e.device).index_add_(0, b, torch.ones_like(e))
+    mean = torch.zeros_like(cnt).index_add_(0, b, e) / cnt.clamp(min=1)
+    _, fwd, _ = line_pairs(data)
+    f, t = data[E].edge_index[:, fwd]
+    de = wrap_angle(
+        (ev[f, col] - ev[t, col]) - (target[f, col] - target[t, col]),
+    ).double()
+    return {
+        "VA_cm": ((cnt * mean**2).sum(), cnt.sum()),
+        "VA_diff": (((e - mean[b]) ** 2).sum(), cnt.sum()),
+        "dVA": ((de**2).sum(), torch.tensor(float(de.numel()))),
+    }
+
+
 @torch.no_grad()
 def accuracy(model, loader, device, sym=None, param=None):
-    """RMSE per predicted quantity and mean power-balance residual, optionally on the transformed set T_g."""
-    acc = {q: torch.zeros(2, dtype=torch.float64) for q in ("VM", "VA", "PG", "QG")}
+    """RMSE per predicted quantity and mean power-balance residual, optionally on the transformed set T_g.
+
+    Also the R7 angle-error split (`angle_error_split`): VA_cm, VA_diff, dVA, in rad.
+    """
+    keys = ("VM", "VA", "PG", "QG", "VA_cm", "VA_diff", "dVA")
+    acc = {q: torch.zeros(2, dtype=torch.float64) for q in keys}
     pbe = torch.zeros(2, dtype=torch.float64)
     for data in loader:
         data = data.to(device)
@@ -130,6 +182,8 @@ def accuracy(model, loader, device, sym=None, param=None):
                 diff = wrap_angle(diff)
             acc[q] += torch.stack([(diff**2).sum(), m.sum().cpu().double()])
         ev = _clamp_known_to_ground_truth(out["bus"], target, data, gen_to_bus, n)
+        for q, (sq, c) in angle_error_split(out, ev, target, data).items():
+            acc[q] += torch.stack([sq.cpu().double(), c.cpu().double()])
         ei, attr = data[E].edge_index, data[E].edge_attr
         pft, qft = ComputeBranchFlow()(ev, ei, attr)
         p_in, q_in = ComputeNodeInjection()(pft, qft, ei, n)
@@ -167,27 +221,33 @@ def audit(model, loader, device):
 
 def run_one(variant, seed, a, device):
     L.seed_everything(seed, workers=True)
-    args = make_args(a)
+    arm = {**NOPHYS, **WARM}.get(variant, variant)
+    args = make_args(a, physics_weight=0.0 if variant in NOPHYS else None)
     augment = {
         "aug": RandomSymmetryAugment(),
         "augmild": RandomSymmetryAugment(alpha_max=0.5, k_range=(0.5, 2.0)),
         "augphase": RandomSymmetryAugment(alpha_max=0.5, k_range=(1.0, 1.0)),
         "augscale": RandomSymmetryAugment(alpha_max=0.0, k_range=(0.5, 2.0)),
-    }.get(variant)
+    }.get(arm)
     grid = build_grid(a.case, args, seed, augment)
     train_loader = DataLoader(grid["train"], batch_size=a.batch_size, shuffle=True)
     val_loader = eval_loader(grid["val"], a.batch_size)
 
     task = get_task(args, [grid["normalizer"]])
-    if variant == "canon":
-        c = Canonicalize(task.model)
+    if arm in CANON_A or arm in M1:
+        inner = BranchAngleHead(task.model) if arm in M1 else task.model
+        c = Canonicalize(inner, scale_a=CANON_A.get(arm, 0.0))
         task.model = (
             c if a.eval_only else c.fit_scale_ref(train_loader)
         )  # scale_ref is in the state dict
-    elif variant == "augcov":
-        task.model = CovariantAugment(task.model)
+    elif arm in COVARIANT:
+        alpha_max, k_range = COVARIANT[arm]
+        task.model = CovariantAugment(task.model, alpha_max=alpha_max, k_range=k_range)
+    if variant in WARM and not a.eval_only:
+        for _ in train_loader:
+            pass
 
-    run_dir = OUT / a.case / f"{variant}_seed{seed}"
+    run_dir = a.results_dir / a.case / f"{variant}_seed{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
     if a.eval_only:
         f = run_dir / "result.json"
@@ -223,7 +283,10 @@ def run_one(variant, seed, a, device):
         "epochs_run": epochs_run,
         "train_time_s": train_time,
         "baseMVA": float(grid["normalizer"].baseMVA),
-        "scale_ref": float(model.scale_ref) if variant == "canon" else None,
+        "scale_ref": float(model.scale_ref) if arm in CANON_A or arm in M1 else None,
+        "scale_a": CANON_A.get(arm, 0.0 if arm in M1 else None),
+        "loss_weights": list(args.training.loss_weights),
+        "device_name": torch.cuda.get_device_name() if device == "cuda" else device,
         "zero_shot_norm": a.zero_shot_norm,
         "in_dist": accuracy(model, test_loader, device),
         "audit": audit(model, test_loader, device),
@@ -255,7 +318,13 @@ def main():
         "--variant",
         nargs="+",
         default=["m0", "aug", "augmild", "canon"],
-        choices=["m0", "aug", "augmild", "augphase", "augscale", "augcov", "canon"],
+        choices=["m0", "aug", "augmild", "augphase", "augscale", *COVARIANT, *CANON_A, *M1, *NOPHYS, *WARM],
+    )
+    p.add_argument(
+        "--results-dir",
+        type=Path,
+        default=OUT,
+        help="root of <case>/<variant>_seed<s>/ (results/abacus for the cluster replicate)",
     )
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     p.add_argument("--case", default="case14_ieee")
@@ -280,7 +349,7 @@ def main():
     a = p.parse_args()
     for seed in a.seeds:
         for variant in a.variant:
-            run_dir = OUT / a.case / f"{variant}_seed{seed}"
+            run_dir = a.results_dir / a.case / f"{variant}_seed{seed}"
             if (
                 a.eval_only
                 and not (run_dir / "model" / "best_model_state_dict.pt").exists()
