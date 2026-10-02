@@ -32,6 +32,7 @@ LABEL = {
     "canonmix": "M-canon, S3 frame P95^0.5 · mean|Y|^0.5",
     "canonp95": "M-canon, S3 frame P95 of input injections",
     "m1canon": "M1 + canon: branch differences, Hodge reconstruction",
+    "m1fullcanon": "M1 + canon, reconstruction in every layer",
 }
 DEG = 180.0 / math.pi
 

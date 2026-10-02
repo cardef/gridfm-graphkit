@@ -98,3 +98,79 @@ class BranchAngleHead(nn.Module):
         m.layer_residuals[max(m.layer_residuals)] = torch.stack([rp, rq], -1).norm(dim=-1).mean()
         out = {"bus": bus, "gen": out["gen"]}
         return (out, emb) if return_embeddings else out
+
+
+class _AngleDecoder(nn.Module):
+    """Stand-in for GNS's shared `mlp_bus`: VM from the original head, VA reconstructed from the branch
+    differences of the same layer's embeddings. Needs the batch's graph context, set by `BranchAngleLayers`."""
+
+    def __init__(self, mlp_bus, edge_mlp):
+        super().__init__()
+        self.mlp_bus = mlp_bus
+        self.edge_mlp = edge_mlp
+        self.ctx = None
+
+    def forward(self, h):
+        c = self.ctx
+        vm = self.mlp_bus(h)[:, 0]
+        x = self.edge_mlp(torch.cat([h[c["ei"][0]], h[c["ei"][1]], c["ea"]], 1)).squeeze(-1)
+        delta = (x - x[c["partner"]])[c["fwd"]]
+        theta = reconstruct_angles(
+            delta,
+            c["f"],
+            c["t"],
+            c["w"],
+            c["ref"],
+            c["theta_ref"],
+            c["batch"],
+            c["n_graphs"],
+        )
+        return torch.stack([vm, theta], 1)
+
+
+class BranchAngleLayers(nn.Module):
+    """M1 in every layer: GNS decodes its state in each of its layers with `mlp_bus`, then computes flows,
+    residuals and the physics feedback from it; replacing `mlp_bus` by `_AngleDecoder` makes all of them use the
+    reconstructed angles, so the per-layer physics correction acts on the branch representation (the confound of
+    `BranchAngleHead`). Same edge head and S1/S4 properties as `BranchAngleHead`."""
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+        d, h = model.hidden_dim * model.heads, model.hidden_dim
+        edge_mlp = nn.Sequential(
+            nn.Linear(2 * d + model.edge_dim, h),
+            nn.LayerNorm(h),
+            nn.LeakyReLU(),
+            nn.Linear(h, 1),
+        )
+        model.mlp_bus = _AngleDecoder(model.mlp_bus, edge_mlp)
+
+    @property
+    def layer_residuals(self):
+        return self.model.layer_residuals
+
+    def forward(self, data, return_embeddings=False):
+        ei, ea = data[E].edge_index, data[E].edge_attr
+        partner, fwd, _ = line_pairs(data)
+        ref, batch, n_graphs = data.mask_dict["REF"], node_batch(data, "bus"), num_graphs(data)
+        theta_ref = ea.new_zeros(n_graphs)
+        theta_ref[batch[ref]] = data["bus"].x[ref, VA_H]
+        dec = self.model.mlp_bus
+        dec.ctx = {
+            "ei": ei,
+            "ea": ea,
+            "partner": partner,
+            "fwd": fwd,
+            "f": ei[0, fwd],
+            "t": ei[1, fwd],
+            "w": ea[fwd][:, [YFT_TF_R, YFT_TF_I]].norm(dim=1),
+            "ref": ref,
+            "theta_ref": theta_ref,
+            "batch": batch,
+            "n_graphs": n_graphs,
+        }
+        try:
+            return self.model(data, return_embeddings=return_embeddings)
+        finally:
+            dec.ctx = None

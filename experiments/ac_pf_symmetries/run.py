@@ -41,7 +41,7 @@ from gridfm_graphkit.tasks.pf_task import (
 )
 from gridfm_graphkit.training.callbacks import SaveBestModelStateDict
 
-from .hodge import BranchAngleHead
+from .hodge import BranchAngleHead, BranchAngleLayers
 from .symmetries import (
     E,
     Canonicalize,
@@ -69,8 +69,9 @@ NOPHYS = {"m0nophys": "m0", "augnophys": "aug"}
 WARM = {"m0warm": "m0"}
 # H4: canonicalized arms by exponent a of the S3 frame P95(injections)^a * mean|Yff|^(1-a)
 CANON_A = {"canon": 0.0, "canonmix": 0.5, "canonp95": 1.0}
-# M1 (Piano A §6, hodge.py) inside the same canonicalization as `canon`: only the angle output differs
-M1 = {"m1canon"}
+# M1 (Piano A §6, hodge.py) inside the same canonicalization as `canon`: only the angle output differs;
+# m1canon swaps the final head only, m1fullcanon reconstructs the angles in every layer
+M1 = {"m1canon": BranchAngleHead, "m1fullcanon": BranchAngleLayers}
 # loss in the sample frame (CovariantAugment): (alpha_max, k_range); the last two split augcov by axis
 COVARIANT = {
     "augcov": (math.pi, (0.1, 10.0)),
@@ -235,7 +236,7 @@ def run_one(variant, seed, a, device):
 
     task = get_task(args, [grid["normalizer"]])
     if arm in CANON_A or arm in M1:
-        inner = BranchAngleHead(task.model) if arm in M1 else task.model
+        inner = M1[arm](task.model) if arm in M1 else task.model
         c = Canonicalize(inner, scale_a=CANON_A.get(arm, 0.0))
         task.model = (
             c if a.eval_only else c.fit_scale_ref(train_loader)

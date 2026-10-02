@@ -40,7 +40,11 @@ from gridfm_graphkit.tasks.pf_task import (
     _clamp_known_to_ground_truth,
 )
 
-from experiments.ac_pf_symmetries.hodge import BranchAngleHead, reconstruct_angles
+from experiments.ac_pf_symmetries.hodge import (
+    BranchAngleHead,
+    BranchAngleLayers,
+    reconstruct_angles,
+)
 from experiments.ac_pf_symmetries.run import angle_error_split
 from experiments.ac_pf_symmetries.symmetries import (
     Canonicalize,
@@ -293,3 +297,12 @@ def test_m1_head_alone_is_invariant_to_line_orientation(loader, args):
     model = BranchAngleHead(load_model(args)).eval()
     ee = equivariance_error(model, loader, "flip", 0.5)
     assert all(v["rel"] < 1e-4 for v in ee.values()), ee
+
+
+def test_m1_in_every_layer_inside_canonicalize_is_exactly_equivariant(loader, args):
+    torch.manual_seed(0)
+    model = Canonicalize(BranchAngleLayers(load_model(args))).fit_scale_ref(loader).eval()
+    probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
+    for sym, param in probes:
+        ee = equivariance_error(model, loader, sym, param)
+        assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)

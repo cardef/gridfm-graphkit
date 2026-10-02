@@ -1,6 +1,6 @@
 # AC-PF symmetry audit — trained on case14_ieee
 
-Seeds per model: { M0 (baseline): 5, M0+Aug wide (k 0.1-10, α ±π): 3, M0+Aug mild (k 0.5-2, α ±0.5): 3, M0+Aug phase only (α ±0.5): 3, M0+Aug scale only (k 0.5-2): 3, M0+Aug wide, loss in the sample frame (k 0.1-10, α ±π): 3, M0+Aug phase wide (α ±π), loss in the sample frame: 3, M0+Aug scale wide (k 0.1-10), loss in the sample frame: 3, M0+Aug wide, physics loss weight 0: 3, M0, physics loss weight 0: 3, M0 on canon's RNG path (one loader pass first): 3, M-canon (canonicalized S1+S3+S4): 5, M-canon, S3 frame P95^0.5 · mean|Y|^0.5: 3, M-canon, S3 frame P95 of input injections: 3, M1 + canon: branch differences, Hodge reconstruction: 5 }
+Seeds per model: { M0 (baseline): 5, M0+Aug wide (k 0.1-10, α ±π): 3, M0+Aug mild (k 0.5-2, α ±0.5): 3, M0+Aug phase only (α ±0.5): 3, M0+Aug scale only (k 0.5-2): 3, M0+Aug wide, loss in the sample frame (k 0.1-10, α ±π): 3, M0+Aug phase wide (α ±π), loss in the sample frame: 3, M0+Aug scale wide (k 0.1-10), loss in the sample frame: 3, M0+Aug wide, physics loss weight 0: 3, M0, physics loss weight 0: 3, M0 on canon's RNG path (one loader pass first): 3, M-canon (canonicalized S1+S3+S4): 5, M-canon, S3 frame P95^0.5 · mean|Y|^0.5: 3, M-canon, S3 frame P95 of input injections: 3, M1 + canon: branch differences, Hodge reconstruction: 5, M1 + canon, reconstruction in every layer: 4 }
 
 ### In-distribution test RMSE
 
@@ -21,6 +21,7 @@ Seeds per model: { M0 (baseline): 5, M0+Aug wide (k 0.1-10, α ±π): 3, M0+Aug 
 | M-canon, S3 frame P95^0.5 · mean|Y|^0.5 | 0.0035 ± 0.0016 | 0.422 ± 0.14 | 3.56 ± 0.76 | 13.1 ± 7 | 0.241 ± 0.033 | 150 ± 0 |
 | M-canon, S3 frame P95 of input injections | 0.00312 ± 0.00089 | 0.356 ± 0.067 | 2.67 ± 0.57 | 11.9 ± 3.7 | 0.195 ± 0.02 | 150 ± 0 |
 | M1 + canon: branch differences, Hodge reconstruction | 0.00384 ± 0.0015 | 0.734 ± 0.19 | 6.94 ± 1.5 | 14 ± 6.3 | 0.505 ± 0.091 | 150 ± 0 |
+| M1 + canon, reconstruction in every layer | 0.00103 ± 0.00015 | 0.168 ± 0.06 | 1.94 ± 0.73 | 2.64 ± 0.41 | 0.161 ± 0.027 | 150 ± 0 |
 
 ### In-distribution angle error split (R7): VA² = offset² + rest²
 
@@ -41,6 +42,7 @@ Seeds per model: { M0 (baseline): 5, M0+Aug wide (k 0.1-10, α ±π): 3, M0+Aug 
 | M-canon, S3 frame P95^0.5 · mean|Y|^0.5 | 0.422 ± 0.14 | 0.412 ± 0.14 | 0.0922 ± 0.017 | 0.114 ± 0.038 |
 | M-canon, S3 frame P95 of input injections | 0.356 ± 0.067 | 0.348 ± 0.067 | 0.0718 ± 0.017 | 0.0967 ± 0.017 |
 | M1 + canon: branch differences, Hodge reconstruction | 0.734 ± 0.19 | 0.704 ± 0.19 | 0.207 ± 0.047 | 0.193 ± 0.049 |
+| M1 + canon, reconstruction in every layer | 0.168 ± 0.06 | 0.159 ± 0.056 | 0.0539 ± 0.019 | 0.0468 ± 0.014 |
 
 ### Equivariance error EE_g / in-distribution RMSE, same channel (> 1: symmetry breaking dominates)
 
@@ -61,6 +63,7 @@ Seeds per model: { M0 (baseline): 5, M0+Aug wide (k 0.1-10, α ±π): 3, M0+Aug 
 | M-canon, S3 frame P95^0.5 · mean|Y|^0.5 | 1.91e-05 ± 6.3e-06 | 1.21e-05 ± 3.8e-06 | 4.7e-05 ± 2.9e-05 | 4.75e-05 ± 3e-05 | 4.61e-05 ± 2.9e-05 | 1.68e-05 ± 7.3e-06 | 4.49e-05 ± 2.9e-05 |
 | M-canon, S3 frame P95 of input injections | 1.93e-05 ± 4.1e-06 | 1.27e-05 ± 4e-06 | 4.5e-05 ± 1.7e-05 | 4.46e-05 ± 1.6e-05 | 4.44e-05 ± 1.7e-05 | 1.55e-05 ± 5.3e-06 | 4.17e-05 ± 1.4e-05 |
 | M1 + canon: branch differences, Hodge reconstruction | 9e-06 ± 3.9e-06 | 5.12e-06 ± 2.3e-06 | 3.25e-05 ± 1.3e-05 | 3.24e-05 ± 1.3e-05 | 3.29e-05 ± 1.3e-05 | 9.07e-06 ± 5.5e-06 | 3.17e-05 ± 1.4e-05 |
+| M1 + canon, reconstruction in every layer | 9.53e-05 ± 6.5e-05 | 8.63e-05 ± 6.4e-05 | 0.000111 ± 1.9e-05 | 0.000114 ± 1.7e-05 | 0.000114 ± 1.9e-05 | 0.000108 ± 6.4e-05 | 0.000111 ± 1.9e-05 |
 
 ### Zero-shot test RMSE on case30_ieee (never seen in training; normalizer: source)
 
@@ -81,6 +84,7 @@ Seeds per model: { M0 (baseline): 5, M0+Aug wide (k 0.1-10, α ±π): 3, M0+Aug 
 | M-canon, S3 frame P95^0.5 · mean|Y|^0.5 | 0.0165 ± 0.0095 | 3.52 ± 0.79 | 67 ± 33 | 17.1 ± 4.4 | 9.5 ± 1.6 | 150 ± 0 |
 | M-canon, S3 frame P95 of input injections | 0.0237 ± 0.0022 | 5.26 ± 1.7 | 105 ± 36 | 23.7 ± 16 | 9.52 ± 1.9 | 150 ± 0 |
 | M1 + canon: branch differences, Hodge reconstruction | 0.0146 ± 0.0028 | 2.16 ± 0.61 | 26.8 ± 11 | 27.1 ± 10 | 46.5 ± 24 | 150 ± 0 |
+| M1 + canon, reconstruction in every layer | 0.0108 ± 0.001 | 1.9 ± 0.98 | 17.7 ± 13 | 11 ± 6.2 | 4.7 ± 0.74 | 150 ± 0 |
 
 ### Zero-shot test RMSE on case57_ieee (never seen in training; normalizer: source)
 
@@ -101,5 +105,6 @@ Seeds per model: { M0 (baseline): 5, M0+Aug wide (k 0.1-10, α ±π): 3, M0+Aug 
 | M-canon, S3 frame P95^0.5 · mean|Y|^0.5 | 0.0238 ± 0.0049 | 9.3 ± 1.4 | 255 ± 74 | 140 ± 25 | 14.1 ± 1.8 | 150 ± 0 |
 | M-canon, S3 frame P95 of input injections | 0.0198 ± 0.0016 | 9.44 ± 0.86 | 281 ± 35 | 121 ± 20 | 12.3 ± 1.1 | 150 ± 0 |
 | M1 + canon: branch differences, Hodge reconstruction | 0.0263 ± 0.0057 | 8.38 ± 1.4 | 317 ± 1.2e+02 | 83.4 ± 19 | 40.4 ± 13 | 150 ± 0 |
+| M1 + canon, reconstruction in every layer | 0.0266 ± 0.006 | 7.25 ± 2.4 | 219 ± 75 | 101 ± 15 | 10.8 ± 1.1 | 150 ± 0 |
 
 ![EE audit](figures/ee_audit.png)

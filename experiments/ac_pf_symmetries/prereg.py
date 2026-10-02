@@ -157,11 +157,15 @@ def main():
         return {r["seed"]: r["in_dist"]["VA"] * DEG for r in every.get(v, [])}
 
     # P11-P13 (F1, M1): m1canon vs canon over seeds 0-4, every channel; registered rule = range separation
-    if "m1canon" in every:
-        m1, cn = every["m1canon"], every.get("canon", [])
+    # P11-P13 (head-swap M1) and P14-P16 (M1 in every layer): against canon over seeds 0-4, every channel;
+    # registered rule = range separation in either direction
+    for arm, (p_in, p_zs, p_ex) in {"m1canon": (11, 12, 13), "m1fullcanon": (14, 15, 16)}.items():
+        if arm not in every:
+            continue
+        m1, cn = every[arm], every.get("canon", [])
         va1, vac = (np.array([r["in_dist"]["VA"] * DEG for r in x]) for x in (m1, cn))
         sep = below(va1, vac) or below(vac, va1)
-        print(f"P11 {verdict(not sep)}: in-dist VA deg m1canon {rng(va1)} vs canon {rng(vac)} (predicted overlap)")
+        print(f"P{p_in} {verdict(not sep)}: in-dist VA deg {arm} {rng(va1)} vs canon {rng(vac)} (predicted overlap)")
         zs = {}
         for t in ("case30_ieee", "case57_ieee"):
             for q, sc in (("VA", DEG), ("VM", 1.0)):
@@ -169,7 +173,7 @@ def main():
                 a0 = np.array([r["zero_shot"][t]["acc"][q] * sc for r in cn])
                 zs[t, q] = (below(a1, a0) or below(a0, a1), rng(a1), rng(a0))
         print(
-            f"P12 {verdict(not any(x[0] for x in zs.values()))}: zero-shot m1canon vs canon "
+            f"P{p_zs} {verdict(not any(x[0] for x in zs.values()))}: zero-shot {arm} vs canon "
             + "; ".join(f"{t[:6]} {q} {x[1]} vs {x[2]}" for (t, q), x in zs.items()),
         )
         worst = max(
@@ -180,9 +184,9 @@ def main():
             for row in r["audit"]
             for q in ("VM", "VA", "PG", "QG")
         )
-        print(f"P13 {verdict(worst < 1e-3)}: m1canon worst frame-consistent EE/RMSE {worst:.1e}")
+        print(f"P{p_ex} {verdict(worst < 1e-3)}: {arm} worst frame-consistent EE/RMSE {worst:.1e}")
         print(
-            "   R7 split, means: m1canon offset/rest/branch "
+            f"   R7 split, means: {arm} offset/rest/branch "
             + "/".join(f"{np.mean([r['in_dist'][q] * DEG for r in m1]):.3f}" for q in ("VA_cm", "VA_diff", "dVA"))
             + ", canon "
             + "/".join(f"{np.mean([r['in_dist'][q] * DEG for r in cn]):.3f}" for q in ("VA_cm", "VA_diff", "dVA")),

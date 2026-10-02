@@ -68,6 +68,19 @@ accurate on branch differences) and the fact that the REF-branch differences nee
 | P12 | H1 for M1 zero-shot (case30, case57; VA and VM) | no separation on any (target, channel) | m1canon's range below canon's on some (target, channel) = a transfer gain of the representation |
 | P13 | exactness | m1canon EE/RMSE < 1e-3 frame-consistent on every probe | implementation error |
 
+## F1, M1 in every layer, fixed 2026-10-02 after P11-P13, before it runs
+
+P11 failed in the wrong direction (head-swap M1 3.4x worse in distribution), with a confound: its reconstructed angles
+skipped GNS's per-layer physics correction. `m1fullcanon` = `Canonicalize(BranchAngleLayers(GNS))` replaces GNS's
+shared state decoder `mlp_bus` by one that keeps VM and reconstructs VA from the same layer's embeddings, so every
+layer's flows, residual, physics feedback and the final output use the reconstructed angles. Seeds 0-4 vs `canon`.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P14 | was P11 the missing physics correction? | m1fullcanon VA range overlaps canon's in distribution | still entirely above canon: the branch representation itself is worse with this backbone; entirely below: a representation gain |
+| P15 | zero-shot (case30, case57; VA and VM) | no separation from canon on any (target, channel) | a separation in either direction is reported as a representation effect on transfer |
+| P16 | exactness | worst frame-consistent EE/RMSE < 1e-3 | implementation error |
+
 R7 metrics (`run.angle_error_split`): VA² = VA_cm² + VA_diff² over the predicted buses of each graph (VA_cm =
 per-graph mean error: an offset relative to the clamped REF angle, seen only by the branches incident to REF);
 dVA = error of θ_f − θ_t, each branch once.
