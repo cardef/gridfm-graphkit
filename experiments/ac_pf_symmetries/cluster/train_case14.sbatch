@@ -26,7 +26,7 @@ v=${VARIANTS[$((i % ${#VARIANTS[@]}))]}
 s=${SEEDS[$((i / ${#VARIANTS[@]}))]}
 OUT=$S/SymmetricalFM/gridfm-graphkit/experiments/ac_pf_symmetries/results/abacus
 echo "HEAD $(git rev-parse HEAD) checkout=$R variant=$v seed=$s host=$(hostname)"
-bash experiments/ac_pf_symmetries/cluster/provenance.sh experiments/ac_pf_symmetries/{run,symmetries}.py
+bash experiments/ac_pf_symmetries/cluster/provenance.sh experiments/ac_pf_symmetries/{run,symmetries,hodge}.py
 nvidia-smi -L
 python -m experiments.ac_pf_symmetries.run --variant "$v" --seeds "$s" --results-dir "$OUT" ${EXTRA_ARGS:-}
 echo TRAIN_DONE

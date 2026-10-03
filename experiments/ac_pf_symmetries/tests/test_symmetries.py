@@ -306,3 +306,16 @@ def test_m1_in_every_layer_inside_canonicalize_is_exactly_equivariant(loader, ar
     for sym, param in probes:
         ee = equivariance_error(model, loader, sym, param)
         assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_reconstruction_handles_graphs_of_different_sizes():
+    """Mixed-grid batches: a 3-bus and a 5-bus graph in one call each get their exact angles back."""
+    batch = torch.tensor([0, 0, 0, 1, 1, 1, 1, 1])
+    theta = torch.tensor([0.0, -0.1, -0.25, 0.3, 0.2, 0.05, -0.1, 0.12])
+    f = torch.tensor([0, 1, 0, 3, 4, 5, 3, 6])
+    t = torch.tensor([1, 2, 2, 4, 5, 6, 7, 7])
+    w = torch.tensor([1.0, 2.0, 0.5, 3.0, 1.0, 1.5, 2.0, 0.7])
+    ref = torch.zeros(8, dtype=torch.bool)
+    ref[[0, 3]] = True
+    rec = reconstruct_angles(theta[f] - theta[t], f, t, w, ref, theta[ref], batch, 2)
+    assert torch.allclose(rec, theta, atol=1e-6)

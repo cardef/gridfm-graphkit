@@ -63,17 +63,16 @@ representation is worse". A clean test of M1 needs the reconstruction inside eve
 ## F1, M1 in every layer (2026-10-02; P14-P16 fixed before the runs)
 
 `m1fullcanon` = `Canonicalize(BranchAngleLayers(GNS))`: every GNS layer decodes its state with the reconstructed
-angles, so the per-layer physics correction acts on them. Seeds 0-3 done; seed 4 is queued (the T4 node is
-CPU-bound by other users' multi-day jobs; expected start 2026-10-04). Range overlap cannot disappear when a seed is
-added, so P14 and P15 are final with 4 seeds; P16 will be re-checked on seed 4.
+angles, so the per-layer physics correction acts on them. Seeds 0-4 (seed 4 ran on 2026-10-03, after a day
+in the queue: the T4 node was CPU-bound by other users' multi-day jobs).
 
 | id | verdict | what the numbers say |
 |---|---|---|
-| P14 in dist. | PASS | VA [0.066, 0.217] deg vs canon [0.151, 0.327] (means 0.168 vs 0.216): the head-swap gap (P11, 3.4x) disappears, so it was the missing physics correction |
-| P15 zero-shot | PASS | no separation; closest: case30 VM [0.0092, 0.0118] vs canon [0.0116, 0.0184] (mean 34% lower, ranges overlap by 0.0003) |
-| P16 exactness | PASS (4 seeds) | worst frame-consistent EE/RMSE 6.0e-4 |
+| P14 in dist. | PASS | VA [0.066, 0.217] deg vs canon [0.151, 0.327] (means 0.176 vs 0.216): the head-swap gap (P11, 3.4x) disappears, so it was the missing physics correction |
+| P15 zero-shot | PASS | no separation; closest: case30 VM [0.0092, 0.0124] vs canon [0.0116, 0.0184] (mean 1/3 lower, ranges overlap by 0.0008) |
+| P16 exactness | PASS | worst frame-consistent EE/RMSE 6.0e-4 |
 
-R7 means: offset 0.159 vs canon 0.209 deg, rest 0.054 vs 0.054, branch differences 0.047 vs 0.059. Reading: with
+R7 means: offset 0.166 vs canon 0.209 deg, rest 0.057 vs 0.054, branch differences 0.049 vs 0.059. Reading: with
 its physics correction intact, the branch representation is on par with node angles at this scale (H1 for M1 not
 supported, as the plan's toy result suggested); the head-swap result of P11 was the decoder, not the
 representation. Still open: the case30 VM hint, which needs more seeds or the multi-grid setting (R2).
