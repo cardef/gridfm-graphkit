@@ -21,3 +21,47 @@ the offset that R7 found dominant. On the smallest grid it can be worse. Zero-sh
 the means favour M1 but stay inside seed variability. Not tested yet, and the direct test of H1 that this suggests:
 a held-out grid larger than the training ones (e.g. train {14, 30, 57}, hold out 118), where the offset the
 representation removes is largest.
+
+## Fold 3: case118 held out (2026-10-05)
+
+Six runs (2 arms × 3 seeds, train {14, 30, 57}) on abacus-007, same code hashes as folds 1-2. The fold-3 section of
+`PREREGISTRATION.md` (09:03) and its scoring in `r2_report.py` (09:06) predate the first result (10:30). As in
+folds 1-2, every run reached the 100-epoch cap without stopping early: both arms are budget-limited alike.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| P20 case118 held out, VA | FAIL | m1 [10.37, 12.74] vs canon [10.06, 12.41] deg (means 11.2 vs 11.5). No zero-shot channel separates: VM [0.0059, 0.0083] vs [0.0054, 0.0069] p.u., PBE [17.4, 26.3] vs [13.7, 20.2] MVA, M1's means higher on both |
+| P21 | not scored (P20 failed) | m1/canon ratio 0.96 on the offset, 0.99 on the rest: no gain to attribute |
+| P22 (exploratory) | — | zero-shot case118, both arms: offset 6.9-7.1 deg, rest 8.8-8.9 deg, branch differences θ_f − θ_t wrong by 2.0-2.1 deg, 8× (canon) and 15× (M1) the same arm trained on case118 in folds 1-2 (0.25-0.27 and 0.13-0.14). In distribution M1 separates below canon on case30 (VA [0.20, 0.31] vs [0.64, 0.66] deg, VM, QG), case14 (VM, QG) and case57 (QG), but canon is the outlier: its case14 errors are 2-9× those of folds 1-2 (VA, VM, QG), case30 1.4-4×, while M1's are in line with folds 1-2. Training composition and node type changed together; cause not identified |
+
+### Trivial references (not pre-registered; `r2_baselines.py`, output in `BASELINES.txt`)
+
+Same scenarios as the zero-shot evaluation, inputs only. flat: every angle = θ_ref, VM = 1. DC: one linear solve
+B θ = P per graph (P from Pd and the Pg of PV buses, B_ft = Im Y_ft), θ_ref fixed, S1/S3/S4-exact by construction.
+VA in deg; learned models: means over 3 seeds, in distribution the range of the fold means where the grid was trained.
+
+| grid | flat | DC | canon zero-shot | M1 zero-shot | canon in dist | M1 in dist |
+|---|---|---|---|---|---|---|
+| case14 | 12.5 | 1.51 | — | — | 0.11-0.33 | 0.17-0.21 |
+| case30 | 11.7 | 1.56 | 5.34 | 3.45 | 0.42-0.65 | 0.24 |
+| case57 | 5.51 | 1.08 | 8.26 | 5.55 | 0.25-0.29 | 0.22 |
+| case118 | 14.2 | 1.95 | 11.5 | 11.2 | 1.65-1.87 | 0.77-0.89 |
+
+Branch differences: DC wrong by 0.34-0.53 deg, the learned models zero-shot by 0.73-2.07 (2-4× DC). DC's error on
+case14/30 is almost all offset (1.46-1.51 of 1.51-1.56 deg), consistent with the losses it ignores. Zero-shot VM is
+informative (0.006-0.018 against 0.027-0.038 for VM = 1).
+
+## Reading (all three folds)
+
+H1 for M1 is not supported on any held-out grid, including the one where the pre-registration expected it to be
+easiest. The references put the representation question in its place: zero-shot, neither arm comes near a DC power
+flow (2-8× its angle error on every held-out grid; on case57 canon is worse than predicting θ_ref everywhere, M1 equal
+to it), and in distribution on case118 canon is only 4-15% below DC; M1 is below half of it. What fails on an
+unseen grid is the branch-level quantity, which M1 takes as given: it changes how node angles are assembled from
+branch differences, which pays once those are right (in distribution, large grid) and not otherwise. Hypothesis, not
+tested: the branch differences need the global, topology-dependent solve (in DC, L⁻¹P), which 12 message-passing
+layers with per-layer physics feedback approximate well only on the topologies they were trained on.
+
+Suggested next test (not run): give the model θ_DC (computed from inputs, exact under S1/S3/S4/S5, so it stays on
+the canonical section) and learn the AC correction. Prediction for fold 3: zero-shot VA on case118 below DC's
+1.95 deg for every seed; if not, the learned correction does not transfer and the gain is DC's alone.

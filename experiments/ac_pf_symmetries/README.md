@@ -156,6 +156,7 @@ twins per released split). `genco_report.py` writes `results/genco/REPORT.md`.
 **R2, held-out grids** (`results/abacus_r2/`: `PREREGISTRATION.md`, `REPORT.md`, `VERDICTS.md`):
 `multigrid.py` trains one model on several grids at once (batches mix grids; each grid has its own
 normalizer and contributes the same number of scenarios) and tests it zero-shot on held-out grids;
-`cluster/train_r2.sbatch` runs `canon` vs `m1fullcanon` on two folds (CPU, pinned to one node type),
-`r2_report.py` scores the predictions. `reconstruct_angles` pads graphs of different sizes, so M1 works on
-mixed batches.
+`cluster/train_r2.sbatch` runs `canon` vs `m1fullcanon` on three folds (held out case30, case57, case118; CPU,
+one node type per fold), `r2_report.py` scores the predictions, `r2_baselines.py` gives two references on the
+same zero-shot scenarios (flat angles, DC power flow). `reconstruct_angles` pads graphs of different sizes, so M1
+works on mixed batches.

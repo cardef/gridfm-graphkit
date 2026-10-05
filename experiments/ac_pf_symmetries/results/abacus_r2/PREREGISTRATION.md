@@ -23,3 +23,19 @@ Rule as before: with 3 seeds a difference is called only when the [min, max] ran
 | P17 | H1 for M1 on held-out grids (case30 in fold 0, case57 in fold 1; VA and VM) | no separation on any (held-out grid, channel) | m1fullcanon entirely below canon on some (grid, channel) = H1 supported there; entirely above = the branch representation transfers worse |
 | P18 | in distribution, every training grid of both folds, VA | no separation | a separation on a training grid is a representation effect in distribution |
 | P19 | exploratory | — | canon's held-out error here vs the single-grid replicate (case14-only training, case30/57 zero-shot), descriptive: does adding training grids help this backbone transfer? |
+
+## Fold 3, fixed 2026-10-05 after reading folds 1-2, before it runs: a held-out grid larger than the training ones
+
+Motivation (R2 VERDICTS): in distribution M1 halved the angle error on case118 in both folds, by removing the
+per-graph offset relative to REF that grows with grid size (canon: 0.11-0.15 deg on case14, 1.4-1.6 deg on
+case118), while the two small held-out grids did not separate. If the branch representation is what removes that
+offset, the gain must also appear zero-shot on a large grid the model never saw. Same protocol as folds 1-2
+(1024 scenarios per grid, max 100 epochs, patience 40, 3 seeds, canon vs m1fullcanon), train {14, 30, 57},
+held out case118. All six runs on one node: abacus-007 (Skylake, 12 CPUs each; moved there at launch, 09:10,
+because abacus-004 was being held for a W28 job; the earlier folds ran on abacus-004 with 16).
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P20 | H1 for M1 under size extrapolation | m1fullcanon's zero-shot VA range on case118 lies entirely below canon's | overlap: the branch representation's gain is an in-distribution effect only (H1 for M1 not supported even where it should be easiest) |
+| P21 | where does it come from (only if P20 passes) | the gain is mostly in the per-graph offset (VA_cm ratio m1/canon below the VA_diff ratio) | a uniform gain = not the offset mechanism |
+| P22 | exploratory | — | zero-shot VM and PBE on case118, in-distribution errors on 14/30/57 |

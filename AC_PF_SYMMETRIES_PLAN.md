@@ -1,6 +1,14 @@
 # Piano A — Simmetrie della mappa AC power flow come bias induttivi per Grid Foundation Models
 
-*Bozza di piano di ricerca — settembre 2026 · rivista il 30 settembre e il 2 ottobre 2026*
+*Bozza di piano di ricerca — settembre 2026 · rivista il 30 settembre, il 2 e il 5 ottobre 2026*
+
+> **Revisione del 5 ottobre 2026** (F1 e R2 sul cluster: M1 su una rete e in multi-rete, tre fold con una rete tenuta
+> fuori; verdetti in `experiments/ac_pf_symmetries/results/abacus/VERDICTS.md` e `results/abacus_r2/VERDICTS.md`):
+> (1) H1 per M1 non è sostenuta: alla pari con M0+Canon su una rete, e in multi-rete nessuna separazione zero-shot
+> su nessuna rete tenuta fuori, inclusa case118, più grande di quelle di training, dove la pre-registrazione la dava
+> per più facile. Il guadagno di M1 è solo in distribuzione, sulla rete grande. (2) Zero-shot nessuno dei due bracci
+> si avvicina al DC-PF calcolato dagli stessi input (2–8× il suo errore sugli angoli; su case57 M0+Canon fa peggio che
+> predire θ_ref ovunque): ciò che non trasferisce sono le grandezze d'arco, che M1 prende come date.
 
 > **Revisione del 2 ottobre 2026** (replica del PoC sul cluster, 46 run, e F0 sui 36 checkpoint GENCO pubblicati;
 > verdetti in `experiments/ac_pf_symmetries/results/abacus/VERDICTS.md` e `results/genco/VERDICTS.md`):
@@ -84,7 +92,8 @@ generalizzazione OOD?
   (convenzioni diverse) M0+Canon eguaglia per costruzione i modelli equivarianti e batte l'augmentation, che copre solo
   il range campionato (PoC: EE_S1 6·10⁻³ dentro il range, ≈ 1 fuori). Con GNS l'augmentation sull'intero range non
   addestra affatto (replica: VA 5–6° contro 0.2–0.3°), né con la loss nel frame del campione né senza loss fisica: il
-  confronto con l'augmentation va fatto su range mild.
+  confronto con l'augmentation va fatto su range mild. M1 non la sostiene (F1/R2, 5/10/2026), neanche su una rete
+  tenuta fuori più grande di quelle di training; M2–M3 non ancora provati.
 - **H2 (diagnostica).** Dentro una classe di modelli non equivarianti, EE_g calcolato senza etichette sul target ordina i
   modelli per errore OOD. Sui 36 checkpoint GENCO pubblicati (zero-shot tra reti IEEE) EE_S3,VM(k = 10) ha ρ parziale
   0.76 [0.57, 0.87] con l'errore VM su 81 coppie tenute fuori, ma anche 0.69 [0.50, 0.82] con l'errore che resta dopo la
@@ -204,7 +213,7 @@ Backbone di riferimento: GENCO (grafo eterogeneo bus/generatori) e, come control
 | M0 | S5 (S4 sulle linee) | Baseline real-valued, angoli di nodo rispetto allo slack, normalizzatore per rete |
 | M0+Canon | S1, S3, S4 (+ S2 con Coulomb) | Frame dei soli input (Prop. 5), zero parametri: **baseline di ogni confronto** |
 | M0+Aug | — | Augmentation casuale: α ∈ [0, 2π), k ∈ [10⁻², 10²], orientamenti casuali, gauge locali casuali (sfasamenti virtuali sulle linee). **Loss valutata nel frame del campione** (predizioni de-aumentate, residuo fisico × k): altrimenti il peso della loss fisica varia di 10⁴ sul range e il baseline è handicappato (PoC: VA 3–9° contro 0.5° di M0). Con GNS non basta: su α ±π, k 0.1–10 l'addestramento fallisce anche nel frame del campione (5.7°) e senza loss fisica (5.0°), mentre ogni asse da solo addestra (fase 0.47°, scala 1.0°). Ipotesi da testare: GNS somma a ogni layer physics_mlp(residuo) allo stato latente, e il residuo scala come 1/k |
-| M1 | S1 | Output = differenze angolari invarianti θ_f − θ_t − φ_ft; θ ricostruito per proiezione di Hodge θ = L_w⁺BᵀWδ̂ + θ_ref (non per albero ricoprente, che rompe S5 e accumula errore lungo i cammini); il residuo è la violazione KVL. Prima prova (2/10/2026, testa d'arco sugli embedding finali di GNS, dentro M0+Canon, 5 seed): peggio in distribuzione (VA 0.73° contro 0.22°, anche sulle differenze d'arco), uguale in zero-shot; confondente: gli angoli ricostruiti saltano la correzione fisica per layer di GNS, che resta sugli angoli di nodo del backbone. Con la ricostruzione dentro ogni layer (4 seed) il divario sparisce: in distribuzione VA 0.17° contro 0.22° di M0+Canon, intervalli sovrapposti, e nessuna separazione in zero-shot (case30 VM 0.011 contro 0.016, sovrapposti per 3·10⁻⁴). A questa scala M1 è alla pari con gli angoli di nodo: H1 per M1 non è sostenuta. Multi-rete (R2, 3 reti IEEE per volta, 2 fold, 3 seed): in distribuzione su case118 dimezza l'errore VA (0.8° contro 1.7–1.9°, tutto nell'offset rispetto al REF, che cresce con la taglia della rete), su case14 in un fold peggiora; zero-shot su case30/57 medie più basse ma intervalli sovrapposti. Test diretto suggerito: rete tenuta fuori più grande di quelle di training (es. 118) |
+| M1 | S1 | Output = differenze angolari invarianti θ_f − θ_t − φ_ft; θ ricostruito per proiezione di Hodge θ = L_w⁺BᵀWδ̂ + θ_ref (non per albero ricoprente, che rompe S5 e accumula errore lungo i cammini); il residuo è la violazione KVL. Prima prova (2/10/2026, testa d'arco sugli embedding finali di GNS, dentro M0+Canon, 5 seed): peggio in distribuzione (VA 0.73° contro 0.22°, anche sulle differenze d'arco), uguale in zero-shot; confondente: gli angoli ricostruiti saltano la correzione fisica per layer di GNS, che resta sugli angoli di nodo del backbone. Con la ricostruzione dentro ogni layer (4 seed) il divario sparisce: in distribuzione VA 0.17° contro 0.22° di M0+Canon, intervalli sovrapposti, e nessuna separazione in zero-shot (case30 VM 0.011 contro 0.016, sovrapposti per 3·10⁻⁴). A questa scala M1 è alla pari con gli angoli di nodo: H1 per M1 non è sostenuta. Multi-rete (R2, 3 reti IEEE per volta, 2 fold, 3 seed): in distribuzione su case118 dimezza l'errore VA (0.8° contro 1.7–1.9°, tutto nell'offset rispetto al REF, che cresce con la taglia della rete), su case14 in un fold peggiora; zero-shot su case30/57 medie più basse ma intervalli sovrapposti. Rete tenuta fuori più grande (train 14/30/57, test case118, P20 pre-registrata): nessuna separazione (VA 11.2° contro 11.5°, intervalli [10.4, 12.7] e [10.1, 12.4]); entrambi sbagliano le differenze d'arco di 2°, 8× (M0+Canon) e 15× (M1) lo stesso braccio addestrato su 118, e M1 non corregge differenze d'arco sbagliate. DC-PF dagli stessi input: 1.95° su case118, 1.1–1.6° sulle altre reti. H1 per M1 non sostenuta in nessun fold; il guadagno è solo in distribuzione |
 | M2 | S1 + S2 | Feature di nodo complesse, message passing con trasportatori U_ij = e^{jφ_ij}, non-linearità modReLU/cardioid; output V e^{jθ} relativo. **Controllo:** stessa rete con attivazione split Re/Im (non equivariante), per separare simmetria e algebra complessa |
 | M3 | S3 | Feature adimensionali p_i = P_i/D_i, q_i = Q_i/D_i, W_ij = \|Y_ij\|/D_i (diretta), D_i = Σ_j \|Y_ij\|. Iniettiva modulo la scala globale perché \|Y_ij\| = \|Y_ji\| dà D_j/D_i = W_ij/W_ji; una "media locale" simmetrica non è garantita iniettiva e imporrebbe invarianza a riscalature locali che non sono simmetrie. Con input adimensionali i layer di omogeneità di grado 0 sono ridondanti |
 | M4 | S4 | Decoder di arco direzionali (vedi S4); il tap come rapporto visto dal bus sorgente di ciascuna riga (τ nel verso from→to, 1/τ nel verso opposto), oppure il frame di orientamento |
@@ -244,7 +253,9 @@ modello a quel k (§5, Diagnostica); con M0+Canon la scelta è irrilevante.
 
 ### 7.3 Baseline e confronti
 M0+Canon come riferimento per ogni variante; M0; M0+Aug con loss nel frame del campione e budget di campioni pari; DC-PF
-e fast-decoupled come riferimenti fisici (Okoyomon mostra che spesso battono le GNN OOD); GENCO pubblicato.
+e fast-decoupled come riferimenti fisici (Okoyomon mostra che spesso battono le GNN OOD); GENCO pubblicato. DC-PF
+calcolato in R2 (`r2_baselines.py`, stessi scenari dello zero-shot): batte di 2–8× sugli angoli sia M0+Canon sia M1
+su ogni rete tenuta fuori; va riportato accanto a ogni confronto di rappresentazione.
 
 ### 7.4 Metriche
 - Accuratezza: MAE su V e θ (θ valutato come θ_f − θ_t − φ_ft, invariante di gauge, per non premiare artefatti di
@@ -320,7 +331,9 @@ Due possibili tagli, non esclusivi:
   PSCC 2027 / IEEE TPWRS / EPSR.
 - **Paper 2 (rappresentazione):** subordinato a R2–R4; sostenibile solo se una scelta di rappresentazione (M1, M2 contro
   M2-split, M3) batte M0+Canon oltre la variabilità tra seed. La simmetria di gauge da sola non lo giustifica
-  (Prop. 5–6). Venue: NeurIPS/ICLR (track geometric DL o AI for science), oppure TPWRS se il taglio è più applicativo.
+  (Prop. 5–6). Dopo R2 (5/10/2026) M1 è escluso, e lo zero-shot del backbone sta sotto il DC-PF: il confronto di
+  rappresentazione ha senso solo per modelli che lo battono. Venue: NeurIPS/ICLR (track geometric DL o AI for
+  science), oppure TPWRS se il taglio è più applicativo.
 
 **Contributo al progetto GridFM:** frame e layer riusabili nel backbone; EE_g come check di introspezione in §4.6;
 canonicalizzazione per il pretraining multi-rete in §4.4.

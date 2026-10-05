@@ -1,0 +1,8 @@
+# r2_baselines.py output, 2026-10-05 (srun job 61900, abacus-008, CPU). Ran from SymmetricalFM/scratch as sha1
+# 8b958391c6f0 (copy in SymmetricalFM/provenance/), which differs from the committed r2_baselines.py only in the
+# docstring; imported modules at 68b76af. Scenarios: the fixed 1024-scenario subset of each grid (seed 0), the
+# set every zero-shot number of R2 is computed on. Angles in deg, VM in p.u.; "offset"/"rest" = R7 split.
+case14_ieee max|VA| 21.6 deg | VA flat 12.5 | VA DC 1.51 | VA DC offset 1.46 | VA DC rest 0.367 | dVA flat 3.43 | dVA DC 0.445 | VM flat 0.0414
+case30_ieee max|VA| 18.5 deg | VA flat 11.7 | VA DC 1.56 | VA DC offset 1.51 | VA DC rest 0.397 | dVA flat 2.21 | dVA DC 0.339 | VM flat 0.0366
+case57_ieee max|VA| 15.5 deg | VA flat 5.51 | VA DC 1.08 | VA DC offset 0.393 | VA DC rest 1.01 | dVA flat 3.09 | dVA DC 0.532 | VM flat 0.0266
+case118_ieee max|VA| 39.8 deg | VA flat 14.2 | VA DC 1.95 | VA DC offset 1.6 | VA DC rest 1.11 | dVA flat 3.54 | dVA DC 0.479 | VM flat 0.0382
