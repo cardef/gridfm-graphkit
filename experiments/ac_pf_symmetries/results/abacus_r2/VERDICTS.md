@@ -84,3 +84,52 @@ effect): the local inputs themselves (q_i = Q_i/D_i is the natural variable of a
 per-bus normalization of the residual that GNS feeds back into every layer and puts in its physics loss.
 Suggested next: (a) pre-register "M3 below canon on zero-shot VM and PBE" on folds 1-2 (held out case30, case57);
 (b) an ablation with canon's inputs and the per-bus residual normalization, to separate the two explanations.
+
+## Residual-normalization ablation on fold 3 (P28, 2026-10-05)
+
+Three runs (`canonresnorm`, seeds 0-2, array 61992) on abacus-007 with 6 CPUs each, HEAD 9c74f7c (the pre-registration
+of P26-P28 is in that commit, before the runs); every run reached the 100-epoch cap. Compared with fold 3's canon and
+m3canon runs.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| P28, VM (decisive) | FAIL: unresolved at 3 seeds | resnorm [0.0034, 0.0066] p.u. overlaps canon [0.0054, 0.0069] and M3 [0.0024, 0.0043] (seeds 0.0034, 0.0039, 0.0066) |
+| P28, PBE (alongside) | (i) residual normalization | resnorm [8.6, 10.7] MVA: below canon [13.7, 20.2], overlapping M3 [9.5, 13.2] |
+
+Exploratory, same runs. Zero-shot: angle rest [7.2, 7.9] deg below canon [8.5, 9.5], overlapping M3; QG [23, 36] Mvar
+overlapping canon and above M3 [16, 21]; VA, offset and branch differences overlap everything. In distribution: VM and
+PBE below canon on case30 and case57 and overlapping M3 there; on case14 everything overlaps.
+
+Reading: dividing the residual GNS feeds back into every layer (and puts in its physics loss) by the local admittance
+scale reproduces most of what M3 gained: the power balance zero-shot, VM and PBE in distribution on case30/57, the
+non-offset part of the angle error. M3's local inputs add the zero-shot QG gain; the zero-shot VM gain is split or
+unresolved at 3 seeds. The ablation, like M3, changes the feedback and the weighting of the physics loss together,
+so which of the two matters is not separated. It is the test Piano A §9 suggested for GNS's physics feedback
+("residuo normalizzato in ingresso a physics_mlp"), here on transfer instead of augmentation.
+
+## M3 on folds 1-2 (P26-P27, 2026-10-06)
+
+Six runs (`m3canon`, folds 1-2 × seeds 0-2, arrays 61990/61991) on abacus-004 with 5 CPUs each, HEAD 9c74f7c; every
+run reached the 100-epoch cap. Compared with those folds' canon runs.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| P26 zero-shot VM | FAIL | case30 m3 [0.0093, 0.0131] vs canon [0.0086, 0.0132]; case57 [0.0161, 0.0306] vs [0.0149, 0.0216], one seed far above canon |
+| P27 zero-shot PBE | PASS | case30 [3.29, 4.97] vs [5.39, 5.82] MVA; case57 [4.91, 7.61] vs [8.27, 12.63] |
+
+Exploratory, same runs: the angle error that is not a common offset (VA rest) is below canon on both grids (case30
+[1.43, 1.92] vs [2.32, 2.81] deg, case57 [1.90, 2.45] vs [3.36, 4.13]), as on case118; branch differences below on
+case57 ([1.07, 1.76] vs [1.98, 2.15]); total VA, offset, PG and QG overlap. In distribution PBE is below canon on 4 of
+6 (fold, grid) pairs, VM on 2.
+
+## Reading (M3, all folds)
+
+On the three held-out grids M3 lowers the zero-shot power-balance error (P27, pre-registered on case30 and case57;
+the same on case118) and the part of the angle error that is not a common offset (exploratory, all three grids). It
+lowers neither the total angle error, dominated by the per-graph offset relative to REF and seed-dependent, nor VM
+beyond case118 (P26). On case118 the per-bus residual normalization alone reproduces the PBE and angle-rest gains
+(P28, alongside): what transfers is mostly how GNS's physics feedback is normalized, not the local inputs.
+
+Suggested next (not run): (a) the residual normalization inside M1, which removes the offset in distribution (P18)
+while the normalization lowers the rest: the two act on the two parts of the angle error; (b) whether the normalized
+feedback lets the wide augmentation train (Piano A §9 hypothesis).
