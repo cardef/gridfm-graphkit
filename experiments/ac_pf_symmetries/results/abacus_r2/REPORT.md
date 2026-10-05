@@ -1,6 +1,6 @@
 # R2: M0+Canon vs M1 on held-out grids
 
-Runs: heldout_case118_ieee canon 3, heldout_case118_ieee m1fullcanon 3, heldout_case30_ieee canon 3, heldout_case30_ieee m1fullcanon 3, heldout_case57_ieee canon 3, heldout_case57_ieee m1fullcanon 3
+Runs: heldout_case118_ieee canon 3, heldout_case118_ieee m1fullcanon 3, heldout_case118_ieee m3canon 3, heldout_case30_ieee canon 3, heldout_case30_ieee m1fullcanon 3, heldout_case57_ieee canon 3, heldout_case57_ieee m1fullcanon 3
 
 ### heldout_case118_ieee: zero-shot
 
@@ -8,6 +8,7 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee m1fullcanon 3, heldout_
 |---|---|---|---|---|---|---|---|---|---|
 | case118_ieee | canon | 0.00632 ± 0.00064 | 11.5 ± 1 | 435 ± 2.1e+02 | 42.6 ± 22 | 16.7 ± 2.7 | 7.13 ± 1.6 | 8.89 ± 0.47 | 2.02 ± 0.19 |
 | case118_ieee | m1fullcanon | 0.00731 ± 0.0011 | 11.2 ± 1.1 | 317 ± 1.7e+02 | 78.2 ± 53 | 21.2 ± 3.7 | 6.85 ± 1.5 | 8.84 ± 0.22 | 2.07 ± 0.11 |
+| case118_ieee | m3canon | 0.00312 ± 0.00086 | 10.6 ± 1.7 | 350 ± 1.9e+02 | 18.8 ± 2 | 11.8 ± 1.6 | 6.74 ± 2.4 | 7.96 ± 0.26 | 1.87 ± 0.11 |
 
 ### heldout_case118_ieee: in distribution
 
@@ -15,10 +16,13 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee m1fullcanon 3, heldout_
 |---|---|---|---|---|---|---|---|---|---|
 | case14_ieee | canon | 0.00345 ± 0.0012 | 0.333 ± 0.049 | 2.17 ± 0.43 | 13.7 ± 4.9 | 0.15 ± 0.021 | 0.328 ± 0.05 | 0.0535 ± 0.0096 | 0.0939 ± 0.019 |
 | case14_ieee | m1fullcanon | 0.00082 ± 0.00034 | 0.198 ± 0.087 | 2.44 ± 0.87 | 2.31 ± 1 | 0.161 ± 0.032 | 0.188 ± 0.083 | 0.0622 ± 0.025 | 0.0535 ± 0.022 |
+| case14_ieee | m3canon | 0.00148 ± 0.0011 | 0.145 ± 0.091 | 1.26 ± 0.5 | 5.89 ± 4.6 | 0.0906 ± 0.015 | 0.143 ± 0.092 | 0.0218 ± 0.004 | 0.0422 ± 0.027 |
 | case30_ieee | canon | 0.0058 ± 0.00033 | 0.649 ± 0.009 | 4.06 ± 0.67 | 22.2 ± 2 | 0.183 ± 0.0086 | 0.641 ± 0.0073 | 0.0979 ± 0.013 | 0.112 ± 0.0014 |
 | case30_ieee | m1fullcanon | 0.00384 ± 9.3e-05 | 0.244 ± 0.046 | 2.69 ± 0.66 | 4.09 ± 0.21 | 0.182 ± 0.018 | 0.233 ± 0.044 | 0.0749 ± 0.013 | 0.0491 ± 0.0077 |
+| case30_ieee | m3canon | 0.00444 ± 0.00051 | 0.554 ± 0.091 | 3.76 ± 0.93 | 19.5 ± 2.8 | 0.151 ± 0.016 | 0.549 ± 0.09 | 0.0752 ± 0.012 | 0.096 ± 0.015 |
 | case57_ieee | canon | 0.00413 ± 0.00032 | 0.249 ± 0.03 | 4.38 ± 0.92 | 16.5 ± 0.82 | 0.207 ± 0.015 | 0.203 ± 0.029 | 0.145 ± 0.013 | 0.0746 ± 0.0066 |
 | case57_ieee | m1fullcanon | 0.00397 ± 0.00031 | 0.216 ± 0.021 | 3.89 ± 0.43 | 12.4 ± 1.1 | 0.186 ± 0.016 | 0.156 ± 0.03 | 0.147 ± 0.0039 | 0.0747 ± 0.00056 |
+| case57_ieee | m3canon | 0.00302 ± 0.00015 | 0.207 ± 0.035 | 4.22 ± 0.65 | 15.3 ± 0.93 | 0.134 ± 0.0055 | 0.187 ± 0.032 | 0.0889 ± 0.014 | 0.0478 ± 0.0064 |
 
 ### heldout_case30_ieee: zero-shot
 
@@ -63,3 +67,9 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee m1fullcanon 3, heldout_
 **P20 (case118 held out, VA): FAIL** (predicted m1 entirely below canon): m1 [10.37, 12.74] vs canon [10.06, 12.41] deg
 
 **P21 (not scored: P20 failed): —** m1/canon ratio of the offset 0.96, of the rest 0.99 (predicted offset ratio below)
+
+**P23 (M3, case118 held out, VA): FAIL** (predicted m3 entirely below canon): m3 [9.277, 12.96] vs canon [10.06, 12.41] deg
+
+**P24 (M3 vs DC, case118): PASS** (predicted some seed above DC's 1.95 deg): m3 [9.277, 12.96] deg
+
+P25 (exploratory), zero-shot case118, m3 vs canon: dVA [1.789, 2.024] vs [1.779, 2.251]; VM [0.002398, 0.004323] vs [0.005432, 0.006928]; PBE [9.509, 13.19] vs [13.65, 20.22]

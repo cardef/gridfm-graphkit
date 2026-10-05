@@ -65,3 +65,22 @@ layers with per-layer physics feedback approximate well only on the topologies t
 Suggested next test (not run): give the model θ_DC (computed from inputs, exact under S1/S3/S4/S5, so it stays on
 the canonical section) and learn the AC correction. Prediction for fold 3: zero-shot VA on case118 below DC's
 1.95 deg for every seed; if not, the learned correction does not transfer and the gain is DC's alone.
+
+## M3 on fold 3 (2026-10-05)
+
+Three runs (`m3canon`, seeds 0-2, array 61962) on abacus-007 with 6 CPUs each, HEAD 30a2148 (the pre-registration of
+P23-P25 is in that commit, before the runs); every run reached the 100-epoch cap. Compared with fold 3's canon runs.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| P23 case118 held out, VA | FAIL | m3 [9.28, 12.96] vs canon [10.06, 12.41] deg (means 10.6 vs 11.5). Seeds 0-1 (9.45, 9.28) were below canon's range; seed 2 (12.96, offset 10.0 deg) is above it |
+| P24 vs DC | PASS (as predicted) | every seed 5-7× DC's 1.95 deg |
+| P25 (exploratory) | — | zero-shot case118: VM [0.0024, 0.0043] vs [0.0054, 0.0069] p.u., PBE [9.5, 13.2] vs [13.7, 20.2] MVA, QG [16, 21] vs [22, 73] Mvar, angle rest [7.6, 8.2] vs [8.5, 9.5] deg: all separated in M3's favour; branch differences [1.79, 2.02] vs [1.78, 2.25] deg, offset and PG overlap. In distribution: PBE lower on all three grids (separated), VM on case30 and case57, VA on case14 by a hair ([0.078, 0.274] vs [0.276, 0.395]); the rest overlap. Canon's fold-3 excess on case30 VA is there in M3 too (0.43-0.65 deg): not specific to canon's frame |
+
+Reading: the per-bus frame does not move the angles (the branch differences are as wrong as canon's, and the offset is
+seed-dependent), but it lowers the voltage-magnitude and power-balance errors, zero-shot and in distribution. These
+channels were exploratory here, on one fold. Two explanations are confounded by construction (pre-registered side
+effect): the local inputs themselves (q_i = Q_i/D_i is the natural variable of a local voltage deviation) or the
+per-bus normalization of the residual that GNS feeds back into every layer and puts in its physics loss.
+Suggested next: (a) pre-register "M3 below canon on zero-shot VM and PBE" on folds 1-2 (held out case30, case57);
+(b) an ablation with canon's inputs and the per-bus residual normalization, to separate the two explanations.
