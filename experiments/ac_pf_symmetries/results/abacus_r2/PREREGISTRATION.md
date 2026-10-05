@@ -64,3 +64,26 @@ the node is shared, and the thread count changes the order of float sums, not th
 
 P23 states H1. After fold 3 (what fails zero-shot are the branch differences, which a frame does not compute) we
 expect it to fail; the scoring does not depend on this expectation.
+
+## M3 confirmation and ablation, fixed 2026-10-05 after reading M3 on fold 3, before they run
+
+On fold 3, M3 lowered zero-shot VM and PBE (exploratory, P25). Two questions follow.
+
+**Does it hold on other held-out grids?** `m3canon` on folds 1-2 (held out case30 / case57), seeds 0-2, compared
+with those folds' canon runs. Node abacus-004 like them, 5 CPUs per task instead of 16 (shared node; the thread
+count changes the order of float sums, not the model).
+
+**Which of the two confounded parts of M3 does it?** Arm `canonresnorm` = Canonicalize(BusResidualScale(GNS))
+(`resnorm.py`): canon's per-graph frame for every input, but the residual GNS feeds back into every layer and puts
+in its physics loss is divided by D_i / D_ref, which makes it equal to M3's (D_i is degree-1 homogeneous, so canon's
+frame cancels; D_ref is M3's constant). Tests: exact equivariance, and the first fed-back residual equals the
+bare model's divided by D_i / D_ref bus by bus. Fold 3, seeds 0-2, abacus-007 with 6 CPUs (as M3).
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P26 | M3's zero-shot VM gain on other held-out grids | m3canon's VM range entirely below canon's on case30 ([0.008638, 0.01324]) and on case57 ([0.01489, 0.02155]) | the fold-3 VM gain does not generalize across held-out grids |
+| P27 | same for PBE | m3canon's PBE range entirely below canon's on case30 ([5.386, 5.823] MVA) and on case57 ([8.266, 12.63] MVA) | as above, for the power balance |
+| P28 | where M3's VM gain comes from (case118, zero-shot VM; PBE reported alongside) | (i) the residual normalization: canonresnorm's VM range entirely below canon's [0.005432, 0.006928] and not entirely above M3's [0.002398, 0.004323] | (ii) overlapping canon's and entirely above M3's: the local inputs; (iii) below canon and above M3: both; otherwise unresolved at 3 seeds |
+
+P28's prediction is a low-confidence call: the in-distribution PBE improved on all three grids, a feedback-like
+signature, but q_i = Q_i/D_i is also the natural input for a local voltage deviation.

@@ -28,10 +28,11 @@ from gridfm_graphkit.io.param_handler import get_task, get_task_transforms, load
 from gridfm_graphkit.training.callbacks import SaveBestModelStateDict
 
 from .hodge import BranchAngleLayers
+from .resnorm import BusResidualScale
 from .run import OUT, ROOT, accuracy, default_device, eval_loader, make_args
 from .symmetries import Canonicalize
 
-ARMS = {"canon": None, "m1fullcanon": BranchAngleLayers, "m3canon": None}
+ARMS = {"canon": None, "m1fullcanon": BranchAngleLayers, "m3canon": None, "canonresnorm": BusResidualScale}
 LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inputs) instead of per graph
 
 
@@ -72,6 +73,8 @@ def run_one(arm, seed, a, device):
     val_loader = eval_loader(ConcatDataset([g["val"] for g in grids.values()]), a.batch_size)
     task = get_task(args, [g["normalizer"] for g in grids.values()])
     inner = ARMS[arm](task.model) if ARMS[arm] else task.model
+    if isinstance(inner, BusResidualScale):
+        inner.fit_d_ref(train_loader)
     task.model = Canonicalize(inner, local=arm in LOCAL).fit_scale_ref(train_loader)
 
     run_dir = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}"

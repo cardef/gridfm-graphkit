@@ -16,7 +16,7 @@ import numpy as np
 
 OUT = Path(__file__).resolve().parent / "results" / "abacus_r2"
 DEG = 180.0 / math.pi
-ARMS = ("canon", "m1fullcanon", "m3canon")
+ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm")  # P26-P28 (m3canon folds 1-2, canonresnorm fold 3)
 FOLD3 = "heldout_case118_ieee"  # P20-P22, registered after folds 1-2 were read; P23-P25 (m3canon) after fold 3
 DC_VA_118 = 1.95  # deg: DC power flow on case118's zero-shot scenarios (BASELINES.txt)
 COLS = {"VM": (1.0, "VM (p.u.)"), "VA": (DEG, "VA (deg)"), "PG": (None, "PG (MW)"), "QG": (None, "QG (Mvar)"),
@@ -53,6 +53,7 @@ def main():
     md = ["# R2: M0+Canon vs M1 on held-out grids", ""]
     md.append("Runs: " + ", ".join(f"{fd} {arm} {len(rs)}" for (fd, arm), rs in sorted(runs.items())) + "\n")
     p17, p18, f3, m3 = [], [], {}, {}
+    p2627, p28 = {"VM": [], "PBE": []}, {}
     for fd in folds:
         rs = {arm: runs.get((fd, arm), []) for arm in ARMS}
         if not (rs["canon"] and rs["m1fullcanon"]):
@@ -87,6 +88,12 @@ def main():
                     if rs["m3canon"]:
                         for q in ("VA", "dVA", "VM", "PBE"):
                             m3[q] = (vals["m3canon", q], vals["canon", q])
+                    if rs["canonresnorm"] and rs["m3canon"]:
+                        for q in ("VM", "PBE"):
+                            p28[q] = (vals["canonresnorm", q], vals["canon", q], vals["m3canon", q])
+                if fd != FOLD3 and kind == "zero-shot" and rs["m3canon"]:
+                    for q in ("VM", "PBE"):
+                        p2627[q].append((g, vals["m3canon", q], vals["canon", q]))
             md.append("")
     for name, recs in (("P17 (held-out grids, folds 1-2)", p17), ("P18 (training grids, folds 1-2)", p18)):
         if recs:
@@ -113,6 +120,19 @@ def main():
                   f"{DC_VA_118} deg): m3 {rng(a3)} deg\n")
         md.append("P25 (exploratory), zero-shot case118, m3 vs canon: " + "; ".join(
             f"{q} {rng(m3[q][0])} vs {rng(m3[q][1])}" for q in ("dVA", "VM", "PBE")) + "\n")
+    for pid, q in (("P26", "VM"), ("P27", "PBE")):
+        if p2627[q]:
+            ok = all(x.max() < y.min() for _, x, y in p2627[q])
+            md.append(f"**{pid} (M3 below canon on zero-shot {q}, folds 1-2): {'PASS' if ok else 'FAIL'}** " + "; ".join(
+                f"{g} m3 {rng(x)} vs canon {rng(y)}" + (" below" if x.max() < y.min() else "") for g, x, y in p2627[q]) + "\n")
+    for q in ("VM", "PBE") if p28 else ():
+        r, c, m = p28[q]
+        below_c, above_m = bool(r.max() < c.min()), bool(r.min() > m.max())
+        outcome = {(True, False): "(i) residual normalization", (False, True): "(ii) local inputs",
+                   (True, True): "(iii) both"}.get((below_c, above_m), "unresolved")
+        head = f"**P28 (ablation, case118 {q}): {'PASS' if outcome.startswith('(i)') else 'FAIL'}** (predicted (i))" \
+            if q == "VM" else f"P28, reported alongside ({q}):"
+        md.append(f"{head} {outcome}: resnorm {rng(r)} vs canon {rng(c)}, m3 {rng(m)}\n")
     out = a.results_dir / "REPORT.md"
     out.write_text("\n".join(md))
     print(out.read_text())

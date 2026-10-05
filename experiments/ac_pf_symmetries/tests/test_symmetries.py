@@ -3,6 +3,7 @@
 Uses the repository test fixture (tests/data/case14_ieee, 72 scenarios).
 """
 
+import copy
 import math
 import os
 
@@ -45,6 +46,7 @@ from experiments.ac_pf_symmetries.hodge import (
     BranchAngleLayers,
     reconstruct_angles,
 )
+from experiments.ac_pf_symmetries.resnorm import BusResidualScale
 from experiments.ac_pf_symmetries.run import angle_error_split
 from experiments.ac_pf_symmetries.symmetries import (
     Canonicalize,
@@ -241,6 +243,34 @@ def test_m3_local_frame_is_exactly_equivariant(loader, args):
     for sym, param in probes:
         ee = equivariance_error(model, loader, sym, param)
         assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_resnorm_inside_canonicalize_is_exactly_equivariant(loader, args):
+    torch.manual_seed(0)
+    model = Canonicalize(BusResidualScale(load_model(args)).fit_d_ref(loader)).fit_scale_ref(loader).eval()
+    probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
+    for sym, param in probes:
+        ee = equivariance_error(model, loader, sym, param)
+        assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_resnorm_feeds_back_the_residual_divided_by_the_bus_scale(loader, args):
+    """Same weights, same batch: the first residual GNS feeds back (before any feedback has acted) is the bare
+    model's divided by D_i / D_ref, bus by bus."""
+    torch.manual_seed(0)
+    bare = load_model(args).eval()
+    wrapped = BusResidualScale(copy.deepcopy(bare)).fit_d_ref(loader).eval()
+    data = next(iter(loader))
+    caps = {}
+    for name, m in (("bare", bare), ("wrapped", wrapped.model)):
+        hook = m.physics_mlp.register_forward_pre_hook(lambda mod, inp, n=name: caps.setdefault(n, inp[0].clone()))
+        with torch.no_grad():
+            (bare if name == "bare" else wrapped)(data)
+        hook.remove()
+    s = Canonicalize.node_scale(data) / wrapped.d_ref
+    assert s.std() > 0.1
+    assert torch.allclose(caps["wrapped"] * s[:, None], caps["bare"], atol=1e-6, rtol=1e-4)
+    assert wrapped.model.node_residuals_layer.scale is None
 
 
 def test_angle_error_split_isolates_a_common_offset(loader):
