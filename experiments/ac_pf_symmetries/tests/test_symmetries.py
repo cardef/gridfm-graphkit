@@ -52,6 +52,7 @@ from experiments.ac_pf_symmetries.symmetries import (
     act,
     act_output,
     act_phase,
+    act_scale_nodes,
     equivariance_error,
     line_pairs,
 )
@@ -216,6 +217,27 @@ def test_canonical_model_is_exactly_equivariant(loader, args, scale_a):
         ("scale", 0.01),
         ("fliptrafo", 1.0),
     )
+    for sym, param in probes:
+        ee = equivariance_error(model, loader, sym, param)
+        assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_m3_frame_divides_each_bus_power_balance_by_its_own_scale(loader):
+    """act_scale_nodes is not a symmetry, but bus i's balance only involves bus i, its generators and the rows
+    leaving it: on a wrong state its residual is divided by s_i exactly, so GNS's physics holds in M3's variables."""
+    data = perturbed(next(iter(loader)))
+    s = Canonicalize.node_scale(data)
+    s = s / s.mean()
+    assert s.std() > 0.1  # the frame really differs between buses
+    base = ground_truth_residual(data)
+    framed = ground_truth_residual(act_scale_nodes(data, s))
+    assert torch.allclose(framed, base / s[:, None], atol=1e-6, rtol=1e-4)
+
+
+def test_m3_local_frame_is_exactly_equivariant(loader, args):
+    torch.manual_seed(0)
+    model = Canonicalize(load_model(args), local=True).fit_scale_ref(loader).eval()
+    probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
     for sym, param in probes:
         ee = equivariance_error(model, loader, sym, param)
         assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)

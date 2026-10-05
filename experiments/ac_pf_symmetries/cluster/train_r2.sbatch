@@ -14,6 +14,8 @@
 # node is pinned with --nodelist:
 #   sbatch --nodelist=abacus-004 --array=0-11%4 train_r2.sbatch                         # folds 1-2 (Sapphire Rapids)
 #   sbatch --nodelist=abacus-007 --cpus-per-task=12 --array=12-17%2 train_r2.sbatch     # fold 3 (Skylake)
+# One arm on one fold, the array index being the seed (fold numbered from 0):
+#   ARM=m3canon FOLD=2 sbatch --nodelist=abacus-007 --cpus-per-task=6 --array=0-2 train_r2.sbatch
 set -euo pipefail
 S=/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO
 R=${CHECKOUT:-$S/SymmetricalFM/gridfm-graphkit}
@@ -24,10 +26,14 @@ TRAIN=("case14_ieee case57_ieee case118_ieee" "case14_ieee case30_ieee case118_i
 HELDOUT=(case30_ieee case57_ieee case118_ieee)
 ARMS=(canon m1fullcanon)
 i=$SLURM_ARRAY_TASK_ID
-fold=$((i / 6))
-j=$((i % 6))
-arm=${ARMS[$((j % 2))]}
-seed=$((j / 2))
+if [ -n "${ARM:-}" ]; then
+    arm=$ARM fold=$FOLD seed=$i
+else
+    fold=$((i / 6))
+    j=$((i % 6))
+    arm=${ARMS[$((j % 2))]}
+    seed=$((j / 2))
+fi
 echo "HEAD $(git rev-parse HEAD) checkout=$R fold=$fold arm=$arm seed=$seed host=$(hostname)"
 bash experiments/ac_pf_symmetries/cluster/provenance.sh \
     experiments/ac_pf_symmetries/{multigrid,hodge,run,symmetries}.py

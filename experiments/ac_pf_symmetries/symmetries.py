@@ -106,6 +106,30 @@ def act_scale(data, k):
     return d
 
 
+def _gen_scale(data, s):
+    """Each generator gets the per-bus scale of the bus it is connected to."""
+    gi, gb = data.edge_index_dict[("gen", "connected_to", "bus")]
+    sg = torch.ones(data["gen"].x.size(0), dtype=s.dtype, device=s.device)
+    sg[gi] = s[gb]
+    return sg
+
+
+def act_scale_nodes(data, s):
+    """M3's frame (Piano A §6): divide the power/admittance inputs of bus i, of its generators and of the edge
+    rows leaving it by s_i. Not a symmetry, but bus i's power balance only involves those quantities (each
+    directed row stores its own sending-end admittances), so it holds exactly in the new variables, with the
+    residual of bus i divided by s_i."""
+    d = data.clone()
+    sg, se = _gen_scale(d, s), s[d[E].edge_index[0]]
+    d["bus"].x[:, BUS_POWER] /= s[:, None]
+    d["bus"].y[:, BUS_Y_POWER] /= s[:, None]
+    d["gen"].x[:, GEN_POWER] /= sg[:, None]
+    d["gen"].y[:, [PG_H]] /= sg[:, None]
+    d[E].edge_attr[:, EDGE_POWER] /= se[:, None]
+    d[E].y /= se[:, None]
+    return d
+
+
 def line_pairs(data):
     """Return (partner_row, is_forward, is_line) for the bidirectional edge layout."""
     ei = data[E].edge_index
@@ -189,6 +213,15 @@ def act_output(out, sym, param, data):
     return o
 
 
+def act_output_nodes(out, s, data):
+    """Undo act_scale_nodes on the outputs: bus PG/QG and generator PG times their bus's s."""
+    o = {k: v.clone() for k, v in out.items()}
+    o["bus"][:, [PG_OUT, QG_OUT]] *= s[:, None]
+    if "gen" in o:
+        o["gen"][:, [PG_OUT_GEN]] *= _gen_scale(data, s)[:, None]
+    return o
+
+
 def wrap_angle(x):
     """Angles live on the circle: map a difference to [-pi, pi)."""
     return torch.remainder(x + math.pi, 2 * math.pi) - math.pi
@@ -249,16 +282,20 @@ class Canonicalize(nn.Module):
     mean(|Yff|)^(1-a) per graph (Piano A H4: every a in [0, 1] is an exact frame;
     a = 0 is the PoC's), relative to a constant fitted on the training set so the
     in-distribution scale is unchanged on average; multiply predicted powers back.
+    `local=True` is Piano A's M3: the scale frame per bus instead of per graph, s_i = D_i = sum of |Y_ij|
+    over the rows leaving bus i (`act_scale_nodes`), so the model sees local dimensionless inputs.
     """
 
-    def __init__(self, model, phase=True, scale=True, orient=True, scale_a=0.0):
+    def __init__(self, model, phase=True, scale=True, orient=True, scale_a=0.0, local=False):
         super().__init__()
         assert 0.0 <= scale_a <= 1.0
+        assert not (local and scale_a), "the per-bus frame has no H4 variant"
         self.model = model
         self.phase = phase
         self.scale = scale
         self.orient = orient
         self.scale_a = scale_a
+        self.local = local
         self.register_buffer("scale_ref", torch.ones(()))
 
     @property
@@ -300,6 +337,15 @@ class Canonicalize(nn.Module):
         return self.injection_scale(data) ** a * self.admittance_scale(data) ** (1 - a)
 
     @staticmethod
+    def node_scale(data):
+        """M3: D_i = sum of |Y_ij| over the edge rows leaving bus i (degree-1 homogeneous, orientation-free)."""
+        y = data[E].edge_attr[:, [YFT_TF_R, YFT_TF_I]].norm(dim=1)
+        d = torch.zeros(data["bus"].x.size(0), dtype=y.dtype, device=y.device)
+        d = d.index_add_(0, data[E].edge_index[0], y)
+        assert (d > 0).all(), "isolated bus: the per-bus frame is undefined"
+        return d
+
+    @staticmethod
     def ref_angle(data):
         ref = data.mask_dict["REF"]
         g = num_graphs(data)
@@ -310,7 +356,8 @@ class Canonicalize(nn.Module):
 
     @torch.no_grad()
     def fit_scale_ref(self, loader):
-        scales = torch.cat([self.graph_scale(d) for d in loader])
+        frame = self.node_scale if self.local else self.graph_scale
+        scales = torch.cat([frame(d) for d in loader])
         self.scale_ref.fill_(scales.mean())
         return self
 
@@ -319,13 +366,18 @@ class Canonicalize(nn.Module):
         if self.phase:
             theta = self.ref_angle(d)
             d = act_phase(d, -theta)
-        if self.scale:
+        if self.scale and self.local:
+            s = self.node_scale(d) / self.scale_ref
+            d = act_scale_nodes(d, s)
+        elif self.scale:
             s = self.graph_scale(d) / self.scale_ref
             d = act_scale(d, s)
         out = self.model(d, return_embeddings=return_embeddings)
         if return_embeddings:
             out, emb = out
-        if self.scale:
+        if self.scale and self.local:
+            out = act_output_nodes(out, s, d)
+        elif self.scale:
             out = act_output(out, "scale", 1.0 / s, d)
         if self.phase:
             out = act_output(out, "phase", theta, d)

@@ -16,8 +16,9 @@ import numpy as np
 
 OUT = Path(__file__).resolve().parent / "results" / "abacus_r2"
 DEG = 180.0 / math.pi
-ARMS = ("canon", "m1fullcanon")
-FOLD3 = "heldout_case118_ieee"  # P20-P22, registered after folds 1-2 were read
+ARMS = ("canon", "m1fullcanon", "m3canon")
+FOLD3 = "heldout_case118_ieee"  # P20-P22, registered after folds 1-2 were read; P23-P25 (m3canon) after fold 3
+DC_VA_118 = 1.95  # deg: DC power flow on case118's zero-shot scenarios (BASELINES.txt)
 COLS = {"VM": (1.0, "VM (p.u.)"), "VA": (DEG, "VA (deg)"), "PG": (None, "PG (MW)"), "QG": (None, "QG (Mvar)"),
         "PBE": (None, "PBE (MVA)"), "VA_cm": (DEG, "VA offset (deg)"), "VA_diff": (DEG, "VA rest (deg)"),
         "dVA": (DEG, "θ_f − θ_t (deg)")}
@@ -30,6 +31,10 @@ def phys(acc, base, q):
 
 def ms(a):
     return f"{a.mean():.3g} ± {a.std():.2g}" if len(a) > 1 else f"{a.mean():.3g}"
+
+
+def rng(a):
+    return f"[{a.min():.4g}, {a.max():.4g}]"
 
 
 def separated(a, b):
@@ -47,18 +52,19 @@ def main():
     folds = sorted({k[0] for k in runs})
     md = ["# R2: M0+Canon vs M1 on held-out grids", ""]
     md.append("Runs: " + ", ".join(f"{fd} {arm} {len(rs)}" for (fd, arm), rs in sorted(runs.items())) + "\n")
-    p17, p18, f3 = [], [], {}
+    p17, p18, f3, m3 = [], [], {}, {}
     for fd in folds:
         rs = {arm: runs.get((fd, arm), []) for arm in ARMS}
-        if not all(rs.values()):
+        if not (rs["canon"] and rs["m1fullcanon"]):
             continue
+        arms = [arm for arm in ARMS if rs[arm]]
         any_r = rs["canon"][0]
         for kind, grids in (("zero-shot", any_r["heldout"]), ("in distribution", any_r["train"])):
             md += [f"### {fd}: {kind}", "", "| grid | arm | " + " | ".join(c[1] for c in COLS.values()) + " |",
                    "|---" * (len(COLS) + 2) + "|"]
             for g in grids:
                 vals = {}
-                for arm in ARMS:
+                for arm in arms:
                     cells = []
                     for q in COLS:
                         if kind == "zero-shot":
@@ -78,6 +84,9 @@ def main():
                 if fd == FOLD3 and kind == "zero-shot":
                     for q in ("VA_cm", "VA_diff"):
                         f3[kind, q] = (vals["m1fullcanon", q], vals["canon", q], None)
+                    if rs["m3canon"]:
+                        for q in ("VA", "dVA", "VM", "PBE"):
+                            m3[q] = (vals["m3canon", q], vals["canon", q])
             md.append("")
     for name, recs in (("P17 (held-out grids, folds 1-2)", p17), ("P18 (training grids, folds 1-2)", p18)):
         if recs:
@@ -94,6 +103,16 @@ def main():
         md.append(f"**P21{'' if p20 else ' (not scored: P20 failed)'}: "
                   f"{('PASS' if cm < dif else 'FAIL') if p20 else '—'}** m1/canon ratio of the offset {cm:.2f}, "
                   f"of the rest {dif:.2f} (predicted offset ratio below)\n")
+    if "VA" in m3:
+        a3, a0 = m3["VA"]
+        p23 = bool(a3.max() < a0.min())
+        md.append(f"**P23 (M3, case118 held out, VA): {'PASS' if p23 else 'FAIL'}** (predicted m3 entirely below "
+                  f"canon): m3 {rng(a3)} vs canon {rng(a0)} deg\n")
+        p24 = not bool(a3.max() < DC_VA_118)
+        md.append(f"**P24 (M3 vs DC, case118): {'PASS' if p24 else 'FAIL'}** (predicted some seed above DC's "
+                  f"{DC_VA_118} deg): m3 {rng(a3)} deg\n")
+        md.append("P25 (exploratory), zero-shot case118, m3 vs canon: " + "; ".join(
+            f"{q} {rng(m3[q][0])} vs {rng(m3[q][1])}" for q in ("dVA", "VM", "PBE")) + "\n")
     out = a.results_dir / "REPORT.md"
     out.write_text("\n".join(md))
     print(out.read_text())

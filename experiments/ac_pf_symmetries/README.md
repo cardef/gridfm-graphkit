@@ -159,4 +159,6 @@ normalizer and contributes the same number of scenarios) and tests it zero-shot 
 `cluster/train_r2.sbatch` runs `canon` vs `m1fullcanon` on three folds (held out case30, case57, case118; CPU,
 one node type per fold), `r2_report.py` scores the predictions, `r2_baselines.py` gives two references on the
 same zero-shot scenarios (flat angles, DC power flow). `reconstruct_angles` pads graphs of different sizes, so M1
-works on mixed batches.
+works on mixed batches. `m3canon` (fold 3 only) is Piano A's M3, `Canonicalize(local=True)`: the S3 frame per bus
+instead of per graph (every power/admittance input of bus i, its generators and the rows leaving it divided by
+D_i = Σ_j |Y_ij|), i.e. local dimensionless inputs on which GNS's physics still holds exactly.
