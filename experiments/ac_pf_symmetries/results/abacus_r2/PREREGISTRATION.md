@@ -113,7 +113,7 @@ All three folds (train on three IEEE grids, hold out the fourth; 1024 scenarios 
 Expectation, not part of the scoring: P31 is near certain (DC alone is 2-8x below canon's ranges); P29 and P30 are
 the real test and I would not bet either way: the correction must stay small on grids it never saw.
 
-### Amendment to the DC prior, fixed 2026-10-07 16:55, before any dccanon result exists
+### Amendment to the DC prior, fixed 2026-10-07 ~16:53 (committed in f44e933), before any dccanon result exists
 
 After an adversarial review (the criterion "below DC" has no margin; P30 lumps two grids whose DC errors differ in
 structure). No dccanon result file existed when this was written (checked by listing, not reading). Deviation logged:

@@ -147,7 +147,7 @@ def main():
         md.append(f"**{pid} (DC prior {what}, zero-shot VA): {verdict}** " + "; ".join(
             f"{g} dc-prior {rng(x)} vs " + (f"DC {DC_VA[g]}" if what == "below DC" else f"canon {rng(y)}")
             for g, x, y in recs) + "\n")
-    for pid, grids in (("P29m", ("case118_ieee",)), ("P30m", ("case30_ieee", "case57_ieee"))):  # amendment of 16:55
+    for pid, grids in (("P29m", ("case118_ieee",)), ("P30m", ("case30_ieee", "case57_ieee"))):  # amendment of 2026-10-07 (f44e933)
         recs = [r for r in dcm if r[0] in grids]
         if recs:
             ok = [bool(x.max() <= 0.75 * DC_VA[g]) for g, x, _ in recs]
