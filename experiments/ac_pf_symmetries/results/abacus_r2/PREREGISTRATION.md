@@ -112,3 +112,27 @@ All three folds (train on three IEEE grids, hold out the fourth; 1024 scenarios 
 
 Expectation, not part of the scoring: P31 is near certain (DC alone is 2-8x below canon's ranges); P29 and P30 are
 the real test and I would not bet either way: the correction must stay small on grids it never saw.
+
+### Amendment to the DC prior, fixed 2026-10-07 16:55, before any dccanon result exists
+
+After an adversarial review (the criterion "below DC" has no margin; P30 lumps two grids whose DC errors differ in
+structure). No dccanon result file existed when this was written (checked by listing, not reading). Deviation logged:
+fold 3 runs with 4 CPUs per task, not 6 (node occupancy; float summation order only).
+
+DC's own split on the zero-shot scenarios (`BASELINES.txt`, deg): case118 offset 1.6, rest 1.11, branch differences
+0.48; case30 1.51 / 0.40 / 0.34 (almost all offset: the losses DC ignores); case57 0.39 / 1.01 / 0.53 (mostly rest).
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P29m | a margin over DC on case118 | zero-shot VA <= 0.75 × DC (1.46 deg) for every seed | P29 without P29m: "DC plus a small correction", no transfer claim |
+| P30m | the same on case30 and case57 | <= 1.17 deg on case30 and <= 0.81 deg on case57, every seed | scored per grid; see the readings below |
+| P33 | does the correction do the global part? | zero-shot offset on case118 below DC's 1.6 deg for every seed | the model cannot fix the loss-induced offset even when given DC: what is missing is loss allocation, not the linear solve |
+
+Readings fixed now for the ambiguous patterns: 2 of 3 seeds below DC = "DC level", no claim; pass on case30 but not
+case57 (or the reverse) is read through DC's error structure above (case30: global offset; case57: local rest); P29
+pass with P30 fail = the correction helps where DC is worse, no general claim.
+
+Decision rule for a separate Paper 2 (from the review): all of (i) P29m and P30m pass on case118 and case30, and
+case57 is not above DC; (ii) P33 passes; (iii) dccanon beats DC + one Newton or fast-decoupled iteration on the same
+scenarios (to be computed; it does not depend on the dccanon runs); (iv) the result holds with a correction
+initialized at zero (to be run). Otherwise the DC reference and the DC prior go into Paper 1.
