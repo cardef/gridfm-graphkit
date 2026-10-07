@@ -163,3 +163,5 @@ works on mixed batches. `m3canon` is Piano A's M3, `Canonicalize(local=True)`: t
 graph (every power/admittance input of bus i, its generators and the rows leaving it divided by D_i = Σ_j |Y_ij|),
 i.e. local dimensionless inputs on which GNS's physics still holds exactly. `canonresnorm` (`resnorm.py`) is its
 ablation: canon's inputs, with the residual GNS feeds back and puts in its physics loss normalized per bus as in M3.
+`dccanon` (`dcprior.py`): every GNS layer decodes its angles as the DC power-flow solution (that of `r2_baselines.py`,
+one anchored Laplacian solve per graph from the inputs) plus a learned correction.

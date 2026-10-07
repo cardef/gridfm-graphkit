@@ -16,9 +16,9 @@ import numpy as np
 
 OUT = Path(__file__).resolve().parent / "results" / "abacus_r2"
 DEG = 180.0 / math.pi
-ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm")  # P26-P28 (m3canon folds 1-2, canonresnorm fold 3)
+ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm", "dccanon")  # P26-P28; dccanon: P29-P32
 FOLD3 = "heldout_case118_ieee"  # P20-P22, registered after folds 1-2 were read; P23-P25 (m3canon) after fold 3
-DC_VA_118 = 1.95  # deg: DC power flow on case118's zero-shot scenarios (BASELINES.txt)
+DC_VA = {"case30_ieee": 1.56, "case57_ieee": 1.08, "case118_ieee": 1.95}  # deg, DC on the zero-shot scenarios (BASELINES.txt)
 COLS = {"VM": (1.0, "VM (p.u.)"), "VA": (DEG, "VA (deg)"), "PG": (None, "PG (MW)"), "QG": (None, "QG (Mvar)"),
         "PBE": (None, "PBE (MVA)"), "VA_cm": (DEG, "VA offset (deg)"), "VA_diff": (DEG, "VA rest (deg)"),
         "dVA": (DEG, "θ_f − θ_t (deg)")}
@@ -53,7 +53,7 @@ def main():
     md = ["# R2: M0+Canon vs M1 on held-out grids", ""]
     md.append("Runs: " + ", ".join(f"{fd} {arm} {len(rs)}" for (fd, arm), rs in sorted(runs.items())) + "\n")
     p17, p18, f3, m3 = [], [], {}, {}
-    p2627, p28 = {"VM": [], "PBE": []}, {}
+    p2627, p28, dcp = {"VM": [], "PBE": []}, {}, []
     for fd in folds:
         rs = {arm: runs.get((fd, arm), []) for arm in ARMS}
         if not (rs["canon"] and rs["m1fullcanon"]):
@@ -91,6 +91,8 @@ def main():
                     if rs["canonresnorm"] and rs["m3canon"]:
                         for q in ("VM", "PBE"):
                             p28[q] = (vals["canonresnorm", q], vals["canon", q], vals["m3canon", q])
+                if kind == "zero-shot" and rs["dccanon"]:
+                    dcp.append((g, vals["dccanon", "VA"], vals["canon", "VA"]))
                 if fd != FOLD3 and kind == "zero-shot" and rs["m3canon"]:
                     for q in ("VM", "PBE"):
                         p2627[q].append((g, vals["m3canon", q], vals["canon", q]))
@@ -115,9 +117,9 @@ def main():
         p23 = bool(a3.max() < a0.min())
         md.append(f"**P23 (M3, case118 held out, VA): {'PASS' if p23 else 'FAIL'}** (predicted m3 entirely below "
                   f"canon): m3 {rng(a3)} vs canon {rng(a0)} deg\n")
-        p24 = not bool(a3.max() < DC_VA_118)
+        p24 = not bool(a3.max() < DC_VA["case118_ieee"])
         md.append(f"**P24 (M3 vs DC, case118): {'PASS' if p24 else 'FAIL'}** (predicted some seed above DC's "
-                  f"{DC_VA_118} deg): m3 {rng(a3)} deg\n")
+                  f"{DC_VA['case118_ieee']} deg): m3 {rng(a3)} deg\n")
         md.append("P25 (exploratory), zero-shot case118, m3 vs canon: " + "; ".join(
             f"{q} {rng(m3[q][0])} vs {rng(m3[q][1])}" for q in ("dVA", "VM", "PBE")) + "\n")
     for pid, q in (("P26", "VM"), ("P27", "PBE")):
@@ -133,6 +135,16 @@ def main():
         head = f"**P28 (ablation, case118 {q}): {'PASS' if outcome.startswith('(i)') else 'FAIL'}** (predicted (i))" \
             if q == "VM" else f"P28, reported alongside ({q}):"
         md.append(f"{head} {outcome}: resnorm {rng(r)} vs canon {rng(c)}, m3 {rng(m)}\n")
+    for pid, grids, what in (("P29", ("case118_ieee",), "below DC"), ("P30", ("case30_ieee", "case57_ieee"), "below DC"),
+                             ("P31", tuple(DC_VA), "below canon")):
+        recs = [r for r in dcp if r[0] in grids]
+        if not recs:
+            continue
+        ok = [x.max() < (DC_VA[g] if what == "below DC" else y.min()) for g, x, y in recs]
+        verdict = ("PASS" if all(ok) else "FAIL") if len(recs) == len(grids) else "incomplete"
+        md.append(f"**{pid} (DC prior {what}, zero-shot VA): {verdict}** " + "; ".join(
+            f"{g} dc-prior {rng(x)} vs " + (f"DC {DC_VA[g]}" if what == "below DC" else f"canon {rng(y)}")
+            for g, x, y in recs) + "\n")
     out = a.results_dir / "REPORT.md"
     out.write_text("\n".join(md))
     print(out.read_text())

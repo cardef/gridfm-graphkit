@@ -14,10 +14,12 @@ from torch import nn
 from torch_geometric.loader import DataLoader
 
 from gridfm_graphkit.datasets.globals import (
+    PD_H,
     PG_H,
     QG_H,
     TAP,
     VA_H,
+    VA_OUT,
     VM_H,
     YFF_TT_I,
     YFF_TT_R,
@@ -41,6 +43,7 @@ from gridfm_graphkit.tasks.pf_task import (
     _clamp_known_to_ground_truth,
 )
 
+from experiments.ac_pf_symmetries.dcprior import DCPriorLayers, dc_angles
 from experiments.ac_pf_symmetries.hodge import (
     BranchAngleHead,
     BranchAngleLayers,
@@ -271,6 +274,52 @@ def test_resnorm_feeds_back_the_residual_divided_by_the_bus_scale(loader, args):
     assert s.std() > 0.1
     assert torch.allclose(caps["wrapped"] * s[:, None], caps["bare"], atol=1e-6, rtol=1e-4)
     assert wrapped.model.node_residuals_layer.scale is None
+
+
+def test_dc_angles_solve_the_dc_system_and_approximate_the_labels(loader):
+    """theta_DC satisfies B theta = P on every non-REF bus, equals the REF angle at REF, and is close to the AC
+    angles (sign and units right: far closer than predicting the REF angle everywhere)."""
+    data = next(iter(loader))
+    th = dc_angles(data).double()
+    _, fwd, _ = line_pairs(data)
+    ei, ea = data[E_KEY].edge_index, data[E_KEY].edge_attr
+    f, t = ei[0, fwd], ei[1, fwd]
+    flow = ea[fwd, YFT_TF_I].double() * (th[f] - th[t])
+    inj = torch.zeros_like(th).index_add(0, f, flow).index_add(0, t, -flow)
+    gi, gb = data.edge_index_dict[("gen", "connected_to", "bus")]
+    known = (~data.mask_dict["gen"][gi, PG_H]).double()
+    p = torch.zeros_like(th).index_add(0, gb, data["gen"].x[gi, PG_H].double() * known)
+    p = p - data["bus"].x[:, PD_H].double()
+    ref = data.mask_dict["REF"]
+    assert torch.allclose(inj[~ref], p[~ref], atol=1e-4)
+    assert torch.allclose(th[ref], data["bus"].x[ref, VA_H].double())
+    target, _, _ = _build_bus_target(data, data["bus"].x.size(0))
+    va = target[~ref, VA_OUT].double()
+    assert (th[~ref] - va).pow(2).mean().sqrt() < 0.25 * va.pow(2).mean().sqrt()
+
+
+def test_dc_prior_with_a_zero_correction_outputs_the_dc_angles(loader, args):
+    torch.manual_seed(0)
+    model = load_model(args)
+    last = [m for m in model.mlp_bus.modules() if isinstance(m, nn.Linear)][-1]
+    nn.init.zeros_(last.weight)
+    nn.init.zeros_(last.bias)
+    wrapped = DCPriorLayers(model).eval()
+    data = next(iter(loader))
+    with torch.no_grad():
+        out = wrapped(data)
+    free = ~data.mask_dict["REF"]
+    assert torch.allclose(out["bus"][free, VA_OUT], dc_angles(data)[free], atol=1e-6)
+    assert wrapped.model.mlp_bus.theta_dc is None
+
+
+def test_dc_prior_inside_canonicalize_is_exactly_equivariant(loader, args):
+    torch.manual_seed(0)
+    model = Canonicalize(DCPriorLayers(load_model(args))).fit_scale_ref(loader).eval()
+    probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
+    for sym, param in probes:
+        ee = equivariance_error(model, loader, sym, param)
+        assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
 
 
 def test_angle_error_split_isolates_a_common_offset(loader):

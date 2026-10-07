@@ -27,12 +27,19 @@ from gridfm_graphkit.datasets.powergrid_hetero_dataset import HeteroGridDatasetD
 from gridfm_graphkit.io.param_handler import get_task, get_task_transforms, load_normalizer
 from gridfm_graphkit.training.callbacks import SaveBestModelStateDict
 
+from .dcprior import DCPriorLayers
 from .hodge import BranchAngleLayers
 from .resnorm import BusResidualScale
 from .run import OUT, ROOT, accuracy, default_device, eval_loader, make_args
 from .symmetries import Canonicalize
 
-ARMS = {"canon": None, "m1fullcanon": BranchAngleLayers, "m3canon": None, "canonresnorm": BusResidualScale}
+ARMS = {
+    "canon": None,
+    "m1fullcanon": BranchAngleLayers,
+    "m3canon": None,
+    "canonresnorm": BusResidualScale,
+    "dccanon": DCPriorLayers,
+}
 LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inputs) instead of per graph
 
 

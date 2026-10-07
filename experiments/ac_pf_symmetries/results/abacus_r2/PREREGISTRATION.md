@@ -87,3 +87,28 @@ bare model's divided by D_i / D_ref bus by bus. Fold 3, seeds 0-2, abacus-007 wi
 
 P28's prediction is a low-confidence call: the in-distribution PBE improved on all three grids, a feedback-like
 signature, but q_i = Q_i/D_i is also the natural input for a local voltage deviation.
+
+## DC prior, fixed 2026-10-07 before it runs
+
+Arm `dccanon` = Canonicalize(DCPriorLayers(GNS)) (`dcprior.py`): in every layer GNS decodes its bus angles as
+theta_DC + a learned correction. theta_DC is the DC power flow of `r2_baselines.py` (B theta = P from the inputs,
+anchored at REF, one solve per graph, no gradient), exact under S1/S3/S4/S5, so the arm stays on canon's section and
+differs from canon only in how the angles are represented; VM, PG and QG as in canon. Tests: theta_DC solves the DC
+system and is far closer to the AC angles than the REF angle is; with a zero correction the model outputs theta_DC;
+exact equivariance. theta_DC is computed in the forward pass (one dense solve per graph, as M1 does in each of its
+12 layers), not precomputed: same numbers, simpler code; the training-time cost is measured (P32).
+
+All three folds (train on three IEEE grids, hold out the fourth; 1024 scenarios per grid, max 100 epochs, patience
+40, seeds 0-2), compared with canon and with DC on the same zero-shot scenarios (`BASELINES.txt`: 1.56, 1.08 and
+1.95 deg on case30, case57 and case118). Nodes as for the M3 runs: folds 1-2 on abacus-004 (5 CPUs per task), fold
+3 on abacus-007 (6 CPUs).
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P29 | does the learned correction transfer to a larger grid? | zero-shot VA on case118 below DC's 1.95 deg for every seed | under size extrapolation the correction does not transfer: the gain over the learned models is DC's alone |
+| P30 | the same on the held-out grids of training size | zero-shot VA below DC on case30 (1.56) and case57 (1.08) for every seed | as above, without the size shift |
+| P31 | does the DC representation help a learned model? | zero-shot VA range entirely below canon's on all three held-out grids | the correction is so wrong on unseen grids that it undoes DC's advantage |
+| P32 | exploratory | — | zero-shot VM, PBE, offset, rest and branch differences; in distribution vs canon and DC; training time vs canon |
+
+Expectation, not part of the scoring: P31 is near certain (DC alone is 2-8x below canon's ranges); P29 and P30 are
+the real test and I would not bet either way: the correction must stay small on grids it never saw.

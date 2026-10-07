@@ -15,33 +15,40 @@ from gridfm_graphkit.datasets.globals import VA_H, VM_OUT, YFT_TF_I, YFT_TF_R
 from .symmetries import E, line_pairs, node_batch, num_graphs
 
 
-def reconstruct_angles(delta, f, t, w, ref, theta_ref, batch, n_graphs, eps=1e-6):
-    """Bus angles from branch differences `delta` (branch e goes f[e] -> t[e]), anchored at the REF angle.
+def solve_anchored(rhs, f, t, w, ref, theta_ref, batch, n_graphs, eps=1e-6):
+    """Solve L_w theta = rhs on every graph of a batch with theta fixed at the REF angle (L_w: the Laplacian with
+    weight w[e] on branch f[e] -> t[e]; rhs per bus, its REF entry ignored).
 
-    Per graph: the weighted Laplacian with the REF row and column replaced by the identity, solved against
-    B^T W delta (REF entry 0), plus theta_ref. Graphs of a batch may differ in size (mixed grids): each is padded to
-    the largest with identity rows, which leaves the real entries unchanged. eps * mean(w) on the non-REF diagonal
-    keeps a bus islanded by an outage at the REF angle instead of making the solve singular; on a connected graph it
-    moves theta by O(eps). PyG batches keep each graph's nodes contiguous, which the local indexing assumes.
+    Per graph: L_w with the REF row and column replaced by the identity, solved against rhs (REF entry 0), plus
+    theta_ref. Graphs of a batch may differ in size (mixed grids): each is padded to the largest with identity
+    rows, which leaves the real entries unchanged. eps * mean(w) on the non-REF diagonal keeps a bus islanded by an
+    outage at the REF angle instead of making the solve singular; on a connected graph it moves theta by O(eps).
+    PyG batches keep each graph's nodes contiguous, which the local indexing assumes.
     """
     counts = torch.bincount(batch, minlength=n_graphs)
     local = torch.arange(batch.numel(), device=batch.device) - (torch.cumsum(counts, 0) - counts)[batch]
     n = int(counts.max())
     g, fi, ti = batch[f], local[f], local[t]
-    lap = delta.new_zeros(n_graphs, n, n)
+    lap = w.new_zeros(n_graphs, n, n)
     for (i, j), s in (((fi, fi), 1.0), ((ti, ti), 1.0), ((fi, ti), -1.0), ((ti, fi), -1.0)):
         lap.index_put_((g, i, j), s * w, accumulate=True)
-    rhs = delta.new_zeros(n_graphs, n)
-    rhs.index_put_((g, fi), w * delta, accumulate=True)
-    rhs.index_put_((g, ti), -w * delta, accumulate=True)
+    b = w.new_zeros(n_graphs, n)
+    b[batch, local] = rhs
     free = torch.zeros(n_graphs, n, dtype=torch.bool, device=batch.device)
     free[batch, local] = True  # real buses; padding stays fixed at 0
     free[batch[ref], local[ref]] = False
     lap = lap * (free[:, :, None] & free[:, None, :]) + torch.diag_embed(
         (~free).to(lap.dtype) + eps * w.mean() * free.to(lap.dtype),
     )
-    theta0 = torch.linalg.solve(lap, (rhs * free).unsqueeze(-1)).squeeze(-1)
+    theta0 = torch.linalg.solve(lap, (b * free).unsqueeze(-1)).squeeze(-1)
     return theta0[batch, local] + theta_ref[batch]
+
+
+def reconstruct_angles(delta, f, t, w, ref, theta_ref, batch, n_graphs, eps=1e-6):
+    """Bus angles from branch differences `delta` (branch e goes f[e] -> t[e]), anchored at the REF angle:
+    `solve_anchored` against B^T W delta."""
+    rhs = delta.new_zeros(batch.numel()).index_add(0, f, w * delta).index_add(0, t, -w * delta)
+    return solve_anchored(rhs, f, t, w, ref, theta_ref, batch, n_graphs, eps)
 
 
 class BranchAngleHead(nn.Module):
