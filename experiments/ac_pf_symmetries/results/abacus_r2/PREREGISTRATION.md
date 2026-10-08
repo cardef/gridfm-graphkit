@@ -206,3 +206,21 @@ saved models with that code (`--eval-only`, `result_eval.json`), whose other met
 | P39 | does the hidden REF voltage explain the zero-shot angle error? | no separation between canonvref and canon on zero-shot VA on any held-out grid: exact physics loses only 0.07-0.56 deg to it (`CLASSICAL.txt`), canon errs by 3.9-12.4 deg | canonvref entirely below canon somewhere: the learned model's guess of the voltage level drives its angle error far more than it does for physics |
 | P40 | does it explain the zero-shot voltage error? | canonvref's zero-shot VM_PQ range entirely below canon's on case30 and case118, where the REF voltage estimate from the PV setpoints is off by 0.024 and 0.015 p.u. | the learned models' zero-shot VM error is not the voltage level |
 | P41 | exploratory | — | case57 VM (the estimate is off by only 0.004 p.u. there); in distribution VM_PQ and VA (the REF voltage varies across scenarios on case14, case57 and case118); PBE; canon's VM error at the REF bus |
+
+### Amendment to step 2, 2026-10-08 ~18:25, after a review and before any dcinjcanon result exists
+
+Checked by listing file names only: no dcinjcanon result existed; two dczcanon results (fold 3, seeds 1-2) existed
+and were not read. Changes, all to dcinjcanon:
+- P34 as registered ("offset at or below DC's") passes with a zero correction, which reproduces DC exactly: it is not
+  informative alone. Added P34s: zero-shot offset <= 0.75 × DC's offset on all three held-out grids, every seed. P34
+  is still reported as registered.
+- P37's threshold (DC with loss compensation) is weaker than DC on case30 and case57 (C2). Added P37s: zero-shot VA
+  below a non-learned iteration from the same inputs, the P-theta fixed-point iteration theta <- theta + L^-1 (P_spec -
+  P_ac(V, theta)) with L the DC matrix, 12 steps (one per GNS layer) from theta_DC, V fixed at the setpoints (PQ at
+  1.0, REF at the mean PV setpoint), every seed on all three grids. GNS's per-layer physics feedback could learn
+  exactly this iteration; if the model does not beat it, learning adds nothing. It will be computed by `r2_classical.py`
+  before any dcinjcanon result is read (it does not depend on the runs); the full fast-decoupled iteration is reported
+  alongside.
+- "Local" in "local injection correction" describes the output (one value per bus), not its inputs (a 12-hop
+  embedding with physics feedback): a test of locality needs a corrector without message passing, planned separately.
+- The decision rule for a transfer result becomes P34s, P35 and P37s.
