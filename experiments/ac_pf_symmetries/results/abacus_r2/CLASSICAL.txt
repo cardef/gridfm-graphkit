@@ -1,0 +1,31 @@
+# r2_classical.py output, 2026-10-08 (job 62783, abacus-004), r2_classical.py b4f7b4e8f4f6 and dcprior.py ee0e1c48806e as
+# committed in 1284efc. Zero-shot scenarios of R2 (the fixed 1024-scenario subset per grid). Angles in deg, VM in p.u.
+# oracle = labelled REF voltage (one input more than the models); inputs = mean of the PV voltage setpoints.
+case14_ieee | oracle Newton iterations to 1e-9 from DC start mean 3.21 max 4, from flat start mean 4.00 max 4 | REF voltage label min 1.0283 max 1.0600, its input estimate RMS error 0.0190
+  dc      VA 1.509 | offset 1.463 rest 0.3666 dVA 0.4451 | VM 0.0373
+  dcloss  VA 1.874 | offset 1.833 rest 0.3926 dVA 0.5322 | VM 0.0373
+  nr1 oracle VA 0.196 | offset 0.1799 rest 0.07774 dVA 0.05725 | VM 0.001997
+  nr oracle VA 1.859e-06 | offset 1.784e-06 rest 5.222e-07 dVA 8.63e-07 | VM 4.92e-08
+  nr1 inputs VA 0.2768 | offset 0.2644 rest 0.08211 dVA 0.1269 | VM 0.006259
+  nr inputs VA 0.4317 | offset 0.4314 rest 0.01639 dVA 0.1369 | VM 0.006182
+case30_ieee | oracle Newton iterations to 1e-9 from DC start mean 4.00 max 4, from flat start mean 4.00 max 4 | REF voltage label min 1.0600 max 1.0600, its input estimate RMS error 0.0243
+  dc      VA 1.56 | offset 1.508 rest 0.397 dVA 0.3391 | VM 0.03494
+  dcloss  VA 1.943 | offset 1.895 rest 0.4294 dVA 0.3921 | VM 0.03494
+  nr1 oracle VA 0.1301 | offset 0.1217 rest 0.04608 dVA 0.02808 | VM 0.002743
+  nr oracle VA 1.366e-06 | offset 1.262e-06 rest 5.22e-07 dVA 6.57e-07 | VM 5.887e-08
+  nr1 inputs VA 0.4603 | offset 0.4583 rest 0.04318 dVA 0.1097 | VM 0.005322
+  nr inputs VA 0.5617 | offset 0.561 rest 0.02848 dVA 0.1134 | VM 0.005388
+case57_ieee | oracle Newton iterations to 1e-9 from DC start mean 4.00 max 4, from flat start mean 4.00 max 4 | REF voltage label min 0.9956 max 1.0390, its input estimate RMS error 0.0040
+  dc      VA 1.08 | offset 0.3928 rest 1.006 dVA 0.5322 | VM 0.02655
+  dcloss  VA 1.563 | offset 1.217 rest 0.9805 dVA 0.4652 | VM 0.02655
+  nr1 oracle VA 0.2183 | offset 0.1955 rest 0.09696 dVA 0.07156 | VM 0.01204
+  nr oracle VA 6.041e-06 | offset 2.361e-06 rest 5.56e-06 dVA 3.23e-06 | VM 2.11e-07
+  nr1 inputs VA 0.1759 | offset 0.1482 rest 0.09486 dVA 0.06892 | VM 0.01174
+  nr inputs VA 0.06975 | offset 0.06949 rest 0.006008 dVA 0.01447 | VM 0.0008391
+case118_ieee | oracle Newton iterations to 1e-9 from DC start mean 4.00 max 4, from flat start mean 4.00 max 4 | REF voltage label min 1.0097 max 1.0600, its input estimate RMS error 0.0152
+  dc      VA 1.948 | offset 1.6 rest 1.111 dVA 0.4792 | VM 0.03768
+  dcloss  VA 1.476 | offset 1.213 rest 0.8413 dVA 0.4573 | VM 0.03768
+  nr1 oracle VA 2.528 | offset 2.173 rest 1.293 dVA 0.3324 | VM 0.002015
+  nr oracle VA 1.714e-06 | offset 1.006e-06 rest 1.387e-06 dVA 1.083e-06 | VM 8.137e-08
+  nr1 inputs VA 2.407 | offset 2.032 rest 1.29 dVA 0.3205 | VM 0.002765
+  nr inputs VA 0.2347 | offset 0.2336 rest 0.02224 dVA 0.04596 | VM 0.001942

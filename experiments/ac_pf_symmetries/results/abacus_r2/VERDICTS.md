@@ -170,3 +170,26 @@ which local message passing cannot infer on an unseen grid. By the pre-registere
 DC-prior paper. Suggested next: compute that global quantity physically (DC with loss compensation, one Newton or
 fast-decoupled step), and as its learned counterpart a model whose learned part is local (injection corrections) and
 whose global part is a second exact solve.
+
+## Transfer step 1: classical references (C1-C4, 2026-10-08)
+
+`r2_classical.py` (job 62783, code as committed in 1284efc), output in `CLASSICAL.txt`. First run (job 62780)
+failed the gate because the PF mask hides the REF voltage; see the amendment in `PREREGISTRATION.md`.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| C1 gate | PASS | Newton to convergence with the labelled REF voltage matches the labels: VA ≤ 6e-6 deg, VM ≤ 2e-7 p.u. on all four grids |
+| C2 | FAIL (seen before the amendment, disclosed) | DC with loss compensation: VA 1.87 / 1.94 / 1.56 / 1.48 deg vs DC 1.51 / 1.56 / 1.08 / 1.95 (case14 / 30 / 57 / 118); offset higher on three grids |
+| C3 | FAIL | one Newton step from DC (oracle REF voltage): VA 0.20 / 0.13 / 0.22 / 2.53 deg, VM 0.002 / 0.003 / 0.012 / 0.002; above DC with loss compensation on case118 and above 0.005 p.u. VM on case57; with the inputs-only REF voltage also above 0.25 deg on case30 |
+| C4 | holds on case14 only | Newton from DC: 3.2 iterations on case14, 4.0 elsewhere; from a flat start 4.0 everywhere |
+
+What the references say:
+- Physics solves these grids exactly in at most four Newton iterations once the REF voltage is known; DC saves at
+  most one iteration. A learned model has a practical role here only as a faster approximation, not as a better one.
+- One Newton step from DC is not a uniformly strong reference: on case118 it overshoots (2.5 deg, worse than DC).
+- With the same information as the models (REF voltage estimated from the PV setpoints), exact physics still errs
+  by 0.43 / 0.56 / 0.07 / 0.23 deg and 0.006 / 0.005 / 0.0008 / 0.002 p.u.: that is the floor the hidden REF voltage
+  puts under any method using these inputs (the setpoint estimate is off by 0.019 / 0.024 / 0.004 / 0.015 p.u.).
+  The learned models are above it zero-shot: the best arm on angles (DC prior) by 3.5-20×, the best on VM (M3) by
+  1.3-18×.
+- DC's offset is not the series losses at |V| = 1 (C2).
