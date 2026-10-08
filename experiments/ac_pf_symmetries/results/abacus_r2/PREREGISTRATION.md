@@ -172,3 +172,21 @@ from a random correction), all three folds, seeds 0-2, nodes as dccanon:
 
 Decision rule for a transfer result: P34, P35 and P37 pass; if C3 holds, also fewer Newton iterations from
 dcinjcanon's prediction than from DC (to be measured). Expectation: C1 and C3 likely; P34 and P37 open.
+
+### Amendment to step 1, 2026-10-08 ~16:30, after a failed gate and before the corrected run
+
+The first run of `r2_classical.py` (job 62780) failed C1: Newton diverged. Cause, found on one scenario: the
+framework's PF mask hides the REF bus's voltage magnitude as well as its QG (`gridfm_graphkit/datasets/masking.py`,
+the "REF buses" block), so the input holds 0 there and Newton started from V = 0 at REF. The labelled state has zero
+mismatch with this solver's Ybus and injections (checked), so the physics matches. Consequence beyond the bug: with
+P and Q at REF unknown and its voltage hidden, the PF the models are asked to solve is one degree of freedom short
+(unknowns N - 1 angles + the PQ and REF voltages; equations N - 1 P balances + the PQ Q balances): the REF voltage
+level is not determined by the inputs, which bears on every zero-shot VM number in this file.
+
+Corrected step 1: Newton twice, with the labelled REF voltage ("oracle", one input more than the learned models; C1
+is checked on it) and with the mean of the graph's PV voltage setpoints ("inputs", the models' information). C3 and
+C4 are read on both, with C3's thresholds unchanged. Disclosure: the first run's DC and DC-with-loss-compensation
+rows do not depend on the bug and were seen: C2 fails (loss compensation raises the offset on case14, case30 and
+case57 and lowers it only on case118; VA 1.87 / 1.94 / 1.56 / 1.48 deg against DC's 1.51 / 1.56 / 1.08 / 1.95).
+Its pre-registered reading stands: DC's offset is not the series losses at |V| = 1. P37 keeps its definition (below
+DC with loss compensation) and is now a weak test on three of the four grids.
