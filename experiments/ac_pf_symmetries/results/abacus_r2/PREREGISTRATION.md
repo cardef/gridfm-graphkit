@@ -190,3 +190,19 @@ rows do not depend on the bug and were seen: C2 fails (loss compensation raises 
 case57 and lowers it only on case118; VA 1.87 / 1.94 / 1.56 / 1.48 deg against DC's 1.51 / 1.56 / 1.08 / 1.95).
 Its pre-registered reading stands: DC's offset is not the series losses at |V| = 1. P37 keeps its definition (below
 DC with loss compensation) and is now a weak test on three of the four grids.
+
+## REF voltage given vs hidden (P39-P41), fixed 2026-10-08 before the runs
+
+Arm `canonvref`: canon with the REF bus's voltage magnitude given as an input (`UnmaskRefVoltage`: restored from the
+labels and marked known, so the model clamps it like the PV setpoints; an operator setpoint in practice). Everything
+else as canon; all three folds, seeds 0-2; folds 1-2 on abacus-004, fold 3 on abacus-007, 4 CPUs per task. The code
+is on branch `research/ac-pf-symmetries-vref` in a separate worktree (`SymmetricalFM/wt-vref`), so that the pending
+step-2 runs keep importing the registered code of this checkout. VM is compared on the PQ buses only (`VM_PQ`, new in
+`run.accuracy`), since canonvref does not predict the REF voltage and canon does; canon's comes from re-evaluating its
+saved models with that code (`--eval-only`, `result_eval.json`), whose other metrics must reproduce `result.json`.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P39 | does the hidden REF voltage explain the zero-shot angle error? | no separation between canonvref and canon on zero-shot VA on any held-out grid: exact physics loses only 0.07-0.56 deg to it (`CLASSICAL.txt`), canon errs by 3.9-12.4 deg | canonvref entirely below canon somewhere: the learned model's guess of the voltage level drives its angle error far more than it does for physics |
+| P40 | does it explain the zero-shot voltage error? | canonvref's zero-shot VM_PQ range entirely below canon's on case30 and case118, where the REF voltage estimate from the PV setpoints is off by 0.024 and 0.015 p.u. | the learned models' zero-shot VM error is not the voltage level |
+| P41 | exploratory | — | case57 VM (the estimate is off by only 0.004 p.u. there); in distribution VM_PQ and VA (the REF voltage varies across scenarios on case14, case57 and case118); PBE; canon's VM error at the REF bus |
