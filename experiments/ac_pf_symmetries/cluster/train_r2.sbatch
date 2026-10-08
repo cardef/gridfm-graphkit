@@ -36,7 +36,7 @@ else
 fi
 echo "HEAD $(git rev-parse HEAD) checkout=$R fold=$fold arm=$arm seed=$seed host=$(hostname)"
 bash experiments/ac_pf_symmetries/cluster/provenance.sh \
-    experiments/ac_pf_symmetries/{multigrid,hodge,run,symmetries}.py
+    experiments/ac_pf_symmetries/{multigrid,hodge,run,symmetries,dcprior,resnorm}.py
 python -m experiments.ac_pf_symmetries.multigrid --arm "$arm" --seeds "$seed" --train ${TRAIN[$fold]} \
     --heldout "${HELDOUT[$fold]}" --device cpu \
     --results-dir $S/SymmetricalFM/gridfm-graphkit/experiments/ac_pf_symmetries/results/abacus_r2

@@ -43,7 +43,7 @@ from gridfm_graphkit.tasks.pf_task import (
     _clamp_known_to_ground_truth,
 )
 
-from experiments.ac_pf_symmetries.dcprior import DCPriorLayers, dc_angles
+from experiments.ac_pf_symmetries.dcprior import DCInjectionLayers, DCPriorLayers, dc_angles
 from experiments.ac_pf_symmetries.hodge import (
     BranchAngleHead,
     BranchAngleLayers,
@@ -60,6 +60,7 @@ from experiments.ac_pf_symmetries.symmetries import (
     act_scale_nodes,
     equivariance_error,
     line_pairs,
+    node_batch,
 )
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -320,6 +321,66 @@ def test_dc_prior_inside_canonicalize_is_exactly_equivariant(loader, args):
     for sym, param in probes:
         ee = equivariance_error(model, loader, sym, param)
         assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_zero_initialized_dc_arms_start_at_the_dc_angles(loader, args):
+    data = next(iter(loader))
+    free = ~data.mask_dict["REF"]
+    for wrap in (lambda m: DCPriorLayers(m, zero_init=True), DCInjectionLayers):
+        torch.manual_seed(0)
+        model = wrap(load_model(args)).eval()
+        with torch.no_grad():
+            out = model(data)
+        assert torch.allclose(out["bus"][free, VA_OUT], dc_angles(data)[free], atol=1e-6)
+
+
+def test_dc_injection_correction_goes_through_the_dc_solve(loader, args):
+    """With the same injection correction c on every bus, theta - theta_DC solves L x = c on the non-REF buses and
+    is 0 at REF: the learned part acts as an injection, its angles come from the exact solve."""
+    torch.manual_seed(0)
+    model = load_model(args)
+    last = [m for m in model.mlp_bus.modules() if isinstance(m, nn.Linear)][-1]
+    wrapped = DCInjectionLayers(model).eval()
+    with torch.no_grad():
+        last.bias[VA_OUT] = 0.01
+    data = next(iter(loader))
+    with torch.no_grad():
+        shift = (wrapped(data)["bus"][:, VA_OUT] - dc_angles(data)).double()
+    _, fwd, _ = line_pairs(data)
+    ei, ea = data[E_KEY].edge_index, data[E_KEY].edge_attr
+    f, t = ei[0, fwd], ei[1, fwd]
+    flow = ea[fwd, YFT_TF_I].double() * (shift[f] - shift[t])
+    inj = torch.zeros_like(shift).index_add(0, f, flow).index_add(0, t, -flow)
+    ref = data.mask_dict["REF"]
+    assert torch.allclose(inj[~ref], torch.full_like(inj[~ref], 0.01), atol=1e-4)
+    assert shift[ref].abs().max() < 1e-6
+
+
+def test_dc_injection_inside_canonicalize_is_exactly_equivariant(loader, args):
+    torch.manual_seed(0)
+    model = Canonicalize(DCInjectionLayers(load_model(args))).fit_scale_ref(loader).eval()
+    probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
+    for sym, param in probes:
+        ee = equivariance_error(model, loader, sym, param)
+        assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+def test_dc_angles_keep_an_islanded_bus_at_the_reference(loader):
+    """Cut every branch of a load bus: the DC solve stays finite and the island stays at the REF angle."""
+    data = next(iter(loader))
+    partner, _, _ = line_pairs(data)
+    ei, x = data[E_KEY].edge_index, data["bus"].x
+    ref, g0 = data.mask_dict["REF"], node_batch(data, "bus") == 0
+    load = (x[:, PD_H] != 0) & ~ref & ~data.mask_dict["PV"] & g0
+    k = int(torch.nonzero(load)[0])
+    touch = (ei[0] == k) | (ei[1] == k)
+    keep = ~(touch | touch[partner])
+    d = data.clone()
+    d[E_KEY].edge_index = ei[:, keep]
+    d[E_KEY].edge_attr = data[E_KEY].edge_attr[keep]
+    th = dc_angles(d)
+    assert torch.isfinite(th).all()
+    assert torch.allclose(th[k], x[ref & g0, VA_H][0])
 
 
 def test_angle_error_split_isolates_a_common_offset(loader):

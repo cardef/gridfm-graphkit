@@ -173,7 +173,7 @@ from a random correction), all three folds, seeds 0-2, nodes as dccanon:
 Decision rule for a transfer result: P34, P35 and P37 pass; if C3 holds, also fewer Newton iterations from
 dcinjcanon's prediction than from DC (to be measured). Expectation: C1 and C3 likely; P34 and P37 open.
 
-### Amendment to step 1, 2026-10-08 ~16:30, after a failed gate and before the corrected run
+### Amendment to step 1, 2026-10-08 ~15:50 (committed in bddf446), after a failed gate and before the corrected run
 
 The first run of `r2_classical.py` (job 62780) failed C1: Newton diverged. Cause, found on one scenario: the
 framework's PF mask hides the REF bus's voltage magnitude as well as its QG (`gridfm_graphkit/datasets/masking.py`,

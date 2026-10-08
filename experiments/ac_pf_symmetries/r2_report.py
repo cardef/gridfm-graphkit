@@ -16,10 +16,11 @@ import numpy as np
 
 OUT = Path(__file__).resolve().parent / "results" / "abacus_r2"
 DEG = 180.0 / math.pi
-ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm", "dccanon")  # P26-P28; dccanon: P29-P32
+ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm", "dccanon", "dczcanon", "dcinjcanon")  # dcz/dcinj: P34-P38
 FOLD3 = "heldout_case118_ieee"  # P20-P22, registered after folds 1-2 were read; P23-P25 (m3canon) after fold 3
 DC_VA = {"case30_ieee": 1.56, "case57_ieee": 1.08, "case118_ieee": 1.95}  # deg, DC on the zero-shot scenarios (BASELINES.txt)
 DC_VA_CM = {"case30_ieee": 1.51, "case57_ieee": 0.393, "case118_ieee": 1.6}  # deg, DC's offset there (P33)
+DCLOSS_VA = {"case30_ieee": 1.943, "case57_ieee": 1.563, "case118_ieee": 1.476}  # deg, DC with loss compensation (CLASSICAL.txt), P37
 COLS = {"VM": (1.0, "VM (p.u.)"), "VA": (DEG, "VA (deg)"), "PG": (None, "PG (MW)"), "QG": (None, "QG (Mvar)"),
         "PBE": (None, "PBE (MVA)"), "VA_cm": (DEG, "VA offset (deg)"), "VA_diff": (DEG, "VA rest (deg)"),
         "dVA": (DEG, "θ_f − θ_t (deg)")}
@@ -54,7 +55,7 @@ def main():
     md = ["# R2: M0+Canon vs M1 on held-out grids", ""]
     md.append("Runs: " + ", ".join(f"{fd} {arm} {len(rs)}" for (fd, arm), rs in sorted(runs.items())) + "\n")
     p17, p18, f3, m3 = [], [], {}, {}
-    p2627, p28, dcp, dcm = {"VM": [], "PBE": []}, {}, [], []
+    p2627, p28, dcp, dcm, inj = {"VM": [], "PBE": []}, {}, [], [], []
     for fd in folds:
         rs = {arm: runs.get((fd, arm), []) for arm in ARMS}
         if not (rs["canon"] and rs["m1fullcanon"]):
@@ -95,6 +96,8 @@ def main():
                 if kind == "zero-shot" and rs["dccanon"]:
                     dcp.append((g, vals["dccanon", "VA"], vals["canon", "VA"]))
                     dcm.append((g, vals["dccanon", "VA"], vals["dccanon", "VA_cm"]))
+                if kind == "zero-shot" and rs["dcinjcanon"] and rs["dczcanon"]:
+                    inj.append((g, vals["dcinjcanon", "VA"], vals["dcinjcanon", "VA_cm"], vals["dczcanon", "VA"]))
                 if fd != FOLD3 and kind == "zero-shot" and rs["m3canon"]:
                     for q in ("VM", "PBE"):
                         p2627[q].append((g, vals["m3canon", q], vals["canon", q]))
@@ -158,6 +161,20 @@ def main():
         if g == "case118_ieee":
             md.append(f"**P33 (DC prior offset below DC's on case118): {'PASS' if cm.max() < DC_VA_CM[g] else 'FAIL'}** "
                       f"offset {rng(cm)} vs DC {DC_VA_CM[g]} deg\n")
+    if inj:
+        complete = len(inj) == len(DC_VA)
+        checks = (
+            ("P34", "offset <= DC's", lambda g, x, cm, z: cm.max() <= DC_VA_CM[g], lambda g, x, cm, z: f"offset {rng(cm)} vs DC {DC_VA_CM[g]}"),
+            ("P35", "VA <= 0.75 x DC", lambda g, x, cm, z: x.max() <= 0.75 * DC_VA[g], lambda g, x, cm, z: f"VA {rng(x)} vs {0.75 * DC_VA[g]:.3g}"),
+            ("P36", "VA below dczcanon", lambda g, x, cm, z: x.max() < z.min(), lambda g, x, cm, z: f"VA {rng(x)} vs dcz {rng(z)}"),
+            ("P37", "VA below DC with losses", lambda g, x, cm, z: g in DCLOSS_VA and x.max() < DCLOSS_VA[g],
+             lambda g, x, cm, z: f"VA {rng(x)} vs {DCLOSS_VA.get(g, 'n/a')}"),
+        )
+        for pid, what, ok, show in checks:
+            res = [bool(ok(*r)) for r in inj]
+            verdict = ("PASS" if all(res) else "FAIL") if complete else "incomplete"
+            md.append(f"**{pid} (dcinjcanon {what}, zero-shot): {verdict}** " + "; ".join(
+                f"{r[0]} {show(*r)}" + (" ok" if o else "") for r, o in zip(inj, res)) + "\n")
     out = a.results_dir / "REPORT.md"
     out.write_text("\n".join(md))
     print(out.read_text())
