@@ -164,9 +164,10 @@ def angle_error_split(out, ev, target, data):
 def accuracy(model, loader, device, sym=None, param=None):
     """RMSE per predicted quantity and mean power-balance residual, optionally on the transformed set T_g.
 
-    Also the R7 angle-error split (`angle_error_split`): VA_cm, VA_diff, dVA, in rad.
+    Also the R7 angle-error split (`angle_error_split`): VA_cm, VA_diff, dVA, in rad; and VM_PQ, the VM error on the
+    PQ buses only, comparable between tasks that hide the REF voltage (the framework's PF mask) and give it.
     """
-    keys = ("VM", "VA", "PG", "QG", "VA_cm", "VA_diff", "dVA")
+    keys = ("VM", "VA", "PG", "QG", "VA_cm", "VA_diff", "dVA", "VM_PQ")
     acc = {q: torch.zeros(2, dtype=torch.float64) for q in keys}
     pbe = torch.zeros(2, dtype=torch.float64)
     for data in loader:
@@ -182,6 +183,10 @@ def accuracy(model, loader, device, sym=None, param=None):
             if q == "VA":
                 diff = wrap_angle(diff)
             acc[q] += torch.stack([(diff**2).sum(), m.sum().cpu().double()])
+        col, m = pred_masks(data)["VM"]
+        m = m & data.mask_dict["PQ"]
+        diff = (out["bus"][m, col] - target[m, col]).cpu().double()
+        acc["VM_PQ"] += torch.stack([(diff**2).sum(), m.sum().cpu().double()])
         ev = _clamp_known_to_ground_truth(out["bus"], target, data, gen_to_bus, n)
         for q, (sq, c) in angle_error_split(out, ev, target, data).items():
             acc[q] += torch.stack([sq.cpu().double(), c.cpu().double()])

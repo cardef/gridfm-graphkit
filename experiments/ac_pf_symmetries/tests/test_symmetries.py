@@ -21,6 +21,7 @@ from gridfm_graphkit.datasets.globals import (
     VA_H,
     VA_OUT,
     VM_H,
+    VM_OUT,
     YFF_TT_I,
     YFF_TT_R,
     YFT_TF_I,
@@ -49,6 +50,7 @@ from experiments.ac_pf_symmetries.hodge import (
     BranchAngleLayers,
     reconstruct_angles,
 )
+from experiments.ac_pf_symmetries.multigrid import UnmaskRefVoltage
 from experiments.ac_pf_symmetries.resnorm import BusResidualScale
 from experiments.ac_pf_symmetries.run import angle_error_split
 from experiments.ac_pf_symmetries.symmetries import (
@@ -381,6 +383,18 @@ def test_dc_angles_keep_an_islanded_bus_at_the_reference(loader):
     th = dc_angles(d)
     assert torch.isfinite(th).all()
     assert torch.allclose(th[k], x[ref & g0, VA_H][0])
+
+
+def test_unmasking_the_ref_voltage_makes_it_a_clamped_input(loader, args):
+    data = UnmaskRefVoltage()(next(iter(loader)).clone())
+    ref = data.mask_dict["REF"]
+    assert not data.mask_dict["bus"][ref, VM_H].any()
+    assert torch.equal(data["bus"].x[ref, VM_H], data["bus"].y[ref, VM_H])
+    torch.manual_seed(0)
+    model = Canonicalize(load_model(args)).fit_scale_ref(loader).eval()
+    with torch.no_grad():
+        out = model(data)
+    assert torch.allclose(out["bus"][ref, VM_OUT], data["bus"].y[ref, VM_H])
 
 
 def test_angle_error_split_isolates_a_common_offset(loader):

@@ -23,7 +23,9 @@ from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.loggers import CSVLogger
 from torch.utils.data import ConcatDataset, Subset
 from torch_geometric.loader import DataLoader
+from torch_geometric.transforms import BaseTransform, Compose
 
+from gridfm_graphkit.datasets.globals import VM_H
 from gridfm_graphkit.datasets.powergrid_hetero_dataset import HeteroGridDatasetDisk
 from gridfm_graphkit.io.param_handler import get_task, get_task_transforms, load_normalizer
 from gridfm_graphkit.training.callbacks import SaveBestModelStateDict
@@ -42,18 +44,35 @@ ARMS = {
     "dccanon": DCPriorLayers,
     "dczcanon": partial(DCPriorLayers, zero_init=True),
     "dcinjcanon": DCInjectionLayers,
+    "canonvref": None,
 }
 LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inputs) instead of per graph
+VREF = {"canonvref"}  # the task with the REF voltage given (UnmaskRefVoltage)
 
 
-def grid_splits(case, args, seed, n, normalizer=None):
+class UnmaskRefVoltage(BaseTransform):
+    """Give the model the REF bus's voltage magnitude, an operator setpoint in practice, which the framework's PF mask
+    hides (with P and Q at REF unknown too, the PF is then one degree of freedom short): restore it from the labels and
+    mark it known, so the model clamps it like the PV setpoints."""
+
+    def forward(self, data):
+        ref = data.mask_dict["REF"]
+        data["bus"].x[ref, VM_H] = data["bus"].y[ref, VM_H]
+        data.mask_dict["bus"][ref, VM_H] = False
+        return data
+
+
+def grid_splits(case, args, seed, n, normalizer=None, vref=False):
     """n scenarios of `case` (a fixed random subset, seed 0), split 80/10/10 by the run seed; the normalizer is
     fitted on the train part unless one is given."""
     root = ROOT / "data" / case
     fit = normalizer is None
     if fit:
         normalizer = load_normalizer(args)
-    ds = HeteroGridDatasetDisk(str(root), normalizer, transform=get_task_transforms(args))
+    transform = get_task_transforms(args)
+    if vref:
+        transform = Compose([transform, UnmaskRefVoltage()])
+    ds = HeteroGridDatasetDisk(str(root), normalizer, transform=transform)
     ids = [int(i) for i in np.random.default_rng(0).permutation(len(ds))[:n]]
     keep = list(ids)
     random.Random(seed).shuffle(ids)
@@ -74,7 +93,8 @@ def run_one(arm, seed, a, device):
     L.seed_everything(seed, workers=True)
     args = make_args(a)
     args.data.networks = list(a.train)  # one normalizer per training grid (the task saves their stats by name)
-    grids = {c: grid_splits(c, args, seed, a.n_per_grid) for c in a.train}
+    vref = arm in VREF
+    grids = {c: grid_splits(c, args, seed, a.n_per_grid, vref=vref) for c in a.train}
     train_loader = DataLoader(
         ConcatDataset([g["train"] for g in grids.values()]),
         batch_size=a.batch_size,
@@ -89,6 +109,17 @@ def run_one(arm, seed, a, device):
 
     run_dir = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
+    epochs_run = train_time = None
+    if not a.eval_only:
+        epochs_run, train_time = train(task, train_loader, val_loader, run_dir, a, device)
+    task.load_state_dict(
+        torch.load(run_dir / "model" / "best_model_state_dict.pt", map_location="cpu"),
+    )
+    model = task.model.to(device).eval()
+    return evaluate(model, arm, seed, a, args, grids, run_dir, epochs_run, train_time, device, vref)
+
+
+def train(task, train_loader, val_loader, run_dir, a, device):
     trainer = L.Trainer(
         max_epochs=a.epochs,
         accelerator=device,
@@ -104,12 +135,11 @@ def run_one(arm, seed, a, device):
     )
     t0 = time.perf_counter()
     trainer.fit(task, train_loader, val_loader)
-    epochs_run, train_time = trainer.current_epoch, time.perf_counter() - t0
-    task.load_state_dict(
-        torch.load(run_dir / "model" / "best_model_state_dict.pt", map_location="cpu"),
-    )
-    model = task.model.to(device).eval()
+    return trainer.current_epoch, time.perf_counter() - t0
 
+
+def evaluate(model, arm, seed, a, args, grids, run_dir, epochs_run, train_time, device, vref):
+    """In-distribution and zero-shot accuracy of a trained model; --eval-only writes result_eval.json, never result.json."""
     source = next(iter(grids.values()))["normalizer"]
     result = {
         "arm": arm,
@@ -126,12 +156,12 @@ def run_one(arm, seed, a, device):
         "zero_shot": {},
     }
     for c in a.heldout:
-        h = grid_splits(c, args, seed, a.n_per_grid, normalizer=source)
+        h = grid_splits(c, args, seed, a.n_per_grid, normalizer=source, vref=vref)
         result["zero_shot"][c] = {
             "baseMVA": float(source.baseMVA),
             "acc": accuracy(model, eval_loader(h["all"], a.batch_size), device),
         }
-    (run_dir / "result.json").write_text(json.dumps(result, indent=2))
+    (run_dir / ("result_eval.json" if a.eval_only else "result.json")).write_text(json.dumps(result, indent=2))
     print(json.dumps({k: result[k] for k in ("arm", "seed", "epochs_run", "zero_shot")}))
     return result
 
@@ -150,10 +180,12 @@ def main():
     p.add_argument("--layers", type=int, default=12)
     p.add_argument("--hidden", type=int, default=48)
     p.add_argument("--device", default=default_device())
+    p.add_argument("--eval-only", action="store_true", help="re-evaluate saved models with the current code")
     a = p.parse_args()
     for seed in a.seeds:
         for arm in a.arm:
-            out = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}" / "result.json"
+            name = "result_eval.json" if a.eval_only else "result.json"
+            out = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}" / name
             if out.exists():
                 print(f"skip {arm} seed {seed}: {out} exists")
                 continue
