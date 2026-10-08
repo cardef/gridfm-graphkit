@@ -136,3 +136,39 @@ Decision rule for a separate Paper 2 (from the review): all of (i) P29m and P30m
 case57 is not above DC; (ii) P33 passes; (iii) dccanon beats DC + one Newton or fast-decoupled iteration on the same
 scenarios (to be computed; it does not depend on the dccanon runs); (iv) the result holds with a correction
 initialized at zero (to be run). Otherwise the DC reference and the DC prior go into Paper 1.
+
+## Transfer, step 1 and 2: classical references and a learned local correction behind an exact solve, fixed 2026-10-08 before either is computed
+
+After the DC prior: its learned correction transfers in its local part (rest and branch differences at or below DC's)
+but not in the common shift relative to REF, which comes from how the losses are carried to the slack, a global
+quantity. Two steps.
+
+Step 1, classical references on the zero-shot scenarios (`r2_classical.py`, no training, inputs only): DC; DC with
+loss compensation (three passes adding each branch's series loss at |V| = 1 as load, half per end); one full AC
+Newton step from the DC angles and the voltage setpoints; Newton to convergence (iterations from the DC start and
+from a flat start).
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| C1 | gate: does the solver reproduce the data's physics? | Newton to convergence matches the labels (VA < 1e-3 deg, VM < 1e-5 p.u.) on all four grids | the Ybus or the bus types differ from the data's physics: nothing below is read until fixed |
+| C2 | does a physical loss allocation fix DC's offset? | DC with loss compensation: offset below DC's on case14, case30 and case118, total VA below DC on all four grids | the offset is not the series losses at |V| = 1 |
+| C3 | how good is one classical step? | one Newton step from DC: VA below DC with loss compensation on all four grids, and below 0.25 deg; VM below 0.005 p.u. | if it holds, a learned model has an accuracy role zero-shot only if it beats one Newton step, otherwise only as a warm start |
+| C4 | descriptive | Newton from the DC start needs fewer iterations than from a flat start | — |
+
+Step 2, two arms (`dcprior.py`), both with the correction initialized at zero (the review's point: dccanon started
+from a random correction), all three folds, seeds 0-2, nodes as dccanon:
+- `dczcanon`: dccanon with the angle correction initialized at zero.
+- `dcinjcanon`: the network's angle output is read as a per-bus injection correction c and turned into angles by
+  the same anchored Laplacian solve as theta_DC: theta = theta_DC + L^-1 c, in every layer. The learned part is
+  local (c, e.g. the losses at a bus); its global effect, including the common shift, comes out of the exact solve.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P34 | does the global part transfer when it comes out of the solve? | dcinjcanon's zero-shot offset at or below DC's on all three held-out grids, every seed | the local injection correction does not carry the loss allocation to unseen grids |
+| P35 | margin over DC | dcinjcanon zero-shot VA <= 0.75 × DC on all three held-out grids, every seed | no useful transfer |
+| P36 | correction through the solve vs angle correction | dcinjcanon's zero-shot VA range entirely below dczcanon's on all three grids | the solve does not help the learned correction transfer |
+| P37 | does learning add to physics? | dcinjcanon zero-shot VA below DC with loss compensation (step 1) on all three grids, every seed | the learned correction adds nothing to a physical loss allocation |
+| P38 | exploratory | — | dczcanon vs dccanon (does zero initialization change transfer?); VM, PBE, in distribution; one Newton step and Newton iterations started from each arm's prediction |
+
+Decision rule for a transfer result: P34, P35 and P37 pass; if C3 holds, also fewer Newton iterations from
+dcinjcanon's prediction than from DC (to be measured). Expectation: C1 and C3 likely; P34 and P37 open.
