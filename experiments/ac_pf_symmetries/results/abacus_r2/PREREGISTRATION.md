@@ -224,3 +224,38 @@ and were not read. Changes, all to dcinjcanon:
 - "Local" in "local injection correction" describes the output (one value per bus), not its inputs (a 12-hop
   embedding with physics feedback): a test of locality needs a corrector without message passing, planned separately.
 - The decision rule for a transfer result becomes P34s, P35 and P37s.
+
+## Step 1b and two more arms (C5-C8, P42-P46), fixed 2026-10-08 before computing or running anything
+
+After the third review: C2's failure fits the voltage level better than losses (with V_f V_t ~ 1.06-1.12, the same P
+needs smaller angles than DC gives, so DC's angles are already too negative, and adding losses makes them more so).
+And the REF voltage is an OPF output: in PF mode `gridfm_datakit` runs an OPF on every scenario and uses its voltages
+as the setpoints of all generators, REF included (`process_network.py`, `process_scenario_pf_mode` and
+`pf_preprocessing`), so it is a setpoint like the PV voltages the models already get, and a function of the loads
+through an OPF whose costs and voltage limits the PF task masks.
+
+Step 1b (`r2_classical.py`, inputs only, same zero-shot scenarios): DC with susceptances weighted by V_f V_t (V from
+the setpoints, PQ at 1.0, REF at the mean PV setpoint), with and without loss compensation; the P-theta fixed-point
+iteration of P37s (12 steps from theta_DC, V fixed as above); the full fast-decoupled iteration (12 steps); the signed
+per-graph offset of every reference; the in-sample R^2 of the REF voltage on the PV setpoints (mean, min, max) and the
+total loads, per grid. Plus a re-evaluation of the dccanon models with a signed offset metric.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| C5 | is DC's offset the voltage level? | DC's signed offset is negative on case14, case30 and case57, and the V-weighted DC brings the offset to <= 0.5 deg on case14 and case30 | the offset is neither losses nor the voltage level: back to nonlocality or the slack balance |
+| C6 | the P37s reference | the 12-step P-theta iteration is below DC on VA on all four grids | the fixed-point iteration does not help with V held at the setpoints |
+| C7 | is the REF voltage predictable within a grid from the inputs? | R^2 >= 0.9 on case14, case57 and case118 (on case30 it is constant at 1.06) | the OPF's REF voltage depends on what the PF task hides, even within a grid |
+| C8 | exploratory | — | dccanon's signed zero-shot offset on case30 and case57: if opposite in sign to DC's, the learned correction carries a constant of the training grids |
+
+Two arms, all three folds, seeds 0-2, CPU (abacus-004 for folds 1-2, abacus-007 for fold 3, 4 CPUs per task):
+- `dcinjvref`: dcinjcanon with the REF voltage given (UnmaskRefVoltage), the best angle arm on the well-posed task.
+- `dcinj1hop`: dcinjcanon with a one-layer GNS: the injection correction sees one hop and gets no physics feedback.
+  The test of whether the local part of the correction transfers without message passing.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P42 | with the setpoint known, does the correction behind the solve beat DC? | dcinjvref zero-shot VA <= 0.75 × DC on all three held-out grids, every seed | even on the well-posed task the learned correction does not transfer |
+| P43 | is the untransferred shift the voltage level? | dcinjvref's zero-shot offset range entirely below dcinjcanon's on case30 and case57 | the shift is not the hidden setpoint |
+| P44 | exploratory | — | dcinjvref against the oracle physics (exact) and the P-theta iteration with the oracle REF voltage; VM_PQ |
+| P45 | does the local part transfer without message passing? | dcinj1hop's zero-shot rest and branch differences at or below DC's on all three grids, every seed | the local transfer seen with dccanon needed multi-hop context |
+| P46 | exploratory | — | dcinj1hop vs dcinjcanon on every channel: what depth adds or costs in transfer |
