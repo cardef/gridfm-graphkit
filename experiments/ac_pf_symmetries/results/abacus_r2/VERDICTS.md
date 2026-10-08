@@ -133,3 +133,40 @@ beyond case118 (P26). On case118 the per-bus residual normalization alone reprod
 Suggested next (not run): (a) the residual normalization inside M1, which removes the offset in distribution (P18)
 while the normalization lowers the rest: the two act on the two parts of the angle error; (b) whether the normalized
 feedback lets the wide augmentation train (Piano A §9 hypothesis).
+
+## DC prior (P29-P33, 2026-10-08)
+
+Nine runs (`dccanon`, 3 folds × seeds 0-2; arrays 62474/62475 on abacus-004 with 5 CPUs per task, 62538 on
+abacus-007 with 4 instead of the registered 6), code as registered (HEAD 665c298 for folds 1-2, 37eb1ae for fold 3;
+the commits in between touched only the pre-registration and the report); every run reached the 100-epoch cap.
+Compared with DC (`BASELINES.txt`) and with each fold's canon runs.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| P29 | FAIL | case118 [1.90, 2.00] deg vs DC 1.95: DC level |
+| P30 | FAIL | case30 [1.98, 2.35] vs DC 1.56; case57 [1.45, 1.81] vs DC 1.08: worse than DC |
+| P31 | PASS (gate) | far below canon on all three grids |
+| P29m, P30m | FAIL | no seed within 0.75 × DC on any grid |
+| P33 | FAIL | case118 offset [1.46, 1.61] vs DC's 1.6 (two seeds below, one at 1.61): DC level |
+
+Exploratory (P32), with the decomposition the amendment fixed in advance (DC's own value in brackets, deg):
+
+| held out | offset | rest | branch differences |
+|---|---|---|---|
+| case30 | 1.93-2.31 (1.51) | 0.33-0.43 (0.40) | 0.34-0.43 (0.34) |
+| case57 | 1.37-1.72 (0.39) | 0.48-0.57 (1.01) | 0.37-0.39 (0.53) |
+| case118 | 1.46-1.61 (1.6) | 1.10-1.37 (1.11) | 0.39-0.48 (0.48) |
+
+The local part of the learned correction transfers: rest and branch differences at or below DC's on every grid,
+halved on case57. The global part does not: the correction adds a common angle shift learned on the training grids,
+which on case30 and case57 is far worse than DC's own offset. PBE is far below canon's on all three grids (case118
+7.4-7.6 vs 13.7-20.2 MVA; PBE is blind to a common shift); VM stays at canon's level (the prior touches only the
+angles). In distribution the DC prior is the best arm on angles (case118 0.59-0.65 deg in folds 1-2, against canon
+1.23-2.09 and M1 0.69-0.99). Training time is not comparable with canon's (different CPU counts per task).
+
+Reading, as the amendment fixed it for a P33 failure: the model cannot fix the loss-induced offset even when given
+the DC solution. What is missing is a global quantity, how the losses are carried through the network to the slack,
+which local message passing cannot infer on an unseen grid. By the pre-registered decision rule there is no separate
+DC-prior paper. Suggested next: compute that global quantity physically (DC with loss compensation, one Newton or
+fast-decoupled step), and as its learned counterpart a model whose learned part is local (injection corrections) and
+whose global part is a second exact solve.
