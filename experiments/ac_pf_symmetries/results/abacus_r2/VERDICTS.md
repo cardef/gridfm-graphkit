@@ -218,3 +218,33 @@ Reading:
   or Newton) gets right (fast-decoupled from the inputs converges to the same 0.07-0.56 deg floor as Newton).
 - P37s is therefore a weak test on case57 and case118, where the P-theta reference is worse than DC; P35's margin
   over DC is what binds there.
+
+## Transfer step 2: zero-initialized DC prior and injection correction (P34-P38, 2026-10-08)
+
+18 runs (dczcanon, dcinjcanon; 3 folds × seeds 0-2; arrays 62785-62790; code at 1284efc; folds 1-2 on abacus-004,
+fold 3 on abacus-007, 4 CPUs per task); every run reached the 100-epoch cap. P34s and P37s are the amendment's
+criteria (f4743ea, before any dcinjcanon result existed; P37s threshold set at 19:16, before one existing result was
+read).
+
+| id | verdict | what the numbers say (zero-shot VA, deg) |
+|---|---|---|
+| P34 | FAIL | offset: case30 [0.20, 1.35] vs DC 1.51 (ok); case57 [0.27, 0.68] vs 0.39; case118 [0.97, 4.77] vs 1.6 |
+| P34s | FAIL | the same against 0.75 × DC's offset |
+| P35 | FAIL | case30 [0.27, 1.45] vs 1.17; case57 [0.37, 0.73] vs 0.81 (ok); case118 [1.06, 5.32] vs 1.46 |
+| P36 | FAIL | below dczcanon on case30 ([0.27, 1.45] vs [1.56, 2.06]) and case57 ([0.37, 0.73] vs [1.46, 1.54]), overlapping on case118 ([1.06, 5.32] vs [1.64, 2.32]) |
+| P37, P37s | FAIL | on case118 (one seed at 5.32); met on case57 for both, on case30 for P37 only |
+| P38 (exploratory) | — | dczcanon vs dccanon (zero init only): no systematic change (case30 [1.56, 2.06] vs [1.98, 2.35], case57 [1.46, 1.54] vs [1.45, 1.81], case118 [1.64, 2.32] vs [1.90, 2.00]) |
+
+Per seed, dcinjcanon zero-shot (DC's value in brackets): case30 VA 0.35 / 0.27 / 1.45 (1.56), branch differences 0.12
+/ 0.10 / 0.31 (0.34); case57 VA 0.37 / 0.73 / 0.67 (1.08), branch differences 0.15 / 0.23 / 0.23 (0.53); case118 VA
+1.94 / 5.32 / 1.06 (1.95), branch differences 0.36 / 0.70 / 0.18 (0.48). In distribution on case118 (folds 1-2)
+0.10-0.30 deg, the best arm so far (dccanon 0.59-0.65, canon 1.23-2.09).
+
+Reading: the pre-registered transfer criterion fails, on case118 and on one case30 seed. The exploratory pattern is
+the first positive transfer result of the campaign. On held-out grids of the training size, reading the learned
+correction as an injection and computing its effect with the exact solve beats both DC (all seeds on case57, two
+of three on case30, which on case30 also go below the inputs-only physics floor of 0.56 deg because the model infers
+the REF voltage better than the mean PV setpoint does) and the same correction applied to the angles directly (P36
+on two grids). On the larger held-out grid it is unstable across seeds (1.06 to 5.32 deg, the large errors in the
+common offset), consistent with the review's concern: L^-1 amplifies the smooth part of c, and that amplification
+grows with grid size beyond what training saw. Zero initialization alone changes nothing (P38).

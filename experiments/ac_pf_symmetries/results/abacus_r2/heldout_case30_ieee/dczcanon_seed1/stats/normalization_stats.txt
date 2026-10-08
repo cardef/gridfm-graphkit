@@ -1,0 +1,9 @@
+Data Normalizer case14_ieee stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(83.8307), 'vn_kv_max': tensor(1.)}
+
+Data Normalizer case57_ieee stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(112.9269), 'vn_kv_max': tensor(1.)}
+
+Data Normalizer case118_ieee stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(140.5709), 'vn_kv_max': tensor(345.)}
+
