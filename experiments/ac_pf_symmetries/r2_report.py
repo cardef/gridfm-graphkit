@@ -16,19 +16,25 @@ import numpy as np
 
 OUT = Path(__file__).resolve().parent / "results" / "abacus_r2"
 DEG = 180.0 / math.pi
-ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm", "dccanon", "dczcanon", "dcinjcanon")  # dcz/dcinj: P34-P38
+ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm", "dccanon", "dczcanon", "dcinjcanon", "canonvref")  # vref: P39-P41
 FOLD3 = "heldout_case118_ieee"  # P20-P22, registered after folds 1-2 were read; P23-P25 (m3canon) after fold 3
 DC_VA = {"case30_ieee": 1.56, "case57_ieee": 1.08, "case118_ieee": 1.95}  # deg, DC on the zero-shot scenarios (BASELINES.txt)
 DC_VA_CM = {"case30_ieee": 1.51, "case57_ieee": 0.393, "case118_ieee": 1.6}  # deg, DC's offset there (P33)
 DCLOSS_VA = {"case30_ieee": 1.943, "case57_ieee": 1.563, "case118_ieee": 1.476}  # deg, DC with loss compensation (CLASSICAL.txt), P37
 COLS = {"VM": (1.0, "VM (p.u.)"), "VA": (DEG, "VA (deg)"), "PG": (None, "PG (MW)"), "QG": (None, "QG (Mvar)"),
         "PBE": (None, "PBE (MVA)"), "VA_cm": (DEG, "VA offset (deg)"), "VA_diff": (DEG, "VA rest (deg)"),
-        "dVA": (DEG, "θ_f − θ_t (deg)")}
+        "dVA": (DEG, "θ_f − θ_t (deg)"), "VM_PQ": (1.0, "VM, PQ buses (p.u.)")}
 
 
 def phys(acc, base, q):
     scale = COLS[q][0]
-    return acc[q] * (base if scale is None else scale)
+    return acc.get(q, math.nan) * (base if scale is None else scale)  # VM_PQ only in results written after it existed
+
+
+def zero_shot_vm_pq(results_dir, fold, arm, grid, name):
+    """Zero-shot VM on the PQ buses per seed; canon's comes from its re-evaluation (result_eval.json)."""
+    return np.array([json.loads(f.read_text())["zero_shot"][grid]["acc"]["VM_PQ"]
+                     for f in sorted((results_dir / fold).glob(f"{arm}_seed*/{name}"))])
 
 
 def ms(a):
@@ -175,6 +181,22 @@ def main():
             verdict = ("PASS" if all(res) else "FAIL") if complete else "incomplete"
             md.append(f"**{pid} (dcinjcanon {what}, zero-shot): {verdict}** " + "; ".join(
                 f"{r[0]} {show(*r)}" + (" ok" if o else "") for r, o in zip(inj, res)) + "\n")
+    vr = [(fd, fd[len("heldout_"):]) for fd in folds if runs.get((fd, "canonvref")) and runs.get((fd, "canon"))]
+    if vr:
+        complete = len(vr) == len(DC_VA)
+        va = {g: (np.array([r["zero_shot"][g]["acc"]["VA"] * DEG for r in runs[fd, "canonvref"]]),
+                  np.array([r["zero_shot"][g]["acc"]["VA"] * DEG for r in runs[fd, "canon"]])) for fd, g in vr}
+        sep = [g for g, (x, y) in va.items() if separated(x, y)]
+        verdict = ("PASS" if not sep else "FAIL") if complete else "incomplete"
+        md.append(f"**P39 (REF voltage given vs hidden, zero-shot VA, predicted no separation): {verdict}** " + "; ".join(
+            f"{g} vref {rng(x)} vs canon {rng(y)}" + (" SEPARATED" if g in sep else "") for g, (x, y) in va.items()) + "\n")
+        vm = {g: (zero_shot_vm_pq(a.results_dir, fd, "canonvref", g, "result.json"),
+                  zero_shot_vm_pq(a.results_dir, fd, "canon", g, "result_eval.json")) for fd, g in vr}
+        want = ("case30_ieee", "case118_ieee")
+        ok = [g for g in want if g in vm and len(vm[g][1]) and vm[g][0].max() < vm[g][1].min()]
+        verdict = ("PASS" if len(ok) == len(want) else "FAIL") if complete and all(len(vm[g][1]) for g in want) else "incomplete"
+        md.append(f"**P40 (REF voltage given, zero-shot VM on PQ buses below canon on case30 and case118): {verdict}** "
+                  + "; ".join(f"{g} vref {rng(x)} vs canon {rng(y) if len(y) else 'n/a'}" for g, (x, y) in vm.items()) + "\n")
     out = a.results_dir / "REPORT.md"
     out.write_text("\n".join(md))
     print(out.read_text())
