@@ -367,6 +367,20 @@ def test_dc_injection_inside_canonicalize_is_exactly_equivariant(loader, args):
         assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
 
 
+def test_one_layer_dc_injection_starts_at_the_dc_angles(loader, args):
+    """dcinj1hop: the injection correction on a one-layer GNS (one hop, no physics feedback) starts at theta_DC."""
+    one = copy.deepcopy(args)
+    one.model.num_layers = 1
+    torch.manual_seed(0)
+    model = DCInjectionLayers(load_model(one)).eval()
+    data = next(iter(loader))
+    free = ~data.mask_dict["REF"]
+    with torch.no_grad():
+        out = model(data)
+    assert len(model.model.layers) == 1
+    assert torch.allclose(out["bus"][free, VA_OUT], dc_angles(data)[free], atol=1e-6)
+
+
 def test_dc_angles_keep_an_islanded_bus_at_the_reference(loader):
     """Cut every branch of a load bus: the DC solve stays finite and the island stays at the REF angle."""
     data = next(iter(loader))
@@ -409,8 +423,11 @@ def test_angle_error_split_isolates_a_common_offset(loader):
     out = {"bus": target.clone()}
     out["bus"][pred, va] += c[data["bus"].batch][pred]
     ev = _clamp_known_to_ground_truth(out["bus"], target, data, gen_to_bus, n)
-    s = {k: math.sqrt(float(sq) / float(m)) for k, (sq, m) in angle_error_split(out, ev, target, data).items()}
+    split = angle_error_split(out, ev, target, data)
     per_bus = c[data["bus"].batch][pred]
+    total, count = split.pop("VA_cm_signed")
+    assert math.isclose(float(total) / float(count), float(per_bus.mean()), rel_tol=1e-5)  # the offset keeps its sign
+    s = {k: math.sqrt(float(sq) / float(m)) for k, (sq, m) in split.items()}
     assert s["VA_diff"] < 1e-6
     assert math.isclose(s["VA_cm"], float(per_bus.pow(2).mean().sqrt()), rel_tol=1e-5)
     _, fwd, _ = line_pairs(data)

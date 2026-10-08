@@ -16,10 +16,14 @@ import numpy as np
 
 OUT = Path(__file__).resolve().parent / "results" / "abacus_r2"
 DEG = 180.0 / math.pi
-ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm", "dccanon", "dczcanon", "dcinjcanon", "canonvref")  # vref: P39-P41
+ARMS = ("canon", "m1fullcanon", "m3canon", "canonresnorm", "dccanon", "dczcanon", "dcinjcanon", "canonvref",
+        "dcinjvref", "dcinj1hop")  # P42-P46
 FOLD3 = "heldout_case118_ieee"  # P20-P22, registered after folds 1-2 were read; P23-P25 (m3canon) after fold 3
 DC_VA = {"case30_ieee": 1.56, "case57_ieee": 1.08, "case118_ieee": 1.95}  # deg, DC on the zero-shot scenarios (BASELINES.txt)
 DC_VA_CM = {"case30_ieee": 1.51, "case57_ieee": 0.393, "case118_ieee": 1.6}  # deg, DC's offset there (P33)
+DC_REST = {"case30_ieee": 0.397, "case57_ieee": 1.01, "case118_ieee": 1.11}  # deg, DC's rest (BASELINES.txt), P45
+DC_DVA = {"case30_ieee": 0.339, "case57_ieee": 0.532, "case118_ieee": 0.479}  # deg, DC's branch differences, P45
+PICARD_VA = {"case30_ieee": 1.003, "case57_ieee": 1.445, "case118_ieee": 2.997}  # deg, 12-step P-theta iteration (CLASSICAL_1b.txt), P37s
 DCLOSS_VA = {"case30_ieee": 1.943, "case57_ieee": 1.563, "case118_ieee": 1.476}  # deg, DC with loss compensation (CLASSICAL.txt), P37
 COLS = {"VM": (1.0, "VM (p.u.)"), "VA": (DEG, "VA (deg)"), "PG": (None, "PG (MW)"), "QG": (None, "QG (Mvar)"),
         "PBE": (None, "PBE (MVA)"), "VA_cm": (DEG, "VA offset (deg)"), "VA_diff": (DEG, "VA rest (deg)"),
@@ -61,7 +65,7 @@ def main():
     md = ["# R2: M0+Canon vs M1 on held-out grids", ""]
     md.append("Runs: " + ", ".join(f"{fd} {arm} {len(rs)}" for (fd, arm), rs in sorted(runs.items())) + "\n")
     p17, p18, f3, m3 = [], [], {}, {}
-    p2627, p28, dcp, dcm, inj = {"VM": [], "PBE": []}, {}, [], [], []
+    p2627, p28, dcp, dcm, inj, injv, hop = {"VM": [], "PBE": []}, {}, [], [], [], [], []
     for fd in folds:
         rs = {arm: runs.get((fd, arm), []) for arm in ARMS}
         if not (rs["canon"] and rs["m1fullcanon"]):
@@ -102,6 +106,11 @@ def main():
                 if kind == "zero-shot" and rs["dccanon"]:
                     dcp.append((g, vals["dccanon", "VA"], vals["canon", "VA"]))
                     dcm.append((g, vals["dccanon", "VA"], vals["dccanon", "VA_cm"]))
+                if kind == "zero-shot" and rs["dcinjvref"]:
+                    injv.append((g, vals["dcinjvref", "VA"], vals["dcinjvref", "VA_cm"],
+                                 vals["dcinjcanon", "VA_cm"] if rs["dcinjcanon"] else None))
+                if kind == "zero-shot" and rs["dcinj1hop"]:
+                    hop.append((g, vals["dcinj1hop", "VA_diff"], vals["dcinj1hop", "dVA"]))
                 if kind == "zero-shot" and rs["dcinjcanon"] and rs["dczcanon"]:
                     inj.append((g, vals["dcinjcanon", "VA"], vals["dcinjcanon", "VA_cm"], vals["dczcanon", "VA"]))
                 if fd != FOLD3 and kind == "zero-shot" and rs["m3canon"]:
@@ -175,12 +184,34 @@ def main():
             ("P36", "VA below dczcanon", lambda g, x, cm, z: x.max() < z.min(), lambda g, x, cm, z: f"VA {rng(x)} vs dcz {rng(z)}"),
             ("P37", "VA below DC with losses", lambda g, x, cm, z: g in DCLOSS_VA and x.max() < DCLOSS_VA[g],
              lambda g, x, cm, z: f"VA {rng(x)} vs {DCLOSS_VA.get(g, 'n/a')}"),
+            ("P34s", "offset <= 0.75 x DC's", lambda g, x, cm, z: cm.max() <= 0.75 * DC_VA_CM[g],
+             lambda g, x, cm, z: f"offset {rng(cm)} vs {0.75 * DC_VA_CM[g]:.3g}"),
+            ("P37s", "VA below the P-theta iteration", lambda g, x, cm, z: g in PICARD_VA and x.max() < PICARD_VA[g],
+             lambda g, x, cm, z: f"VA {rng(x)} vs {PICARD_VA.get(g, 'n/a')}"),
         )
         for pid, what, ok, show in checks:
             res = [bool(ok(*r)) for r in inj]
             verdict = ("PASS" if all(res) else "FAIL") if complete else "incomplete"
             md.append(f"**{pid} (dcinjcanon {what}, zero-shot): {verdict}** " + "; ".join(
                 f"{r[0]} {show(*r)}" + (" ok" if o else "") for r, o in zip(inj, res)) + "\n")
+    if injv:
+        complete = len(injv) == len(DC_VA)
+        ok = [bool(x.max() <= 0.75 * DC_VA[g]) for g, x, _, _ in injv]
+        verdict = ("PASS" if all(ok) else "FAIL") if complete else "incomplete"
+        md.append(f"**P42 (dcinjvref VA <= 0.75 x DC, zero-shot): {verdict}** " + "; ".join(
+            f"{g} VA {rng(x)} vs {0.75 * DC_VA[g]:.3g}" + (" ok" if o else "") for (g, x, _, _), o in zip(injv, ok)) + "\n")
+        pair = {g: (cm, base) for g, _, cm, base in injv if base is not None and g in ("case30_ieee", "case57_ieee")}
+        ok = [g for g, (cm, base) in pair.items() if cm.max() < base.min()]
+        verdict = ("PASS" if len(ok) == 2 else "FAIL") if len(pair) == 2 else "incomplete"
+        md.append(f"**P43 (dcinjvref offset below dcinjcanon's on case30 and case57): {verdict}** " + "; ".join(
+            f"{g} vref {rng(cm)} vs hidden {rng(base)}" for g, (cm, base) in pair.items()) + "\n")
+    if hop:
+        complete = len(hop) == len(DC_VA)
+        ok = [bool(r.max() <= DC_REST[g] and d.max() <= DC_DVA[g]) for g, r, d in hop]
+        verdict = ("PASS" if all(ok) else "FAIL") if complete else "incomplete"
+        md.append(f"**P45 (dcinj1hop rest and branch differences at or below DC's, zero-shot): {verdict}** " + "; ".join(
+            f"{g} rest {rng(r)} vs {DC_REST[g]}, dVA {rng(d)} vs {DC_DVA[g]}" + (" ok" if o else "")
+            for (g, r, d), o in zip(hop, ok)) + "\n")
     vr = [(fd, fd[len("heldout_"):]) for fd in folds if runs.get((fd, "canonvref")) and runs.get((fd, "canon"))]
     if vr:
         complete = len(vr) == len(DC_VA)

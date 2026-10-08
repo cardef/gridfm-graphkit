@@ -45,9 +45,12 @@ ARMS = {
     "dczcanon": partial(DCPriorLayers, zero_init=True),
     "dcinjcanon": DCInjectionLayers,
     "canonvref": None,
+    "dcinjvref": DCInjectionLayers,
+    "dcinj1hop": DCInjectionLayers,
 }
 LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inputs) instead of per graph
-VREF = {"canonvref"}  # the task with the REF voltage given (UnmaskRefVoltage)
+VREF = {"canonvref", "dcinjvref"}  # the task with the REF voltage given (UnmaskRefVoltage)
+LAYERS = {"dcinj1hop": 1}  # GNS depth overrides: one layer = one hop and no physics feedback
 
 
 class UnmaskRefVoltage(BaseTransform):
@@ -92,6 +95,8 @@ def grid_splits(case, args, seed, n, normalizer=None, vref=False):
 def run_one(arm, seed, a, device):
     L.seed_everything(seed, workers=True)
     args = make_args(a)
+    if arm in LAYERS:
+        args.model.num_layers = LAYERS[arm]
     args.data.networks = list(a.train)  # one normalizer per training grid (the task saves their stats by name)
     vref = arm in VREF
     grids = {c: grid_splits(c, args, seed, a.n_per_grid, vref=vref) for c in a.train}

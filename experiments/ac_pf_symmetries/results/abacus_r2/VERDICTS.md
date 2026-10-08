@@ -193,3 +193,28 @@ What the references say:
   The learned models are above it zero-shot: the best arm on angles (DC prior) by 3.5-20×, the best on VM (M3) by
   1.3-18×.
 - DC's offset is not the series losses at |V| = 1 (C2).
+
+## Transfer step 1b (C5-C7, 2026-10-08)
+
+`r2_classical.py` at 47451d3 (job 62854), output in `CLASSICAL_1b.txt`. The P37s threshold (the 12-step P-theta
+iteration: case30 1.003, case57 1.445, case118 2.997 deg) was set in `r2_report.py` at 19:16, when one dcinjcanon
+result existed and had not been read.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| C5 | FAIL | DC's signed offset is -1.46 / -1.51 / **+0.38** / +1.49 deg (case14 / 30 / 57 / 118): negative on case14 and case30 only. V-weighted DC lowers the offset to 0.85 (case14) and 1.10 (case30), not to <= 0.5; on case118 it raises it (1.94) |
+| C6 | FAIL | the P-theta iteration with V held at the setpoints: VA 0.51 / 1.00 / 1.45 / 3.00 deg against DC's 1.51 / 1.56 / 1.08 / 1.95: better than DC on case14 and case30, worse on case57 and case118 |
+| C7 | PASS | REF voltage on the PV setpoints and the total loads, in sample: R^2 0.991 / 0.947 / 0.973 on case14 / 57 / 118 (RMSE 0.0002 / 0.0013 / 0.0025 p.u.; constant 1.06 on case30) |
+
+Reading:
+- The REF voltage is a near-deterministic function of the inputs within a grid (the OPF the generator runs),
+  which is why the released models predict it in distribution; the "inputs" floor of step 1 (mean PV setpoint) is
+  a crude estimator's, not the Bayes floor. Zero-shot, the function is grid-specific (it goes through costs and
+  limits the PF task masks).
+- DC's offset is not one global quantity. The voltage level explains part of it on case14 and case30 (V-weighting
+  removes 42% and 27%), losses explain part of it on case118, and on case57 the two cancel. With the REF voltage
+  known, the 12-step iteration still leaves 0.06-0.38 deg of offset on case14 and case30 because the PQ voltages
+  are held at 1.0 there: the offset tracks the whole voltage profile, which only the full AC iteration (fast-decoupled
+  or Newton) gets right (fast-decoupled from the inputs converges to the same 0.07-0.56 deg floor as Newton).
+- P37s is therefore a weak test on case57 and case118, where the P-theta reference is worse than DC; P35's margin
+  over DC is what binds there.

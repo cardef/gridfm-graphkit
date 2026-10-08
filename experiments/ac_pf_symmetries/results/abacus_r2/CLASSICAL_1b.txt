@@ -1,0 +1,50 @@
+# r2_classical.py output, 2026-10-08 (job 62854), step 1b, code at 47451d3. Zero-shot scenarios of R2, angles in deg,
+# VM in p.u.; signed = the per-graph offset with its sign, averaged; inputs-only V: PV setpoints, PQ at 1.0, REF at the mean PV setpoint.
+case14_ieee | oracle Newton iterations to 1e-9 from DC start mean 3.21 max 4, from flat start mean 4.00 max 4 | REF voltage label min 1.0283 max 1.0600, its input estimate RMS error 0.0190 | REF voltage on PV setpoints and loads: R^2 0.991, RMSE 0.0002
+  dc            VA 1.509 | offset 1.463 (signed -1.46) rest 0.3666 dVA 0.4451 | VM 0.0373 VM_PQ 0.0388
+  dcloss        VA 1.874 | offset 1.833 (signed -1.828) rest 0.3926 dVA 0.5322 | VM 0.0373 VM_PQ 0.0388
+  dcv           VA 0.8984 | offset 0.8482 (signed -0.8469) rest 0.296 dVA 0.3222 | VM 0.0373 VM_PQ 0.0388
+  dcvloss       VA 1.472 | offset 1.42 (signed -1.418) rest 0.3864 dVA 0.4319 | VM 0.0373 VM_PQ 0.0388
+  picard        VA 0.5073 | offset 0.4061 (signed -0.3966) rest 0.304 dVA 0.5136 | VM 0.0373 VM_PQ 0.0388
+  picard oracle VA 0.31 | offset 0.06303 (signed +0.04455) rest 0.3035 dVA 0.4918 | VM 0.03681 VM_PQ 0.0388
+  fdpf          VA 0.4318 | offset 0.4315 (signed -0.4287) rest 0.01646 dVA 0.1369 | VM 0.006181 VM_PQ 0.001588
+  nr1 oracle    VA 0.196 | offset 0.1799 (signed +0.1792) rest 0.07774 dVA 0.05725 | VM 0.001997 VM_PQ 0.002105
+  nr oracle     VA 1.859e-06 | offset 1.784e-06 (signed -1.713e-06) rest 5.222e-07 dVA 8.63e-07 | VM 4.92e-08 VM_PQ 5.187e-08
+  nr1 inputs    VA 0.2768 | offset 0.2644 (signed -0.2574) rest 0.08211 dVA 0.1269 | VM 0.006259 VM_PQ 0.001894
+  nr inputs     VA 0.4317 | offset 0.4314 (signed -0.4286) rest 0.01639 dVA 0.1369 | VM 0.006182 VM_PQ 0.001588
+case30_ieee | oracle Newton iterations to 1e-9 from DC start mean 4.00 max 4, from flat start mean 4.00 max 4 | REF voltage label min 1.0600 max 1.0600, its input estimate RMS error 0.0243 | REF voltage on PV setpoints and loads: R^2 0.589, RMSE 0.0000
+  dc            VA 1.56 | offset 1.508 (signed -1.508) rest 0.397 dVA 0.3391 | VM 0.03494 VM_PQ 0.03531
+  dcloss        VA 1.943 | offset 1.895 (signed -1.892) rest 0.4294 dVA 0.3921 | VM 0.03494 VM_PQ 0.03531
+  dcv           VA 1.171 | offset 1.105 (signed -1.104) rest 0.3881 dVA 0.2923 | VM 0.03494 VM_PQ 0.03531
+  dcvloss       VA 1.561 | offset 1.503 (signed -1.501) rest 0.421 dVA 0.3372 | VM 0.03494 VM_PQ 0.03531
+  picard        VA 1.003 | offset 0.9294 (signed -0.923) rest 0.3769 dVA 0.2952 | VM 0.03494 VM_PQ 0.03531
+  picard oracle VA 0.5381 | offset 0.3843 (signed -0.3786) rest 0.3767 dVA 0.2813 | VM 0.0346 VM_PQ 0.03531
+  fdpf          VA 0.5617 | offset 0.5609 (signed -0.5587) rest 0.02845 dVA 0.1134 | VM 0.005388 VM_PQ 0.002362
+  nr1 oracle    VA 0.1301 | offset 0.1217 (signed +0.1215) rest 0.04608 dVA 0.02808 | VM 0.002743 VM_PQ 0.002799
+  nr oracle     VA 1.366e-06 | offset 1.262e-06 (signed -2.234e-07) rest 5.22e-07 dVA 6.57e-07 | VM 5.887e-08 VM_PQ 6.009e-08
+  nr1 inputs    VA 0.4603 | offset 0.4583 (signed -0.4552) rest 0.04318 dVA 0.1097 | VM 0.005322 VM_PQ 0.002199
+  nr inputs     VA 0.5617 | offset 0.561 (signed -0.5588) rest 0.02848 dVA 0.1134 | VM 0.005388 VM_PQ 0.002362
+case57_ieee | oracle Newton iterations to 1e-9 from DC start mean 4.00 max 4, from flat start mean 4.00 max 4 | REF voltage label min 0.9956 max 1.0390, its input estimate RMS error 0.0040 | REF voltage on PV setpoints and loads: R^2 0.947, RMSE 0.0013
+  dc            VA 1.08 | offset 0.3928 (signed +0.3827) rest 1.006 dVA 0.5322 | VM 0.02655 VM_PQ 0.02681
+  dcloss        VA 1.563 | offset 1.217 (signed -1.205) rest 0.9805 dVA 0.4652 | VM 0.02655 VM_PQ 0.02681
+  dcv           VA 1.051 | offset 0.3924 (signed +0.3818) rest 0.9747 dVA 0.5005 | VM 0.02655 VM_PQ 0.02681
+  dcvloss       VA 1.591 | offset 1.269 (signed -1.258) rest 0.9606 dVA 0.4349 | VM 0.02655 VM_PQ 0.02681
+  picard        VA 1.445 | offset 1.081 (signed -1.074) rest 0.9591 dVA 0.4377 | VM 0.02655 VM_PQ 0.02681
+  picard oracle VA 1.408 | offset 1.03 (signed -1.026) rest 0.9594 dVA 0.4372 | VM 0.02654 VM_PQ 0.02681
+  fdpf          VA 0.08816 | offset 0.06481 (signed -0.04329) rest 0.05976 dVA 0.05297 | VM 0.001425 VM_PQ 0.001324
+  nr1 oracle    VA 0.2183 | offset 0.1955 (signed +0.1933) rest 0.09696 dVA 0.07156 | VM 0.01204 VM_PQ 0.01216
+  nr oracle     VA 6.041e-06 | offset 2.361e-06 (signed +2.113e-06) rest 5.56e-06 dVA 3.23e-06 | VM 2.11e-07 VM_PQ 2.131e-07
+  nr1 inputs    VA 0.1759 | offset 0.1482 (signed +0.1443) rest 0.09486 dVA 0.06892 | VM 0.01174 VM_PQ 0.01184
+  nr inputs     VA 0.06975 | offset 0.06949 (signed -0.05094) rest 0.006008 dVA 0.01447 | VM 0.0008391 VM_PQ 0.0006311
+case118_ieee | oracle Newton iterations to 1e-9 from DC start mean 4.00 max 4, from flat start mean 4.00 max 4 | REF voltage label min 1.0097 max 1.0600, its input estimate RMS error 0.0152 | REF voltage on PV setpoints and loads: R^2 0.973, RMSE 0.0025
+  dc            VA 1.948 | offset 1.6 (signed +1.49) rest 1.111 dVA 0.4792 | VM 0.03768 VM_PQ 0.03792
+  dcloss        VA 1.476 | offset 1.213 (signed -1.182) rest 0.8413 dVA 0.4573 | VM 0.03768 VM_PQ 0.03792
+  dcv           VA 2.154 | offset 1.939 (signed +1.855) rest 0.9378 dVA 0.3773 | VM 0.03768 VM_PQ 0.03792
+  dcvloss       VA 2.949 | offset 2.65 (signed -2.642) rest 1.295 dVA 0.4596 | VM 0.03768 VM_PQ 0.03792
+  picard        VA 2.997 | offset 2.501 (signed -2.493) rest 1.651 dVA 0.5835 | VM 0.03768 VM_PQ 0.03792
+  picard oracle VA 2.869 | offset 2.345 (signed -2.343) rest 1.652 dVA 0.5733 | VM 0.03763 VM_PQ 0.03792
+  fdpf          VA 0.2347 | offset 0.2336 (signed -0.1441) rest 0.02224 dVA 0.04596 | VM 0.001942 VM_PQ 0.0004631
+  nr1 oracle    VA 2.528 | offset 2.173 (signed +2.17) rest 1.293 dVA 0.3324 | VM 0.002015 VM_PQ 0.00203
+  nr oracle     VA 1.714e-06 | offset 1.006e-06 (signed -6.811e-07) rest 1.387e-06 dVA 1.083e-06 | VM 8.137e-08 VM_PQ 8.201e-08
+  nr1 inputs    VA 2.407 | offset 2.032 (signed +2.029) rest 1.29 dVA 0.3205 | VM 0.002765 VM_PQ 0.002036
+  nr inputs     VA 0.2347 | offset 0.2336 (signed -0.1441) rest 0.02224 dVA 0.04596 | VM 0.001942 VM_PQ 0.0004631

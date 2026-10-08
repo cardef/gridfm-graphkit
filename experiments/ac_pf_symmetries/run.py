@@ -155,6 +155,7 @@ def angle_error_split(out, ev, target, data):
     ).double()
     return {
         "VA_cm": ((cnt * mean**2).sum(), cnt.sum()),
+        "VA_cm_signed": ((cnt * mean).sum(), cnt.sum()),  # the offset with its sign, averaged over graphs
         "VA_diff": (((e - mean[b]) ** 2).sum(), cnt.sum()),
         "dVA": ((de**2).sum(), torch.tensor(float(de.numel()))),
     }
@@ -167,7 +168,7 @@ def accuracy(model, loader, device, sym=None, param=None):
     Also the R7 angle-error split (`angle_error_split`): VA_cm, VA_diff, dVA, in rad; and VM_PQ, the VM error on the
     PQ buses only, comparable between tasks that hide the REF voltage (the framework's PF mask) and give it.
     """
-    keys = ("VM", "VA", "PG", "QG", "VA_cm", "VA_diff", "dVA", "VM_PQ")
+    keys = ("VM", "VA", "PG", "QG", "VA_cm", "VA_diff", "dVA", "VM_PQ", "VA_cm_signed")
     acc = {q: torch.zeros(2, dtype=torch.float64) for q in keys}
     pbe = torch.zeros(2, dtype=torch.float64)
     for data in loader:
@@ -198,7 +199,7 @@ def accuracy(model, loader, device, sym=None, param=None):
             [float(torch.sqrt(rp**2 + rq**2).sum()), n],
             dtype=torch.float64,
         )
-    res = {q: math.sqrt(a[0] / a[1]) for q, a in acc.items()}
+    res = {q: (a[0] / a[1]).item() if q.endswith("_signed") else math.sqrt(a[0] / a[1]) for q, a in acc.items()}
     # residual is reported in the *original* base so it is comparable across k
     res["PBE"] = float(pbe[0] / pbe[1]) * (param if sym == "scale" else 1.0)
     return res
