@@ -65,6 +65,14 @@ class UnmaskRefVoltage(BaseTransform):
         return data
 
 
+def result_name(a):
+    """result.json for a training run, result_eval.json for a re-evaluation, result_extrap_<grids>.json for a
+    re-evaluation on other grids (size extrapolation, P47-P50)."""
+    if a.extrap:
+        return f"result_extrap_{'_'.join(a.extrap)}.json"
+    return "result_eval.json" if a.eval_only else "result.json"
+
+
 def grid_splits(case, args, seed, n, normalizer=None, vref=False):
     """n scenarios of `case` (a fixed random subset, seed 0), split 80/10/10 by the run seed; the normalizer is
     fitted on the train part unless one is given."""
@@ -144,29 +152,31 @@ def train(task, train_loader, val_loader, run_dir, a, device):
 
 
 def evaluate(model, arm, seed, a, args, grids, run_dir, epochs_run, train_time, device, vref):
-    """In-distribution and zero-shot accuracy of a trained model; --eval-only writes result_eval.json, never result.json."""
+    """In-distribution and zero-shot accuracy of a trained model; --eval-only writes result_eval.json, never result.json;
+    with --extrap the zero-shot grids are those instead of the held-out one and in-distribution is skipped."""
     source = next(iter(grids.values()))["normalizer"]
     result = {
         "arm": arm,
         "seed": seed,
         "train": list(a.train),
         "heldout": list(a.heldout),
+        "extrap": list(a.extrap or []),
         "n_per_grid": a.n_per_grid,
         "epochs_run": epochs_run,
         "train_time_s": train_time,
         "scale_ref": float(model.scale_ref),
         "device_name": torch.cuda.get_device_name() if device == "cuda" else device,
         "baseMVA": {c: float(g["normalizer"].baseMVA) for c, g in grids.items()},
-        "in_dist": {c: accuracy(model, eval_loader(g["test"], a.batch_size), device) for c, g in grids.items()},
+        "in_dist": {} if a.extrap else {c: accuracy(model, eval_loader(g["test"], a.batch_size), device) for c, g in grids.items()},
         "zero_shot": {},
     }
-    for c in a.heldout:
+    for c in a.extrap or a.heldout:
         h = grid_splits(c, args, seed, a.n_per_grid, normalizer=source, vref=vref)
         result["zero_shot"][c] = {
             "baseMVA": float(source.baseMVA),
             "acc": accuracy(model, eval_loader(h["all"], a.batch_size), device),
         }
-    (run_dir / ("result_eval.json" if a.eval_only else "result.json")).write_text(json.dumps(result, indent=2))
+    (run_dir / result_name(a)).write_text(json.dumps(result, indent=2))
     print(json.dumps({k: result[k] for k in ("arm", "seed", "epochs_run", "zero_shot")}))
     return result
 
@@ -186,11 +196,15 @@ def main():
     p.add_argument("--hidden", type=int, default=48)
     p.add_argument("--device", default=default_device())
     p.add_argument("--eval-only", action="store_true", help="re-evaluate saved models with the current code")
+    p.add_argument("--extrap", nargs="+", default=None,
+                   help="with --eval-only: evaluate the saved models zero-shot on these grids instead of the held-out "
+                        "one (size extrapolation, P47-P50); writes result_extrap_<grids>.json")
     a = p.parse_args()
+    if a.extrap and not a.eval_only:
+        p.error("--extrap requires --eval-only")
     for seed in a.seeds:
         for arm in a.arm:
-            name = "result_eval.json" if a.eval_only else "result.json"
-            out = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}" / name
+            out = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}" / result_name(a)
             if out.exists():
                 print(f"skip {arm} seed {seed}: {out} exists")
                 continue

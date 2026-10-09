@@ -259,3 +259,24 @@ Two arms, all three folds, seeds 0-2, CPU (abacus-004 for folds 1-2, abacus-007 
 | P44 | exploratory | — | dcinjvref against the oracle physics (exact) and the P-theta iteration with the oracle REF voltage; VM_PQ |
 | P45 | does the local part transfer without message passing? | dcinj1hop's zero-shot rest and branch differences at or below DC's on all three grids, every seed | the local transfer seen with dccanon needed multi-hop context |
 | P46 | exploratory | — | dcinj1hop vs dcinjcanon on every channel: what depth adds or costs in transfer |
+
+## Size extrapolation of the trained arms (P47-P50), fixed 2026-10-09 ~16:00 before any model is evaluated there
+
+Question: how do the arms trained on grids of at most 118 buses do on grids 4x and 17x larger? Setting: every saved
+model of the three folds (arms canon, m1fullcanon, m3canon, canonresnorm, dccanon, dczcanon, dcinjcanon, canonvref,
+dcinjvref, dcinj1hop; seeds 0-2; canonresnorm exists in fold 3 only) is evaluated zero-shot and unchanged on
+case500_goc and case2000_goc (`multigrid.py --eval-only --extrap`, writes `result_extrap_<grid>.json` in the
+registered run dir): the fixed 1024-scenario subset (seed 0) of a 2048-scenario random subset (seed 0) of the public
+`gridfm/pf_small_<grid>` datasets, drawn from 20 of their ~1000 partitions spread over the whole set (partition 0 and
+every 50th; the full sets are 13 and 80 GB and the filesystem is 98% full), bus/branch/gen tables only, same masks
+and metrics as R2. References on the same scenarios and inputs: flat and DC (`r2_baselines.py`), the oracle Newton,
+the fast-decoupled iteration and the inputs-only physics floor (`r2_classical.py`), computed by the data job before
+any model result exists. Rule as before: ranges over the 3 seeds; a difference is called only when the ranges do not
+overlap; "every fold" = the models of all three folds, scored fold by fold.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| P47 | does the DC prior stay at DC level with size? | dccanon's zero-shot VA on case500_goc within [0.9, 1.1] x DC's VA on that grid for every seed of every fold, as on case118 (1.00 x) | above 1.1: the learned correction harms with size (the amplification the review feared); below 0.9: a gain that grows with size |
+| P48 | does the injection correction's instability grow with size? | dcinjcanon does not beat DC on case500_goc: in every fold at least one seed has VA above DC's, and the seed max/min ratio of VA exceeds 2 in every fold | if some fold has every seed below DC: the injection correction transfers to 4x the training size; if the spread shrinks: the case118 instability was not a size effect |
+| P49 | do the canon-like arms stay far from DC with size? | zero-shot VA of canon, m1fullcanon, m3canon and canonvref on case500_goc at least 4 x DC's for every seed of every fold (5.4-5.9 x on case118), with the per-graph offset the larger part of VA^2 | ratio below 4 somewhere: the canon-like arms lose less with size than the DC-based ones; offset not dominant: the local part degrades too |
+| P50 | exploratory | — | the same on case2000_goc; offset / rest / branch differences against grid size; VM and VM_PQ against flat and the physics floor; PBE; dczcanon, dcinjvref and dcinj1hop; the cost of extrapolation (zero-shot on the large grid / in-distribution on the largest training grid); whether m3canon's and canonresnorm's VM and PBE gains over canon hold with size |
