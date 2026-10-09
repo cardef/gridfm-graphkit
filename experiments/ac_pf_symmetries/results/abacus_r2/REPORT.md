@@ -1,6 +1,6 @@
 # R2: M0+Canon vs M1 on held-out grids
 
-Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout_case118_ieee dccanon 3, heldout_case118_ieee dcinjcanon 3, heldout_case118_ieee dczcanon 3, heldout_case118_ieee m1fullcanon 3, heldout_case118_ieee m3canon 3, heldout_case30_ieee canon 3, heldout_case30_ieee canonvref 1, heldout_case30_ieee dccanon 3, heldout_case30_ieee dcinj1hop 3, heldout_case30_ieee dcinjcanon 3, heldout_case30_ieee dczcanon 3, heldout_case30_ieee m1fullcanon 3, heldout_case30_ieee m3canon 3, heldout_case57_ieee canon 3, heldout_case57_ieee dccanon 3, heldout_case57_ieee dcinj1hop 3, heldout_case57_ieee dcinjcanon 3, heldout_case57_ieee dczcanon 3, heldout_case57_ieee m1fullcanon 3, heldout_case57_ieee m3canon 3
+Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout_case118_ieee canonvref 3, heldout_case118_ieee dccanon 3, heldout_case118_ieee dcinj1hop 3, heldout_case118_ieee dcinjcanon 3, heldout_case118_ieee dcinjvref 3, heldout_case118_ieee dczcanon 3, heldout_case118_ieee m1fullcanon 3, heldout_case118_ieee m3canon 3, heldout_case30_ieee canon 3, heldout_case30_ieee canonvref 3, heldout_case30_ieee dccanon 3, heldout_case30_ieee dcinj1hop 3, heldout_case30_ieee dcinjcanon 3, heldout_case30_ieee dcinjvref 3, heldout_case30_ieee dczcanon 3, heldout_case30_ieee m1fullcanon 3, heldout_case30_ieee m3canon 3, heldout_case57_ieee canon 3, heldout_case57_ieee canonvref 3, heldout_case57_ieee dccanon 3, heldout_case57_ieee dcinj1hop 3, heldout_case57_ieee dcinjcanon 3, heldout_case57_ieee dcinjvref 3, heldout_case57_ieee dczcanon 3, heldout_case57_ieee m1fullcanon 3, heldout_case57_ieee m3canon 3
 
 ### heldout_case118_ieee: zero-shot
 
@@ -13,6 +13,9 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case118_ieee | dccanon | 0.00699 ± 0.001 | 1.95 ± 0.042 | 39 ± 27 | 34.8 ± 12 | 7.54 ± 0.078 | 1.52 ± 0.065 | 1.22 ± 0.11 | 0.426 ± 0.041 | nan ± nan |
 | case118_ieee | dczcanon | 0.00531 ± 0.00047 | 1.99 ± 0.28 | 32.4 ± 11 | 18 ± 3.5 | 6.39 ± 1.9 | 1.65 ± 0.27 | 1.1 ± 0.097 | 0.401 ± 0.06 | nan ± nan |
 | case118_ieee | dcinjcanon | 0.00566 ± 0.00032 | 2.77 ± 1.8 | 131 ± 1e+02 | 28.2 ± 2 | 7.41 ± 2.7 | 2.52 ± 1.6 | 1.16 ± 0.85 | 0.416 ± 0.22 | nan ± nan |
+| case118_ieee | canonvref | 0.00571 ± 0.0009 | 10.8 ± 0.64 | 334 ± 63 | 17.8 ± 1.7 | 15.1 ± 0.84 | 5.94 ± 1.4 | 8.91 ± 0.27 | 1.91 ± 0.072 | 0.00571 ± 0.0009 |
+| case118_ieee | dcinjvref | 0.0171 ± 0.017 | 5.58 ± 4.2 | 172 ± 1.1e+02 | 295 ± 4.1e+02 | 44.4 ± 55 | 4.46 ± 3.1 | 3.29 ± 2.8 | 0.794 ± 0.55 | 0.0171 ± 0.017 |
+| case118_ieee | dcinj1hop | 0.0194 ± 0.00089 | 7.99 ± 3.9 | 404 ± 2.2e+02 | 146 ± 40 | 56.3 ± 7 | 7.61 ± 3.8 | 2.42 ± 0.99 | 1.16 ± 0.48 | 0.0192 ± 0.00093 |
 
 ### heldout_case118_ieee: in distribution
 
@@ -25,6 +28,9 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case14_ieee | dccanon | 0.00241 ± 0.00082 | 0.19 ± 0.06 | 0.666 ± 0.13 | 9.54 ± 3.4 | 0.0731 ± 0.0056 | 0.189 ± 0.06 | 0.0178 ± 0.0035 | 0.0567 ± 0.018 | nan ± nan |
 | case14_ieee | dczcanon | 0.00249 ± 0.002 | 0.18 ± 0.14 | 0.469 ± 0.19 | 9.75 ± 7.8 | 0.0848 ± 0.036 | 0.179 ± 0.14 | 0.0167 ± 0.0097 | 0.0559 ± 0.043 | nan ± nan |
 | case14_ieee | dcinjcanon | 0.00292 ± 0.0012 | 0.202 ± 0.062 | 0.792 ± 0.35 | 11.6 ± 4.6 | 0.13 ± 0.04 | 0.2 ± 0.061 | 0.0307 ± 0.017 | 0.067 ± 0.024 | nan ± nan |
+| case14_ieee | canonvref | 0.000536 ± 0.00027 | 0.179 ± 0.048 | 2.43 ± 0.64 | 0.49 ± 0.18 | 0.164 ± 0.024 | 0.17 ± 0.045 | 0.0572 ± 0.015 | 0.0485 ± 0.013 | 0.000536 ± 0.00027 |
+| case14_ieee | dcinjvref | 0.000733 ± 0.00062 | 0.0665 ± 0.039 | 0.91 ± 0.54 | 0.543 ± 0.45 | 0.176 ± 0.1 | 0.0622 ± 0.037 | 0.0233 ± 0.012 | 0.0221 ± 0.013 | 0.000733 ± 0.00062 |
+| case14_ieee | dcinj1hop | 0.00636 ± 0.0012 | 0.452 ± 0.092 | 3.18 ± 0.71 | 22.4 ± 5.3 | 1.03 ± 0.17 | 0.445 ± 0.092 | 0.0752 ± 0.0081 | 0.151 ± 0.033 | 0.00349 ± 0.00066 |
 | case30_ieee | canon | 0.0058 ± 0.00033 | 0.649 ± 0.009 | 4.06 ± 0.67 | 22.2 ± 2 | 0.183 ± 0.0086 | 0.641 ± 0.0073 | 0.0979 ± 0.013 | 0.112 ± 0.0014 | nan ± nan |
 | case30_ieee | m1fullcanon | 0.00384 ± 9.3e-05 | 0.244 ± 0.046 | 2.69 ± 0.66 | 4.09 ± 0.21 | 0.182 ± 0.018 | 0.233 ± 0.044 | 0.0749 ± 0.013 | 0.0491 ± 0.0077 | nan ± nan |
 | case30_ieee | m3canon | 0.00444 ± 0.00051 | 0.554 ± 0.091 | 3.76 ± 0.93 | 19.5 ± 2.8 | 0.151 ± 0.016 | 0.549 ± 0.09 | 0.0752 ± 0.012 | 0.096 ± 0.015 | nan ± nan |
@@ -32,6 +38,9 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case30_ieee | dccanon | 0.00471 ± 0.00042 | 0.139 ± 0.025 | 0.504 ± 0.11 | 6.52 ± 0.96 | 0.176 ± 0.015 | 0.136 ± 0.026 | 0.0277 ± 0.0018 | 0.0321 ± 0.003 | nan ± nan |
 | case30_ieee | dczcanon | 0.00508 ± 0.00086 | 0.236 ± 0.15 | 0.526 ± 0.2 | 12.1 ± 8 | 0.179 ± 0.036 | 0.23 ± 0.16 | 0.0316 ± 0.003 | 0.0524 ± 0.026 | nan ± nan |
 | case30_ieee | dcinjcanon | 0.00456 ± 0.00092 | 0.193 ± 0.043 | 2.08 ± 0.78 | 8.22 ± 4.3 | 0.185 ± 0.036 | 0.186 ± 0.038 | 0.0501 ± 0.022 | 0.0449 ± 0.016 | nan ± nan |
+| case30_ieee | canonvref | 0.00425 ± 0.00014 | 0.533 ± 0.062 | 6.72 ± 0.93 | 1.63 ± 0.13 | 0.237 ± 0.0092 | 0.506 ± 0.06 | 0.17 ± 0.019 | 0.104 ± 0.011 | 0.00425 ± 0.00014 |
+| case30_ieee | dcinjvref | 0.00454 ± 0.00011 | 0.136 ± 0.012 | 1.71 ± 0.24 | 1.32 ± 0.062 | 0.204 ± 0.037 | 0.128 ± 0.012 | 0.0437 ± 0.0039 | 0.0319 ± 0.0017 | 0.00454 ± 0.00011 |
+| case30_ieee | dcinj1hop | 0.00799 ± 0.0009 | 0.376 ± 0.014 | 6.37 ± 1.6 | 25.5 ± 5.4 | 1.33 ± 0.24 | 0.331 ± 0.018 | 0.17 ± 0.054 | 0.139 ± 0.036 | 0.00691 ± 0.00054 |
 | case57_ieee | canon | 0.00413 ± 0.00032 | 0.249 ± 0.03 | 4.38 ± 0.92 | 16.5 ± 0.82 | 0.207 ± 0.015 | 0.203 ± 0.029 | 0.145 ± 0.013 | 0.0746 ± 0.0066 | nan ± nan |
 | case57_ieee | m1fullcanon | 0.00397 ± 0.00031 | 0.216 ± 0.021 | 3.89 ± 0.43 | 12.4 ± 1.1 | 0.186 ± 0.016 | 0.156 ± 0.03 | 0.147 ± 0.0039 | 0.0747 ± 0.00056 | nan ± nan |
 | case57_ieee | m3canon | 0.00302 ± 0.00015 | 0.207 ± 0.035 | 4.22 ± 0.65 | 15.3 ± 0.93 | 0.134 ± 0.0055 | 0.187 ± 0.032 | 0.0889 ± 0.014 | 0.0478 ± 0.0064 | nan ± nan |
@@ -39,6 +48,9 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case57_ieee | dccanon | 0.00422 ± 0.00045 | 0.118 ± 0.012 | 3.04 ± 1.1 | 15 ± 4 | 0.162 ± 0.026 | 0.105 ± 0.012 | 0.0526 ± 0.0059 | 0.0351 ± 0.0051 | nan ± nan |
 | case57_ieee | dczcanon | 0.00459 ± 0.00026 | 0.183 ± 0.078 | 2.64 ± 0.47 | 24.3 ± 16 | 0.149 ± 0.023 | 0.174 ± 0.08 | 0.0551 ± 0.009 | 0.047 ± 0.018 | nan ± nan |
 | case57_ieee | dcinjcanon | 0.00389 ± 0.00034 | 0.0665 ± 0.0092 | 1.92 ± 0.58 | 7.84 ± 1.8 | 0.16 ± 0.025 | 0.0548 ± 0.009 | 0.0373 ± 0.0065 | 0.0313 ± 0.0025 | nan ± nan |
+| case57_ieee | canonvref | 0.00414 ± 0.00038 | 0.261 ± 0.048 | 4.85 ± 1 | 0.994 ± 0.13 | 0.213 ± 0.022 | 0.214 ± 0.045 | 0.15 ± 0.02 | 0.0781 ± 0.0096 | 0.00414 ± 0.00038 |
+| case57_ieee | dcinjvref | 0.00403 ± 0.00034 | 0.0658 ± 0.0088 | 1.53 ± 0.12 | 0.912 ± 0.056 | 0.198 ± 0.05 | 0.0538 ± 0.0083 | 0.0378 ± 0.0036 | 0.0329 ± 0.0021 | 0.00403 ± 0.00034 |
+| case57_ieee | dcinj1hop | 0.0178 ± 0.0012 | 0.408 ± 0.083 | 14.3 ± 2.6 | 26.5 ± 9.8 | 2.23 ± 0.33 | 0.347 ± 0.071 | 0.214 ± 0.043 | 0.164 ± 0.042 | 0.0179 ± 0.0013 |
 
 ### heldout_case30_ieee: zero-shot
 
@@ -50,7 +62,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case30_ieee | dccanon | 0.011 ± 0.0017 | 2.14 ± 0.16 | 35.3 ± 12 | 18 ± 12 | 1.87 ± 0.33 | 2.1 ± 0.16 | 0.394 ± 0.044 | 0.387 ± 0.034 | nan ± nan |
 | case30_ieee | dczcanon | 0.0119 ± 0.0031 | 1.81 ± 0.2 | 18.7 ± 8.8 | 41 ± 24 | 1.84 ± 0.38 | 1.77 ± 0.2 | 0.351 ± 0.13 | 0.345 ± 0.011 | nan ± nan |
 | case30_ieee | dcinjcanon | 0.00629 ± 0.00038 | 0.692 ± 0.54 | 8.23 ± 5.8 | 9.96 ± 2 | 1.71 ± 0.54 | 0.609 ± 0.52 | 0.312 ± 0.16 | 0.18 ± 0.095 | nan ± nan |
-| case30_ieee | canonvref | 0.0134 | 7.69 | 97.9 | 11.4 | 3.89 | 7.32 | 2.36 | 1.44 | 0.0134 |
+| case30_ieee | canonvref | 0.0104 ± 0.0028 | 7.87 ± 0.22 | 90.8 ± 11 | 10.9 ± 0.96 | 4.2 ± 0.3 | 7.44 ± 0.22 | 2.57 ± 0.15 | 1.52 ± 0.056 | 0.0104 ± 0.0028 |
+| case30_ieee | dcinjvref | 0.00791 ± 0.0013 | 1.23 ± 0.79 | 12.7 ± 6.9 | 3.01 ± 0.56 | 2.34 ± 0.38 | 1.14 ± 0.75 | 0.465 ± 0.25 | 0.275 ± 0.13 | 0.00791 ± 0.0013 |
 | case30_ieee | dcinj1hop | 0.0152 ± 0.0014 | 1.72 ± 0.64 | 17.2 ± 5.6 | 21.5 ± 8.2 | 19.5 ± 3.6 | 1.59 ± 0.63 | 0.629 ± 0.16 | 0.393 ± 0.099 | 0.0154 ± 0.0014 |
 
 ### heldout_case30_ieee: in distribution
@@ -63,7 +76,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case14_ieee | dccanon | 0.00193 ± 0.00079 | 0.138 ± 0.058 | 0.453 ± 0.16 | 7.57 ± 3.1 | 0.0867 ± 0.015 | 0.138 ± 0.058 | 0.0144 ± 0.0036 | 0.0431 ± 0.018 | nan ± nan |
 | case14_ieee | dczcanon | 0.00754 ± 0.0042 | 0.54 ± 0.31 | 1.13 ± 0.7 | 29.9 ± 17 | 0.0766 ± 0.014 | 0.54 ± 0.31 | 0.0237 ± 0.011 | 0.169 ± 0.097 | nan ± nan |
 | case14_ieee | dcinjcanon | 0.00252 ± 0.00071 | 0.181 ± 0.041 | 0.909 ± 0.41 | 10 ± 2.8 | 0.15 ± 0.043 | 0.179 ± 0.041 | 0.0231 ± 0.013 | 0.0588 ± 0.015 | nan ± nan |
-| case14_ieee | canonvref | 0.000349 | 0.123 | 1.95 | 0.354 | 0.189 | 0.117 | 0.0392 | 0.0351 | 0.000349 |
+| case14_ieee | canonvref | 0.000428 ± 0.00015 | 0.115 ± 0.02 | 1.66 ± 0.33 | 0.361 ± 0.12 | 0.174 ± 0.035 | 0.108 ± 0.019 | 0.0384 ± 0.0069 | 0.0332 ± 0.0067 | 0.000428 ± 0.00015 |
+| case14_ieee | dcinjvref | 0.000429 ± 0.00018 | 0.0862 ± 0.029 | 1.2 ± 0.33 | 0.357 ± 0.14 | 0.18 ± 0.0075 | 0.0805 ± 0.028 | 0.0307 ± 0.0086 | 0.0272 ± 0.0074 | 0.000429 ± 0.00018 |
 | case14_ieee | dcinj1hop | 0.00449 ± 0.00097 | 0.364 ± 0.14 | 5.29 ± 2.1 | 12.3 ± 2.4 | 1.84 ± 0.38 | 0.33 ± 0.18 | 0.113 ± 0.023 | 0.16 ± 0.01 | 0.00362 ± 0.00082 |
 | case57_ieee | canon | 0.0042 ± 0.00033 | 0.289 ± 0.046 | 5.27 ± 1.3 | 17 ± 0.48 | 0.259 ± 0.029 | 0.242 ± 0.05 | 0.156 ± 0.0072 | 0.0817 ± 0.0034 | nan ± nan |
 | case57_ieee | m1fullcanon | 0.00407 ± 0.00037 | 0.217 ± 0.03 | 3.74 ± 0.21 | 13.5 ± 0.83 | 0.2 ± 0.013 | 0.154 ± 0.033 | 0.152 ± 0.011 | 0.0753 ± 0.0053 | nan ± nan |
@@ -71,7 +85,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case57_ieee | dccanon | 0.00403 ± 0.00037 | 0.0932 ± 0.011 | 2.73 ± 0.097 | 7.85 ± 2.3 | 0.155 ± 0.018 | 0.0758 ± 0.0084 | 0.0541 ± 0.0075 | 0.0304 ± 0.004 | nan ± nan |
 | case57_ieee | dczcanon | 0.00438 ± 0.00016 | 0.158 ± 0.053 | 3.31 ± 0.19 | 20.9 ± 11 | 0.158 ± 0.019 | 0.116 ± 0.056 | 0.1 ± 0.032 | 0.0556 ± 0.019 | nan ± nan |
 | case57_ieee | dcinjcanon | 0.00392 ± 0.00029 | 0.114 ± 0.048 | 2.3 ± 1.2 | 8.28 ± 0.55 | 0.196 ± 0.033 | 0.0988 ± 0.04 | 0.0566 ± 0.026 | 0.0366 ± 0.0068 | nan ± nan |
-| case57_ieee | canonvref | 0.00413 | 0.234 | 4.51 | 1.07 | 0.288 | 0.177 | 0.154 | 0.0797 | 0.00413 |
+| case57_ieee | canonvref | 0.00404 ± 0.00043 | 0.244 ± 0.043 | 4.92 ± 0.99 | 1 ± 0.11 | 0.273 ± 0.012 | 0.194 ± 0.038 | 0.147 ± 0.023 | 0.0764 ± 0.011 | 0.00404 ± 0.00043 |
+| case57_ieee | dcinjvref | 0.00404 ± 0.0004 | 0.0953 ± 0.033 | 2.45 ± 0.74 | 0.871 ± 0.044 | 0.234 ± 0.013 | 0.0836 ± 0.035 | 0.0439 ± 0.0047 | 0.0345 ± 0.0014 | 0.00404 ± 0.0004 |
 | case57_ieee | dcinj1hop | 0.017 ± 0.0016 | 0.338 ± 0.071 | 8.12 ± 1.4 | 25.8 ± 13 | 2.99 ± 0.31 | 0.163 ± 0.03 | 0.296 ± 0.066 | 0.251 ± 0.056 | 0.0171 ± 0.0015 |
 | case118_ieee | canon | 0.00156 ± 0.00027 | 1.65 ± 0.31 | 72.8 ± 13 | 9.26 ± 2 | 1.2 ± 0.18 | 1.4 ± 0.3 | 0.878 ± 0.12 | 0.251 ± 0.038 | nan ± nan |
 | case118_ieee | m1fullcanon | 0.00192 ± 0.00021 | 0.771 ± 0.08 | 27.3 ± 1.4 | 10.9 ± 0.04 | 0.607 ± 0.092 | 0.55 ± 0.06 | 0.539 ± 0.061 | 0.128 ± 0.012 | nan ± nan |
@@ -79,7 +94,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case118_ieee | dccanon | 0.00249 ± 0.00016 | 0.625 ± 0.019 | 19 ± 0.88 | 15.1 ± 0.98 | 0.295 ± 0.051 | 0.598 ± 0.018 | 0.18 ± 0.0082 | 0.0928 ± 0.0036 | nan ± nan |
 | case118_ieee | dczcanon | 0.0028 ± 0.00037 | 0.64 ± 0.035 | 18.9 ± 1.8 | 17 ± 1.7 | 0.287 ± 0.067 | 0.603 ± 0.029 | 0.212 ± 0.035 | 0.0992 ± 0.0089 | nan ± nan |
 | case118_ieee | dcinjcanon | 0.00151 ± 0.00038 | 0.195 ± 0.078 | 7.57 ± 5.4 | 8.17 ± 1.5 | 0.395 ± 0.12 | 0.17 ± 0.064 | 0.0944 ± 0.047 | 0.0399 ± 0.013 | nan ± nan |
-| case118_ieee | canonvref | 0.000592 | 2.3 | 91.7 | 1.99 | 1.25 | 1.96 | 1.2 | 0.322 | 0.000592 |
+| case118_ieee | canonvref | 0.000617 ± 0.00014 | 1.89 ± 0.33 | 76.6 ± 12 | 1.78 ± 0.2 | 1.19 ± 0.074 | 1.59 ± 0.3 | 1.02 ± 0.15 | 0.277 ± 0.036 | 0.000617 ± 0.00014 |
+| case118_ieee | dcinjvref | 0.000573 ± 0.00013 | 0.205 ± 0.0071 | 11.4 ± 0.73 | 0.549 ± 0.067 | 0.456 ± 0.033 | 0.182 ± 0.013 | 0.0936 ± 0.0093 | 0.0351 ± 0.0017 | 0.000573 ± 0.00013 |
 | case118_ieee | dcinj1hop | 0.00756 ± 0.0011 | 0.45 ± 0.018 | 23.6 ± 3.7 | 19.5 ± 8.1 | 6.24 ± 1.3 | 0.327 ± 0.041 | 0.307 ± 0.018 | 0.14 ± 0.0057 | 0.0075 ± 0.0011 |
 
 ### heldout_case57_ieee: zero-shot
@@ -92,6 +108,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case57_ieee | dccanon | 0.0203 ± 0.0032 | 1.62 ± 0.15 | 27.6 ± 9.5 | 89.9 ± 8.5 | 2.52 ± 0.41 | 1.53 ± 0.14 | 0.528 ± 0.038 | 0.38 ± 0.0089 | nan ± nan |
 | case57_ieee | dczcanon | 0.017 ± 0.00098 | 1.5 ± 0.033 | 33.9 ± 4.2 | 75.9 ± 17 | 2.83 ± 0.22 | 1.43 ± 0.031 | 0.456 ± 0.014 | 0.351 ± 0.012 | nan ± nan |
 | case57_ieee | dcinjcanon | 0.0171 ± 0.0017 | 0.587 ± 0.16 | 13.1 ± 3.5 | 38.7 ± 4.1 | 3.44 ± 0.37 | 0.468 ± 0.16 | 0.334 ± 0.11 | 0.203 ± 0.038 | nan ± nan |
+| case57_ieee | canonvref | 0.0203 ± 0.0049 | 8.22 ± 0.74 | 258 ± 15 | 17.2 ± 3.4 | 9.16 ± 1.1 | 7.49 ± 1 | 3.26 ± 0.55 | 1.91 ± 0.2 | 0.0203 ± 0.0049 |
+| case57_ieee | dcinjvref | 0.0175 ± 0.002 | 0.9 ± 0.35 | 20.7 ± 2 | 8.48 ± 2.4 | 4.4 ± 0.5 | 0.775 ± 0.37 | 0.439 ± 0.087 | 0.274 ± 0.023 | 0.0175 ± 0.002 |
 | case57_ieee | dcinj1hop | 0.0339 ± 0.0022 | 2.8 ± 1.4 | 38.9 ± 22 | 88.7 ± 48 | 58.8 ± 1.1 | 2.13 ± 1.4 | 1.74 ± 0.7 | 0.68 ± 0.24 | 0.0342 ± 0.0022 |
 
 ### heldout_case57_ieee: in distribution
@@ -104,6 +122,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case14_ieee | dccanon | 0.0013 ± 0.00033 | 0.098 ± 0.018 | 0.512 ± 0.13 | 5.11 ± 1.3 | 0.0603 ± 0.0038 | 0.0973 ± 0.018 | 0.012 ± 0.0026 | 0.0296 ± 0.006 | nan ± nan |
 | case14_ieee | dczcanon | 0.00213 ± 0.00067 | 0.163 ± 0.051 | 0.466 ± 0.2 | 8.45 ± 2.7 | 0.0666 ± 0.01 | 0.162 ± 0.052 | 0.0137 ± 0.0034 | 0.0483 ± 0.016 | nan ± nan |
 | case14_ieee | dcinjcanon | 0.00262 ± 0.0016 | 0.21 ± 0.13 | 1.01 ± 0.39 | 10.4 ± 6.7 | 0.163 ± 0.063 | 0.208 ± 0.13 | 0.0252 ± 0.014 | 0.064 ± 0.038 | nan ± nan |
+| case14_ieee | canonvref | 0.000417 ± 0.00013 | 0.193 ± 0.063 | 2.67 ± 0.81 | 0.451 ± 0.15 | 0.205 ± 0.054 | 0.182 ± 0.059 | 0.0635 ± 0.022 | 0.053 ± 0.017 | 0.000417 ± 0.00013 |
+| case14_ieee | dcinjvref | 0.000353 ± 0.00015 | 0.046 ± 0.023 | 0.588 ± 0.21 | 0.257 ± 0.11 | 0.142 ± 0.04 | 0.0425 ± 0.021 | 0.0175 ± 0.0077 | 0.0163 ± 0.0069 | 0.000353 ± 0.00015 |
 | case14_ieee | dcinj1hop | 0.0052 ± 0.00051 | 0.517 ± 0.063 | 5.98 ± 0.84 | 17.8 ± 2 | 1.64 ± 0.36 | 0.511 ± 0.063 | 0.0765 ± 0.018 | 0.179 ± 0.02 | 0.00317 ± 0.0006 |
 | case30_ieee | canon | 0.00406 ± 0.00061 | 0.422 ± 0.038 | 4.74 ± 0.37 | 5.91 ± 3.2 | 0.227 ± 0.0084 | 0.409 ± 0.04 | 0.103 ± 0.0044 | 0.0753 ± 0.0039 | nan ± nan |
 | case30_ieee | m1fullcanon | 0.00443 ± 0.00038 | 0.241 ± 0.034 | 2.94 ± 0.48 | 3.49 ± 1.3 | 0.205 ± 0.023 | 0.229 ± 0.033 | 0.0748 ± 0.0092 | 0.0488 ± 0.0064 | nan ± nan |
@@ -111,6 +131,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case30_ieee | dccanon | 0.0042 ± 0.00052 | 0.0506 ± 0.013 | 0.451 ± 0.086 | 2.32 ± 0.32 | 0.165 ± 0.016 | 0.0443 ± 0.014 | 0.0237 ± 0.0024 | 0.0187 ± 0.0026 | nan ± nan |
 | case30_ieee | dczcanon | 0.00404 ± 0.00067 | 0.07 ± 0.0045 | 0.283 ± 0.02 | 3.29 ± 0.23 | 0.158 ± 0.017 | 0.0645 ± 0.0042 | 0.0271 ± 0.0021 | 0.0215 ± 0.002 | nan ± nan |
 | case30_ieee | dcinjcanon | 0.00477 ± 0.00048 | 0.196 ± 0.07 | 1.34 ± 0.11 | 10.5 ± 6.4 | 0.207 ± 0.022 | 0.191 ± 0.073 | 0.0403 ± 0.0023 | 0.0497 ± 0.015 | nan ± nan |
+| case30_ieee | canonvref | 0.0043 ± 0.00074 | 0.52 ± 0.12 | 7.25 ± 1.7 | 1.8 ± 0.4 | 0.283 ± 0.043 | 0.5 ± 0.12 | 0.145 ± 0.032 | 0.0967 ± 0.022 | 0.0043 ± 0.00074 |
+| case30_ieee | dcinjvref | 0.00433 ± 0.00038 | 0.107 ± 0.033 | 1.36 ± 0.58 | 1.28 ± 0.13 | 0.224 ± 0.031 | 0.099 ± 0.032 | 0.039 ± 0.0078 | 0.0291 ± 0.0054 | 0.00433 ± 0.00038 |
 | case30_ieee | dcinj1hop | 0.00855 ± 0.0019 | 0.403 ± 0.064 | 4.55 ± 1.3 | 17.5 ± 2.2 | 1.92 ± 0.24 | 0.292 ± 0.065 | 0.274 ± 0.033 | 0.192 ± 0.017 | 0.00817 ± 0.0021 |
 | case118_ieee | canon | 0.00178 ± 0.00048 | 1.87 ± 0.18 | 75.8 ± 4.1 | 11.1 ± 3.4 | 1.09 ± 0.036 | 1.57 ± 0.13 | 1 ± 0.14 | 0.27 ± 0.02 | nan ± nan |
 | case118_ieee | m1fullcanon | 0.00194 ± 0.00043 | 0.889 ± 0.08 | 33.8 ± 4.6 | 11.5 ± 2.7 | 0.626 ± 0.056 | 0.685 ± 0.062 | 0.565 ± 0.051 | 0.141 ± 0.014 | nan ± nan |
@@ -118,6 +140,8 @@ Runs: heldout_case118_ieee canon 3, heldout_case118_ieee canonresnorm 3, heldout
 | case118_ieee | dccanon | 0.00242 ± 0.0001 | 0.615 ± 0.026 | 18.6 ± 1.6 | 15.4 ± 0.55 | 0.223 ± 0.017 | 0.59 ± 0.026 | 0.173 ± 0.0044 | 0.0917 ± 0.0038 | nan ± nan |
 | case118_ieee | dczcanon | 0.00241 ± 0.00012 | 0.625 ± 0.021 | 17.9 ± 1.7 | 15.2 ± 0.43 | 0.232 ± 0.02 | 0.598 ± 0.018 | 0.181 ± 0.011 | 0.0927 ± 0.0037 | nan ± nan |
 | case118_ieee | dcinjcanon | 0.00146 ± 0.00024 | 0.166 ± 0.01 | 5.01 ± 0.68 | 8.75 ± 1.7 | 0.344 ± 0.067 | 0.14 ± 0.014 | 0.0848 ± 0.025 | 0.0388 ± 0.0064 | nan ± nan |
+| case118_ieee | canonvref | 0.000855 ± 0.00048 | 2.45 ± 0.44 | 96.6 ± 20 | 2.27 ± 0.59 | 1.22 ± 0.14 | 2.05 ± 0.4 | 1.34 ± 0.21 | 0.343 ± 0.057 | 0.000855 ± 0.00048 |
+| case118_ieee | dcinjvref | 0.000514 ± 0.00017 | 0.173 ± 0.064 | 7.61 ± 2.7 | 0.608 ± 0.21 | 0.397 ± 0.11 | 0.148 ± 0.063 | 0.0867 ± 0.021 | 0.0294 ± 0.0096 | 0.000514 ± 0.00017 |
 | case118_ieee | dcinj1hop | 0.0075 ± 0.00044 | 0.56 ± 0.052 | 39.3 ± 1.2 | 21.9 ± 4.8 | 6.25 ± 0.71 | 0.414 ± 0.058 | 0.375 ± 0.029 | 0.15 ± 0.014 | 0.0073 ± 0.00044 |
 
 **P17 (held-out grids, folds 1-2): PASS** (predicted no separation). case30_ieee VA m1 [0.7911, 7.07] vs canon [3.89, 6.169]; case30_ieee VM m1 [0.005591, 0.01188] vs canon [0.008638, 0.01324]; case57_ieee VA m1 [3.006, 8.083] vs canon [7.437, 8.971]; case57_ieee VM m1 [0.01588, 0.02022] vs canon [0.01489, 0.02155]
@@ -166,8 +190,12 @@ P28, reported alongside (PBE): (i) residual normalization: resnorm [8.626, 10.74
 
 **P37s (dcinjcanon VA below the P-theta iteration, zero-shot): FAIL** case118_ieee VA [1.063, 5.317] vs 2.997; case30_ieee VA [0.2671, 1.453] vs 1.003; case57_ieee VA [0.3676, 0.7262] vs 1.445 ok
 
-**P45 (dcinj1hop rest and branch differences at or below DC's, zero-shot): incomplete** case30_ieee rest [0.4397, 0.834] vs 0.397, dVA [0.2782, 0.5191] vs 0.339; case57_ieee rest [1.103, 2.719] vs 1.01, dVA [0.4486, 1.013] vs 0.532
+**P42 (dcinjvref VA <= 0.75 x DC, zero-shot): FAIL** case118_ieee VA [1.659, 11.33] vs 1.46; case30_ieee VA [0.2329, 2.157] vs 1.17; case57_ieee VA [0.5259, 1.374] vs 0.81
 
-**P39 (REF voltage given vs hidden, zero-shot VA, predicted no separation): incomplete** case30_ieee vref [7.687, 7.687] vs canon [3.89, 6.169] SEPARATED
+**P43 (dcinjvref offset below dcinjcanon's on case30 and case57): FAIL** case30_ieee vref [0.1933, 2.028] vs hidden [0.1997, 1.35]; case57_ieee vref [0.3659, 1.253] vs hidden [0.2734, 0.6764]
 
-**P40 (REF voltage given, zero-shot VM on PQ buses below canon on case30 and case118): incomplete** case30_ieee vref [0.0134, 0.0134] vs canon [0.008602, 0.0135]
+**P45 (dcinj1hop rest and branch differences at or below DC's, zero-shot): FAIL** case118_ieee rest [1.166, 3.585] vs 1.11, dVA [0.5828, 1.751] vs 0.479; case30_ieee rest [0.4397, 0.834] vs 0.397, dVA [0.2782, 0.5191] vs 0.339; case57_ieee rest [1.103, 2.719] vs 1.01, dVA [0.4486, 1.013] vs 0.532
+
+**P39 (REF voltage given vs hidden, zero-shot VA, predicted no separation): FAIL** case118_ieee vref [9.897, 11.35] vs canon [10.06, 12.41]; case30_ieee vref [7.687, 8.182] vs canon [3.89, 6.169] SEPARATED; case57_ieee vref [7.445, 9.206] vs canon [7.437, 8.971]
+
+**P40 (REF voltage given, zero-shot VM on PQ buses below canon on case30 and case118): FAIL** case118_ieee vref [0.005073, 0.006981] vs canon [0.004933, 0.006352]; case30_ieee vref [0.006704, 0.0134] vs canon [0.008602, 0.0135]; case57_ieee vref [0.01586, 0.02708] vs canon [0.01444, 0.02156]

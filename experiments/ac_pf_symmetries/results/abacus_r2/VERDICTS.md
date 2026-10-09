@@ -248,3 +248,40 @@ the REF voltage better than the mean PV setpoint does) and the same correction a
 on two grids). On the larger held-out grid it is unstable across seeds (1.06 to 5.32 deg, the large errors in the
 common offset), consistent with the review's concern: L^-1 amplifies the smooth part of c, and that amplification
 grows with grid size beyond what training saw. Zero initialization alone changes nothing (P38).
+
+## REF voltage given vs hidden, and the two extra arms (P39-P46, C8; 2026-10-09)
+
+27 runs, every one at the 100-epoch cap. `canonvref` (3 folds × seeds 0-2; arrays 62812/62813 on abacus-004,
+62814 on abacus-007; 4 CPUs per task; code 5447821 on the vref branch, merged into main as 6a72b06), `dcinjvref`
+(62860-62862) and `dcinj1hop` (62863-62865), both launched 2026-10-08 ~19:20 with the code of 99d201d, which added
+the arms. canon's VM on PQ buses comes from its re-evaluation (62815-62817, `result_eval.json`), which reproduces
+`result.json` on every shared metric to 4e-5 relative: the gate of the P39-P41 block holds. dccanon's signed offsets
+from its re-evaluation (62866-62868). Scored with `r2_report.py` at HEAD 9fc600a, run from the workstation against the
+GPFS mount (Python 3.11, numpy 2.3; the script needs only numpy): a deviation from the cluster-side scoring of the
+earlier blocks, with no effect on the numbers.
+
+| id | verdict | what the numbers say (zero-shot, deg / p.u. / MVA) |
+|---|---|---|
+| P39 | FAIL, in the direction the registration did not anticipate | VA: case30 canonvref [7.69, 8.18] vs canon [3.89, 6.17], separated with canonvref ABOVE; case57 [7.45, 9.21] vs [7.44, 8.97] and case118 [9.90, 11.35] vs [10.06, 12.41] overlap. The registered failure reading (canonvref entirely below canon somewhere) does not apply. On case30 the whole increase is the common offset ([7.26, 7.75] vs [3.13, 5.49]); rest and branch differences overlap |
+| P40 | FAIL | VM on PQ buses: case30 [0.0067, 0.0134] vs canon [0.0086, 0.0135]; case118 [0.0051, 0.0070] vs [0.0049, 0.0064]; case57 [0.0159, 0.0271] vs [0.0144, 0.0216]: overlap everywhere. Registered reading: the learned models' zero-shot VM error is not the voltage level |
+| P41 (exploratory) | — | zero-shot QG below canon on case57 ([14.0, 21.9] vs [41.4, 95.0] Mvar) and case118 ([16.6, 20.2] vs [21.9, 73.5]); PBE below on case30 ([3.89, 4.61] vs [5.39, 5.82] MVA), overlapping elsewhere. In distribution canon's VM on all buses is 2-4× its VM on PQ buses on case14 and case118 (fold 3 case14 [0.0024, 0.0051] vs [0.0009, 0.0013]; fold 1 case118 [0.0012, 0.0018] vs [0.0006, 0.0009]): the REF bus carries most of canon's in-dist VM error there; on PQ buses canonvref and canon overlap on every (fold, grid). In-dist VA: canonvref below canon on case14 and case30 in fold 3 ([0.12, 0.24] vs [0.28, 0.40]; [0.45, 0.60] vs [0.64, 0.66]), overlapping elsewhere (case118 means higher, 1.9-2.5 vs 1.7-1.9). In-dist PBE above canon on case14 in fold 2 and case30 in fold 3 |
+| P42 | FAIL | dcinjvref VA vs 0.75 × DC: case30 [0.23, 2.16] vs 1.17; case57 [0.53, 1.37] vs 0.81; case118 [1.66, 11.33] vs 1.46. Every grid has a seed above DC itself (1.56 / 1.08 / 1.95). Registered reading: even on the well-posed task the learned correction does not transfer |
+| P43 | FAIL | dcinjvref offset vs dcinjcanon: case30 [0.19, 2.03] vs [0.20, 1.35]; case57 [0.37, 1.25] vs [0.27, 0.68]: not below. Registered reading: the shift is not the hidden setpoint |
+| P44 (exploratory) | — | against the oracle references of `CLASSICAL_1b.txt` (REF voltage given to physics): Newton is exact; the 12-step P-θ iteration errs 0.54 / 1.41 / 2.87 deg (case30 / 57 / 118); dcinjvref per seed 0.23, 1.30, 2.16 / 0.53, 1.37, 0.80 / 11.3, 3.75, 1.66: at or below the iteration on case57 (all seeds) and case30 (one seed); one case118 seed diverged (VA 11.3 deg, VM 0.041, PBE 123 MVA, QG 870 Mvar; fine in distribution). VM on PQ buses overlaps canonvref's on all three grids. QG far below dcinjcanon on case30 ([2.2, 3.5] vs [7.1, 11.6] Mvar) and case57 ([5.2, 11.0] vs [33.7, 43.7]); branch differences above it on case57 ([0.24, 0.29] vs [0.15, 0.23]). In distribution VM below dcinjcanon on case14 and case118 (the REF bus is given), VA below on case14 in fold 3, overlapping elsewhere |
+| P45 | FAIL | dcinj1hop rest / branch differences vs DC: case30 [0.44, 0.83] vs 0.40, [0.28, 0.52] vs 0.34; case57 [1.10, 2.72] vs 1.01, [0.45, 1.01] vs 0.53; case118 [1.17, 3.59] vs 1.11, [0.58, 1.75] vs 0.48: above DC on every grid. Registered reading: the local transfer seen with dccanon needed multi-hop context |
+| P46 (exploratory) | — | dcinj1hop vs dcinjcanon: zero-shot VM and PBE separated above on all three grids (PBE [14.4, 22.6] vs [1.07, 2.38] MVA on case30, [57.7, 60.4] vs [2.95, 3.86] on case57, [48.2, 65.4] vs [3.7, 10.2] on case118), QG above on case57 and case118, VA above on case57 ([1.58, 4.82] vs [0.37, 0.73]) and overlapping on case30 and case118 where dcinjcanon's own spread is wide. In distribution above on VM, VA and PBE on nearly every (fold, grid), PBE by 5-20×. Training 1,000-1,400 s against 7,000-17,000 s |
+| C8 (exploratory) | — | dccanon's signed zero-shot offset: case30 −2.06 / −1.93 / −2.31 deg against DC's −1.51; case57 +1.50 / +1.72 / +1.37 against +0.38; case118 +1.37 / +1.32 / +1.51 against +1.49. Same sign as DC's on every grid: the learned correction does not carry a constant of the training grids; it pushes the offset further in DC's own direction on case30 (by 0.4-0.8 deg) and case57 (by 1.0-1.3), and leaves it at DC's on case118 |
+
+Reading: the REF voltage is not what the learned models lack. Given as an input it leaves the zero-shot angle error
+where it was on case57 and case118 and makes it worse on case30 (P39, opposite to the registered direction; the whole
+increase is the common offset), and lowers the voltage error on the PQ buses nowhere (P40). The same holds for the
+injection-correction arm (P42, P43): the shift that does not transfer is not the hidden setpoint, and C8 says it is
+not a constant of the training grids either (same sign as DC's offset on every grid). What the setpoint buys is in
+distribution and in the task definition: the REF bus carried most of canon's in-dist VM error on case14 and case118,
+and with the setpoint given the task is well posed, so the floor that physics puts under any method from these inputs
+(0.07-0.56 deg) goes to zero. The local part of the learned correction needs the multi-hop context: with one layer and
+no physics feedback, rest and branch differences are worse than DC's everywhere (P45) and every other channel is
+worse than dcinjcanon's (P46). Protocol consequence, carried into Piano T: give the REF voltage to every method as an
+input (an OPF setpoint, like the PV ones), compare VM on PQ buses, keep the multi-layer corrector. By the decision rule
+of the pre-registration there is no claim about the hidden setpoint; the zero-shot problem stays the global shift, now
+shown to be neither the voltage level nor a constant.
