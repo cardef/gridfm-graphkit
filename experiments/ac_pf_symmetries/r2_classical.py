@@ -217,11 +217,11 @@ def add(s, k, sq, c):
 
 a = SimpleNamespace(epochs=1, batch_size=1, patience=1, layers=12, hidden=48)
 argv = sys.argv[1:]
-coef = None
+vref_coef = None  # not `coef`: the in-sample REF-voltage regression below reuses that name
 if "--vref-coef" in argv:
     i = argv.index("--vref-coef")
     import json as _json
-    coef = np.array(_json.load(open(argv[i + 1]))["coef"])
+    vref_coef = np.array(_json.load(open(argv[i + 1]))["coef"])
     argv = argv[:i] + argv[i + 2:]
 for case in argv:
     args = make_args(a)
@@ -244,9 +244,9 @@ for case in argv:
         xb = data["bus"].x.double().numpy()
         setp = xb[pv, VM_H]
         feats.append([1.0, setp.mean(), setp.min(), setp.max(), xb[:, PD_H].sum(), xb[:, QD_H].sum()])
-        if coef is not None:
+        if vref_coef is not None:
             vm_ph = vm0.copy()
-            vm_ph[ref] = float(np.dot(coef, feats[-1]))
+            vm_ph[ref] = float(np.dot(vref_coef, feats[-1]))
         th_dc = dc_angles(data).double().numpy()
         lap = dc_matrix(data)[0]
         states = {"dc": (vm0, th_dc), "dcloss": (vm0, dc_with_losses(data))}
@@ -255,7 +255,7 @@ for case in argv:
         states["picard"] = (vm0, picard(y, p_spec, ref, vm0, th_dc, lap))
         states["picard oracle"] = (vm_oracle, picard(y, p_spec, ref, vm_oracle, th_dc, lap))
         states["fdpf"] = fdpf(y, p_spec, q_spec, pq, ref, vm0, th_dc, lap)
-        if coef is not None:
+        if vref_coef is not None:
             states["ph"] = fdpf(y, p_spec, q_spec, pq, ref, vm_ph, th_dc, lap)
         for tag, v0 in (("oracle", vm_oracle), ("inputs", vm0)):
             states[f"nr1 {tag}"] = newton(y, p_spec, q_spec, pv, pq, v0, th_dc, 1)[:2]
@@ -288,7 +288,7 @@ for case in argv:
         vr[:, 0].min(), vr[:, 0].max(), np.sqrt(((vr[:, 0] - vr[:, 1]) ** 2).mean())),
         f"| REF voltage on PV setpoints and loads: R^2 {r2}, RMSE {math.sqrt(res / len(yr)):.4f}")
     for k in ("dc", "dcloss", "dcv", "dcvloss", "picard", "picard oracle", "fdpf",
-              "nr1 oracle", "nr oracle", "nr1 inputs", "nr inputs") + (("ph",) if coef is not None else ()):
+              "nr1 oracle", "nr oracle", "nr1 inputs", "nr inputs") + (("ph",) if vref_coef is not None else ()):
         print(f"  {k:13s} VA {out[k + ' VA']:.4g} | offset {out[k + ' offset']:.4g} (signed {out[k + ' signed']:+.4g}) "
               f"rest {out[k + ' rest']:.4g} dVA {out[k + ' dVA']:.4g} | VM {out[k + ' VM']:.4g} "
               f"VM_PQ {out[k + ' VM_PQ']:.4g}", flush=True)
