@@ -1,0 +1,46 @@
+# Piano K test set: case118_ieee with exactly 3 outages per scenario (K-P1..K-P5). Same recipe as the public
+# gridfm/pf_small_case118_ieee set (its args.log) except: 512 load scenarios x 4 topology variants = 2048 scenarios,
+# all outage mass on k = 3, fixed seed. Islanded topologies are rejected by datakit's random perturbation.
+network:
+  name: "case118_ieee"
+  source: "file"  # compute nodes cannot download PGLib; same correct_network() path as source pglib
+  network_dir: "/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO/SymmetricalFM/gridfm-graphkit/experiments/ac_pf_symmetries/cluster/nk/grids"
+
+load:
+  generator: "agg_load_profile"
+  agg_profile: "default"
+  scenarios: 512
+  sigma: 0.2
+  change_reactive_power: true
+  global_range: 0.4
+  max_scaling_factor: 4.0
+  step_size: 0.1
+  start_scaling_factor: 1.0
+
+topology_perturbation:
+  type: "random"
+  k: 3
+  n_topology_variants: 4
+  elements: [branch, gen]
+  outage_count_probabilities: [0.0, 0.0, 0.0, 1.0]
+
+generation_perturbation:
+  type: "cost_permutation"
+  sigma: 1.0
+
+admittance_perturbation:
+  type: "random_perturbation"
+  sigma: 0.2
+
+settings:
+  num_processes: 4
+  data_dir: "/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO/SymmetricalFM/gridfm-graphkit/data/nk_tmp/k3"
+  large_chunk_size: 128
+  overwrite: true
+  mode: "pf"
+  include_dc_res: true
+  enable_solver_logs: false
+  pf_fast: true
+  dcpf_fast: true
+  max_iter: 100
+  seed: 20261012
