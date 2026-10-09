@@ -1,0 +1,43 @@
+{
+  "arm": "dcinj1hop",
+  "seed": 1,
+  "train": [
+    "case14_ieee",
+    "case30_ieee",
+    "case118_ieee"
+  ],
+  "heldout": [
+    "case57_ieee"
+  ],
+  "extrap": [
+    "case2000_goc"
+  ],
+  "n_per_grid": 1024,
+  "epochs_run": null,
+  "train_time_s": null,
+  "scale_ref": 13.670952796936035,
+  "device_name": "cpu",
+  "baseMVA": {
+    "case14_ieee": 83.83069119326402,
+    "case30_ieee": 39.99999040229092,
+    "case118_ieee": 140.57090786189963
+  },
+  "in_dist": {},
+  "zero_shot": {
+    "case2000_goc": {
+      "baseMVA": 83.83069119326402,
+      "acc": {
+        "VM": 0.06544462166277586,
+        "VA": 1.508978231782969,
+        "PG": 151.3527240917774,
+        "QG": 24.227835430884518,
+        "VA_cm": 0.1810453412586632,
+        "VA_diff": 1.4980781350979342,
+        "dVA": 0.08117006429145929,
+        "VM_PQ": 0.0654622180960853,
+        "VA_cm_signed": 0.015181009447213269,
+        "PBE": 15.945773315429687
+      }
+    }
+  }
+}

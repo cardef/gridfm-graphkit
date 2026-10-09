@@ -1,0 +1,43 @@
+{
+  "arm": "m1fullcanon",
+  "seed": 0,
+  "train": [
+    "case14_ieee",
+    "case57_ieee",
+    "case118_ieee"
+  ],
+  "heldout": [
+    "case30_ieee"
+  ],
+  "extrap": [
+    "case500_goc"
+  ],
+  "n_per_grid": 1024,
+  "epochs_run": null,
+  "train_time_s": null,
+  "scale_ref": 9.937005996704102,
+  "device_name": "cpu",
+  "baseMVA": {
+    "case14_ieee": 83.75339094765879,
+    "case57_ieee": 113.1853478742109,
+    "case118_ieee": 141.436795675946
+  },
+  "in_dist": {},
+  "zero_shot": {
+    "case500_goc": {
+      "baseMVA": 83.75339094765879,
+      "acc": {
+        "VM": 0.035634397606209414,
+        "VA": 0.1714881362079397,
+        "PG": 16.81298625433845,
+        "QG": 1.7930048294092253,
+        "VA_cm": 0.15157709654441318,
+        "VA_diff": 0.08020327098105835,
+        "dVA": 0.03347018362111976,
+        "VM_PQ": 0.035672802593073,
+        "VA_cm_signed": 0.13153633208504928,
+        "PBE": 1.174216537475586
+      }
+    }
+  }
+}

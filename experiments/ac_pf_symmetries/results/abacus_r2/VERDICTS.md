@@ -285,3 +285,40 @@ worse than dcinjcanon's (P46). Protocol consequence, carried into Piano T: give 
 input (an OPF setpoint, like the PV ones), compare VM on PQ buses, keep the multi-layer corrector. By the decision rule
 of the pre-registration there is no claim about the hidden setpoint; the zero-shot problem stays the global shift, now
 shown to be neither the voltage level nor a constant.
+
+## Size extrapolation of the trained arms (P47-P50, 2026-10-09 evening)
+
+Every saved model of the three folds (84 per grid; canonresnorm exists in fold 3 only), evaluated zero-shot and
+unchanged on case500_goc and case2000_goc: arrays 62987 and 62988 (60 tasks, 4 CPUs each, code 60c4da6, `multigrid.py
+--eval-only --extrap`, `result_extrap_<grid>.json` in the registered run dirs); the fixed 1024 scenarios of a
+2048-scenario random subset (seed 0) drawn from 20 of the ~1000 partitions of the public `pf_small` sets (data job
+62985). References: `BASELINES_extrap.txt` (flat, DC; computed before any evaluation) and `CLASSICAL_extrap.txt`
+(case500 done; the case2000 floors were still computing when this was written and will be added). Deviation: the
+arrays were released from their dependency on the data job once the processed caches and the DC references existed,
+so the classical floors of case500 were computed concurrently with the evaluations, not before; the pre-registered
+criteria use only DC. Scored with `r2_extrap.py` (`REPORT_extrap.md`) from the workstation, as the previous block.
+
+| grid | flat VA | DC VA | DC offset | DC rest | DC θ_f − θ_t | VM flat | physics from the inputs only |
+|---|---|---|---|---|---|---|---|
+| case500_goc | 10.1 | 2.51 | 2.18 | 1.24 | 0.274 | 0.0648 | fast-decoupled and Newton 0.070 deg, VM 0.0009; Newton converges in 5 iterations from flat or DC; DC + loss compensation 1.73; one Newton step from DC 26.8 (overshoot) |
+| case2000_goc | 16.9 | 9.75 | 9.08 | 3.54 | 0.291 | 0.0628 | pending (job 62985) |
+
+| id | verdict | what the numbers say (zero-shot VA in deg unless stated) |
+|---|---|---|
+| P47 | FAIL, below the band in one fold | dccanon / DC on case500: fold 1 (train 14/57/118) [0.75, 0.92], fold 2 [0.90, 0.98], fold 3 [0.99, 1.02]; dczcanon [0.73, 0.81], [0.84, 0.93], [0.98, 1.10]. The registered reading for "below 0.9" (a gain that grows with size) holds only in the fold whose training set holds the 118, and is 8-25%. On case2000 both arms are DC: [0.94, 1.08] x, with DC's own offset (8.5-9.9 against 9.08) and rest (3.4-3.6 against 3.54) |
+| P48 | FAIL by the spread clause; the substantive prediction holds everywhere | dcinjcanon on case500: fold 1 [6.96, 45.6] (spread 6.5x), fold 2 [37.2, 53.6] (1.4x), fold 3 [27.8, 128] (4.6x): every seed above DC's 2.51 in every fold, 3-50x; fold 2's spread is below 2 because its three seeds fail alike. Neither registered failure reading applies (no fold below DC; the spread did not shrink through stability). On case2000: 20-136 (8-12x DC). dcinjvref 12-109 (500), 51-130 (2000); dcinj1hop 11-118 (500), 59-112 (2000) |
+| P49 | FAIL | canon, m1fullcanon, m3canon, canonvref on case500: 5.5-15.3 deg, mean ratios to DC 2.4-3.9x, per seed 2.2-6.1x (one m1fullcanon seed in fold 2 above 4x); offset²/VA² 0.42-0.78, the larger part in 10 of 12 cells but never dominant; rest 3.6-5.7 against DC's 1.24, branch differences 0.74-2.29 against DC's 0.27: the local part is 3-8x worse than DC's. Registered reading: the canon-like arms lose less with size than the DC-based ones gain because DC itself worsens (1.95 -> 2.51 -> 9.75 deg), and the local part degrades too. On case2000 1.2-2.2x DC (11.3-21.5 deg; rest 8.3-9.9 against DC's 3.54; branch differences 0.95-2.7 against 0.29) |
+| P50 (exploratory) | — | VM on case500: every arm 0.36-0.83 of flat and 26-60x the physics floor (0.0009); m3canon has the lowest means but overlaps canon's range in every fold; on case2000 0.5-1.6 of flat, dcinjcanon above flat. PBE on case500: m3canon and canonresnorm 27-43 MVA, dccanon 30-66, canon 59-149, dcinj1hop 260-515; on case2000 m3canon 41-64, dccanon 47-98, canon 84-221. Cost of extrapolation (zero-shot VA on case500 / in-distribution VA on the fold's largest training grid, means): canon 4-28x, m1fullcanon 11-30x, m3canon 5-29x, dccanon 3-21x, dcinjcanon 130-1100x. The canon-like arms' absolute angle error is not monotone in size: 6-8 deg on case500 against 10-12 on case118 held out and 5-8 on case30/57 held out; it is DC that degrades with size. The DC prior's gain over DC: 8-25% at 500 in the fold that trained on the 118, none at 2000 |
+
+Reading: with size, what transfers is the physics operator and nothing learned. The DC-anchored arms are DC, plus a
+small gain at 4x the training size when the largest training grid was the 118 and none at 17x. Every arm without the
+anchor is 1.2-3.9x worse than DC in angles, with a local part 3-9x worse than DC's branch differences and a voltage
+channel at 0.4-0.9 of a flat profile. The injection arms, the closest realization of "local corrections behind an
+exact global solve", collapse: L⁻¹ amplifies the smooth part of a local error, more on larger grids. And the DC
+operator is itself the wrong global operator with size: its offset against the slack grows from 1.6 deg (118) to 9.1
+(2000) while its branch differences stay at 0.3, and the fast-decoupled iteration from the same inputs reaches 0.07 deg
+on case500. The transferable global operator is the AC iteration. Carried into Piano T: its strong form (beat DC
+zero-shot with a DC anchor, learned local corrections and exact symmetries) is contradicted at PoC scale (three
+training grids of at most 118 buses, 1024 scenarios each, a 20M-parameter GNS); the one experiment that can revive it
+is T1w trained on the 100 public pretraining subgrids and evaluated zero-shot on 118/500/2000, pre-registered with the
+expectation "DC level". Failing that, the question becomes what a learned component adds to an AC iteration.

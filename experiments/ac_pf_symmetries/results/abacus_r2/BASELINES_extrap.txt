@@ -1,0 +1,2 @@
+case500_goc max|VA| 56.4 deg | VA flat 10.1 | VA DC 2.51 | VA DC offset 2.18 | VA DC rest 1.24 | dVA flat 1.85 | dVA DC 0.274 | VM flat 0.0648
+case2000_goc max|VA| 71.7 deg | VA flat 16.9 | VA DC 9.75 | VA DC offset 9.08 | VA DC rest 3.54 | dVA flat 1.46 | dVA DC 0.291 | VM flat 0.0628
