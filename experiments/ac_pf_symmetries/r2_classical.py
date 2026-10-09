@@ -30,7 +30,9 @@ import sys
 from types import SimpleNamespace
 
 import numpy as np
+import scipy.sparse as sp
 import torch
+from scipy.sparse.linalg import splu, spsolve
 from torch_geometric.loader import DataLoader
 
 from gridfm_graphkit.datasets.globals import (
@@ -60,15 +62,17 @@ D = 180 / math.pi
 
 
 def network(data):
-    """Bus admittance matrix, specified injections and bus sets of one graph (float64 numpy)."""
+    """Bus admittance matrix (sparse CSR, complex), specified injections and bus sets of one graph (float64 numpy).
+    Sparse since the GOC grids (2026-10-09): the dense Jacobian products and solves cost O(n^3) per Newton step, hours
+    per 1024 scenarios of case2000_goc; the numbers are the same (duplicates are summed as np.add.at did)."""
     x = data["bus"].x.double().numpy()
     ei = data[E].edge_index.numpy()
     ea = data[E].edge_attr.double().numpy()
     n = x.shape[0]
-    y = np.zeros((n, n), complex)
-    np.add.at(y, (ei[0], ei[0]), ea[:, YFF_TT_R] + 1j * ea[:, YFF_TT_I])  # each directed row: its own end
-    np.add.at(y, (ei[0], ei[1]), ea[:, YFT_TF_R] + 1j * ea[:, YFT_TF_I])
-    y[np.arange(n), np.arange(n)] += x[:, GS] + 1j * x[:, BS]
+    rows = np.r_[ei[0], ei[0], np.arange(n)]  # each directed row: its own end, the other end, then the bus shunt
+    cols = np.r_[ei[0], ei[1], np.arange(n)]
+    vals = np.r_[ea[:, YFF_TT_R] + 1j * ea[:, YFF_TT_I], ea[:, YFT_TF_R] + 1j * ea[:, YFT_TF_I], x[:, GS] + 1j * x[:, BS]]
+    y = sp.csr_matrix((vals, (rows, cols)), shape=(n, n))
     gi, gb = (v.numpy() for v in data.edge_index_dict[("gen", "connected_to", "bus")])
     known = ~data.mask_dict["gen"][:, PG_H].numpy()[gi]
     pg = np.zeros(n)
@@ -90,13 +94,14 @@ def newton(y, p_spec, q_spec, pv, pq, vm, va, max_it, tol=1e-9):
         f = np.r_[s.real[pvpq] - p_spec[pvpq], s.imag[pqi] - q_spec[pqi]]
         if np.abs(f).max() < tol or it == max_it:
             return vm, va, it, np.abs(f).max()
-        dva = 1j * np.diag(v) @ np.conj(np.diag(i) - y @ np.diag(v))
-        dvm = np.diag(v) @ np.conj(y @ np.diag(v / np.abs(v))) + np.conj(np.diag(i)) @ np.diag(v / np.abs(v))
-        jac = np.block([
-            [dva.real[np.ix_(pvpq, pvpq)], dvm.real[np.ix_(pvpq, pqi)]],
-            [dva.imag[np.ix_(pqi, pvpq)], dvm.imag[np.ix_(pqi, pqi)]],
-        ])
-        dx = -np.linalg.solve(jac, f)
+        dv, di, dvn = sp.diags(v), sp.diags(i), sp.diags(v / np.abs(v))
+        dva = (1j * dv @ (di - y @ dv).conj()).tocsr()
+        dvm = (dv @ (y @ dvn).conj() + di.conj() @ dvn).tocsr()
+        jac = sp.bmat([
+            [dva.real[pvpq][:, pvpq], dvm.real[pvpq][:, pqi]],
+            [dva.imag[pqi][:, pvpq], dvm.imag[pqi][:, pqi]],
+        ], format="csc")
+        dx = -spsolve(jac, f)
         va[pvpq] += dx[: len(pvpq)]
         vm[pqi] += dx[len(pvpq):]
 
@@ -121,17 +126,22 @@ def dc_with_losses(data, iters=3):
 
 
 def dc_matrix(data):
-    """The DC Laplacian (weights Im Y_ft on the forward rows) as a dense numpy matrix, with its branches."""
+    """The DC Laplacian (weights Im Y_ft on the forward rows) as a sparse CSR matrix, with its branches."""
     _, fwd, _ = line_pairs(data)
     ei, ea = data[E].edge_index.numpy(), data[E].edge_attr.double().numpy()
     f, t, w = ei[0, fwd.numpy()], ei[1, fwd.numpy()], ea[fwd.numpy(), YFT_TF_I]
     n = data["bus"].x.size(0)
-    lap = np.zeros((n, n))
-    np.add.at(lap, (f, f), w)
-    np.add.at(lap, (t, t), w)
-    np.add.at(lap, (f, t), -w)
-    np.add.at(lap, (t, f), -w)
+    lap = laplacian(f, t, w, n)
     return lap, f, t, w, -ea[fwd.numpy(), YFT_TF_R]
+
+
+def laplacian(f, t, w, n):
+    return sp.csr_matrix((np.r_[w, w, -w, -w], (np.r_[f, t, f, t], np.r_[f, t, t, f])), shape=(n, n))
+
+
+def factor(mat, idx):
+    """LU of the rows and columns `idx` of a sparse matrix (one factorization, reused across the iteration steps)."""
+    return splu(mat[idx][:, idx].tocsc())
 
 
 def dc_weighted(data, vm, losses, iters=3):
@@ -140,10 +150,9 @@ def dc_weighted(data, vm, losses, iters=3):
     y, p_spec, _, ref, _, _, _, va_in = network(data)
     x = data["bus"].x.double().numpy()
     wv = w * vm[f] * vm[t]
-    lv = np.zeros_like(lap)
-    for (i, j), sg in (((f, f), 1), ((t, t), 1), ((f, t), -1), ((t, f), -1)):
-        np.add.at(lv, (i, j), sg * wv)
-    free = ~ref
+    lv = laplacian(f, t, wv, lap.shape[0])
+    free = np.flatnonzero(~ref)
+    lu = factor(lv, free)
     p0 = p_spec - x[:, GS] * vm**2
     th = np.full(len(vm), va_in[ref][0])
     for _ in range(1 + (iters if losses else 0)):
@@ -152,26 +161,28 @@ def dc_weighted(data, vm, losses, iters=3):
         np.add.at(p, f, -0.5 * loss)
         np.add.at(p, t, -0.5 * loss)
         th = np.full(len(vm), va_in[ref][0])
-        th[free] += np.linalg.solve(lv[np.ix_(free, free)], p[free])
+        th[free] += lu.solve(p[free])
     return th
 
 
 def picard(y, p_spec, ref, vm, th0, lap, steps=12):
-    th, free = th0.copy(), ~ref
+    th, free = th0.copy(), np.flatnonzero(~ref)
+    lu = factor(lap, free)
     for _ in range(steps):
         v = vm * np.exp(1j * th)
-        th[free] += np.linalg.solve(lap[np.ix_(free, free)], (p_spec - (v * np.conj(y @ v)).real)[free])
+        th[free] += lu.solve((p_spec - (v * np.conj(y @ v)).real)[free])
     return th
 
 
 def fdpf(y, p_spec, q_spec, pq, ref, vm0, th0, lap, steps=12):
-    vm, th, free = vm0.copy(), th0.copy(), ~ref
-    bpp = -y.imag[np.ix_(pq, pq)]
+    vm, th, free = vm0.copy(), th0.copy(), np.flatnonzero(~ref)
+    pqi = np.flatnonzero(pq)
+    lu, bpp = factor(lap, free), factor(-y.imag, pqi)
     for _ in range(steps):
         v = vm * np.exp(1j * th)
-        th[free] += np.linalg.solve(lap[np.ix_(free, free)], ((p_spec - (v * np.conj(y @ v)).real) / vm)[free])
+        th[free] += lu.solve(((p_spec - (v * np.conj(y @ v)).real) / vm)[free])
         v = vm * np.exp(1j * th)
-        vm[pq] += np.linalg.solve(bpp, ((q_spec - (v * np.conj(y @ v)).imag) / vm)[pq])
+        vm[pqi] += bpp.solve(((q_spec - (v * np.conj(y @ v)).imag) / vm)[pqi])
     return vm, th
 
 

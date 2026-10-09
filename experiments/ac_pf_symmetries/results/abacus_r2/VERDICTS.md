@@ -293,7 +293,9 @@ unchanged on case500_goc and case2000_goc: arrays 62987 and 62988 (60 tasks, 4 C
 --eval-only --extrap`, `result_extrap_<grid>.json` in the registered run dirs); the fixed 1024 scenarios of a
 2048-scenario random subset (seed 0) drawn from 20 of the ~1000 partitions of the public `pf_small` sets (data job
 62985). References: `BASELINES_extrap.txt` (flat, DC; computed before any evaluation) and `CLASSICAL_extrap.txt`
-(case500 done; the case2000 floors were still computing when this was written and will be added). Deviation: the
+(case500 from the dense `r2_classical.py` at 60c4da6; case2000 from its sparse rewrite, job 63051, identical to the
+dense output on case14 and case500 at every printed digit; the dense run on case2000 was cancelled after 4 h 27 min).
+Deviation: the
 arrays were released from their dependency on the data job once the processed caches and the DC references existed,
 so the classical floors of case500 were computed concurrently with the evaluations, not before; the pre-registered
 criteria use only DC. Scored with `r2_extrap.py` (`REPORT_extrap.md`) from the workstation, as the previous block.
@@ -301,7 +303,7 @@ criteria use only DC. Scored with `r2_extrap.py` (`REPORT_extrap.md`) from the w
 | grid | flat VA | DC VA | DC offset | DC rest | DC θ_f − θ_t | VM flat | physics from the inputs only |
 |---|---|---|---|---|---|---|---|
 | case500_goc | 10.1 | 2.51 | 2.18 | 1.24 | 0.274 | 0.0648 | fast-decoupled and Newton 0.070 deg, VM 0.0009; Newton converges in 5 iterations from flat or DC; DC + loss compensation 1.73; one Newton step from DC 26.8 (overshoot) |
-| case2000_goc | 16.9 | 9.75 | 9.08 | 3.54 | 0.291 | 0.0628 | pending (job 62985) |
+| case2000_goc | 16.9 | 9.75 | 9.08 | 3.54 | 0.291 | 0.0628 | fast-decoupled from the inputs 0.33 deg (0.33 on the 1010 scenarios where the oracle Newton converges), VM on PQ buses 0.0013; DC + loss compensation 2.91; the oracle Newton reproduces the labels on 1010 of 1024 scenarios (max 1.1e-5 deg) and diverges on 14 from the DC start and from flat (plain Newton without step control; no islands, no PV voltage off its setpoint, labels' mismatch in our Ybus 1.5e-4 p.u. everywhere), so its aggregate rows in `CLASSICAL_extrap.txt` are contaminated by those 14 (`gate_extrap.py`, job 63052) |
 
 | id | verdict | what the numbers say (zero-shot VA in deg unless stated) |
 |---|---|---|
@@ -317,7 +319,8 @@ channel at 0.4-0.9 of a flat profile. The injection arms, the closest realizatio
 exact global solve", collapse: L⁻¹ amplifies the smooth part of a local error, more on larger grids. And the DC
 operator is itself the wrong global operator with size: its offset against the slack grows from 1.6 deg (118) to 9.1
 (2000) while its branch differences stay at 0.3, and the fast-decoupled iteration from the same inputs reaches 0.07 deg
-on case500. The transferable global operator is the AC iteration. Carried into Piano T: its strong form (beat DC
+on case500 and 0.33 on case2000 (30x below DC and below every learned arm there). The transferable global operator is
+the AC iteration; plain Newton needs step control on the largest grid (14 of 1024 scenarios diverge from the DC start). Carried into Piano T: its strong form (beat DC
 zero-shot with a DC anchor, learned local corrections and exact symmetries) is contradicted at PoC scale (three
 training grids of at most 118 buses, 1024 scenarios each, a 20M-parameter GNS); the one experiment that can revive it
 is T1w trained on the 100 public pretraining subgrids and evaluated zero-shot on 118/500/2000, pre-registered with the

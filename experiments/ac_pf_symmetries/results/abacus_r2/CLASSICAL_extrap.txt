@@ -1,0 +1,30 @@
+# r2_classical.py output on the size-extrapolation grids (zero-shot scenarios: the fixed 1024 of the 2048-scenario subsets).
+# case500_goc: dense code at 60c4da6, data job 62985 (abacus-008), 2026-10-09 18:48. case2000_goc: sparse code
+# (r2_classical.py 39e97e1a0633, same formulas with scipy.sparse LU; identical to the dense output on case14 and
+# case500 at every printed digit), job 63051, 11 min 40 s; the dense job was cancelled after 4 h 27 min on this grid.
+# case2000: the oracle Newton does not converge on every scenario (iterations at the cap 30; its VM blows up on some):
+# see the gate diagnostic in VERDICTS.md (P47-P50 block). Angles in deg, VM in p.u.
+case500_goc | oracle Newton iterations to 1e-9 from DC start mean 5.00 max 5, from flat start mean 5.00 max 5 | REF voltage label min 1.0238 max 1.0695, its input estimate RMS error 0.0141 | REF voltage on PV setpoints and loads: R^2 0.702, RMSE 0.0047
+  dc            VA 2.517 | offset 2.189 (signed +2.121) rest 1.243 dVA 0.2744 | VM 0.06472 VM_PQ 0.0648
+  dcloss        VA 1.725 | offset 1.581 (signed -1.436) rest 0.6909 dVA 0.2707 | VM 0.06472 VM_PQ 0.0648
+  dcv           VA 2.618 | offset 2.332 (signed +2.279) rest 1.189 dVA 0.2418 | VM 0.06472 VM_PQ 0.0648
+  dcvloss       VA 24.61 | offset 23.56 (signed -23.16) rest 7.109 dVA 0.9329 | VM 0.06472 VM_PQ 0.0648
+  picard        VA 26.2 | offset 25.09 (signed -24.64) rest 7.559 dVA 1.019 | VM 0.06472 VM_PQ 0.0648
+  picard oracle VA 26.36 | offset 25.25 (signed -24.8) rest 7.559 dVA 1.021 | VM 0.06472 VM_PQ 0.0648
+  fdpf          VA 0.07041 | offset 0.07034 (signed +0.06495) rest 0.003121 dVA 0.002677 | VM 0.0008922 VM_PQ 0.0005324
+  nr1 oracle    VA 26.76 | offset 25.56 (signed +25.15) rest 7.898 dVA 0.9996 | VM 0.0077 VM_PQ 0.00771
+  nr oracle     VA 3.407e-06 | offset 1.948e-06 (signed +3.346e-07) rest 2.795e-06 dVA 1.234e-06 | VM 3.426e-07 VM_PQ 3.431e-07
+  nr1 inputs    VA 26.72 | offset 25.53 (signed +25.11) rest 7.898 dVA 0.9995 | VM 0.008028 VM_PQ 0.008007
+  nr inputs     VA 0.07041 | offset 0.07034 (signed +0.06495) rest 0.003121 dVA 0.002677 | VM 0.0008922 VM_PQ 0.0005324
+case2000_goc | oracle Newton iterations to 1e-9 from DC start mean 6.77 max 30, from flat start mean 7.13 max 30 | REF voltage label min 1.0542 max 1.0944, its input estimate RMS error 0.0396 | REF voltage on PV setpoints and loads: R^2 0.062, RMSE 0.0089
+  dc            VA 9.746 | offset 9.083 (signed +8.891) rest 3.533 dVA 0.2903 | VM 0.06279 VM_PQ 0.0628
+  dcloss        VA 2.906 | offset 2.643 (signed -2.393) rest 1.208 dVA 0.2456 | VM 0.06279 VM_PQ 0.0628
+  dcv           VA 9.728 | offset 9.06 (signed +8.866) rest 3.543 dVA 0.2805 | VM 0.06279 VM_PQ 0.0628
+  dcvloss       VA 91.26 | offset 85.58 (signed -82.38) rest 31.68 dVA 1.804 | VM 0.06279 VM_PQ 0.0628
+  picard        VA 102.8 | offset 89.58 (signed -79.51) rest 50.47 dVA 2.575 | VM 0.06279 VM_PQ 0.0628
+  picard oracle VA 102.1 | offset 88.9 (signed -78.92) rest 50.19 dVA 2.569 | VM 0.06278 VM_PQ 0.0628
+  fdpf          VA 0.3316 | offset 0.3308 (signed -0.2783) rest 0.02329 dVA 0.005026 | VM 0.001609 VM_PQ 0.001315
+  nr1 oracle    VA 88.4 | offset 82.91 (signed +79.88) rest 30.68 dVA 1.808 | VM 0.01455 VM_PQ 0.01456
+  nr oracle     VA 12.1 | offset 0.3358 (signed -0.001102) rest 12.1 dVA 11.57 | VM 1.401e+05 VM_PQ 1.401e+05
+  nr1 inputs    VA 88.78 | offset 83.3 (signed +80.29) rest 30.7 dVA 1.809 | VM 0.01468 VM_PQ 0.01465
+  nr inputs     VA 12.24 | offset 0.5737 (signed -0.282) rest 12.23 dVA 11.64 | VM 1.676e+05 VM_PQ 1.676e+05
