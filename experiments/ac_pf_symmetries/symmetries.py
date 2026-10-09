@@ -447,3 +447,12 @@ class CovariantAugment(nn.Module):
             res[i] = res[i] * k
         out = act_output(act_output(out, "scale", 1.0 / k, data), "phase", -alpha, data)
         return (out, emb) if return_embeddings else out
+
+
+def gns_of(model):
+    """The GNS inside a chain of wrappers that each keep their inner model as `.model`: the first module with a
+    `mlp_bus` decoder. Lets DCPriorLayers, DCInjectionLayers, BranchAngleLayers and BusResidualScale be stacked
+    (Piano K's GP arm = DCPriorLayers(BusResidualScale(gns)))."""
+    while not hasattr(model, "mlp_bus"):
+        model = model.model
+    return model

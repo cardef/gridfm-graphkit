@@ -19,7 +19,7 @@ from torch import nn
 from gridfm_graphkit.datasets.globals import PD_H, PG_H, VA_H, VA_OUT, YFT_TF_I
 
 from .hodge import solve_anchored
-from .symmetries import E, line_pairs, node_batch, num_graphs
+from .symmetries import E, gns_of, line_pairs, node_batch, num_graphs
 
 
 def ref_connected(f, t, ref):
@@ -85,16 +85,17 @@ class DCPriorLayers(nn.Module):
     def __init__(self, model, zero_init=False):
         super().__init__()
         self.model = model
+        base = gns_of(model)
         if zero_init:
-            _zero_angle_row(model.mlp_bus)
-        model.mlp_bus = _DCDecoder(model.mlp_bus)
+            _zero_angle_row(base.mlp_bus)
+        base.mlp_bus = _DCDecoder(base.mlp_bus)
 
     @property
     def layer_residuals(self):
         return self.model.layer_residuals
 
     def forward(self, data, return_embeddings=False):
-        dec = self.model.mlp_bus
+        dec = gns_of(self.model).mlp_bus
         with torch.no_grad():
             dec.theta_dc = dc_angles(data)
         try:
@@ -125,16 +126,17 @@ class DCInjectionLayers(nn.Module):
     def __init__(self, model, zero_init=True):
         super().__init__()
         self.model = model
+        base = gns_of(model)
         if zero_init:
-            _zero_angle_row(model.mlp_bus)
-        model.mlp_bus = _DCInjectionDecoder(model.mlp_bus)
+            _zero_angle_row(base.mlp_bus)
+        base.mlp_bus = _DCInjectionDecoder(base.mlp_bus)
 
     @property
     def layer_residuals(self):
         return self.model.layer_residuals
 
     def forward(self, data, return_embeddings=False):
-        dec = self.model.mlp_bus
+        dec = gns_of(self.model).mlp_bus
         with torch.no_grad():
             system, p, theta_ref, conn = dc_context(data)
             theta_dc = solve_anchored(p * conn, theta_ref=theta_ref, **system)

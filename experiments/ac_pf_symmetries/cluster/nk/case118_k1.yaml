@@ -43,4 +43,4 @@ settings:
   pf_fast: true
   dcpf_fast: true
   max_iter: 100
-  seed: 20261010
+  seed: 1001  # datakit derives per-scenario seeds from it: must stay below ~50000

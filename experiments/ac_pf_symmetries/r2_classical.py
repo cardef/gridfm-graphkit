@@ -5,7 +5,8 @@
   |V| = 1 (g = -Re Y_ft) is added as load, half at each end, together with the shunt conductance, and the DC system is
   solved again.
 - nr1: one full AC Newton-Raphson step from the DC angles and the voltage setpoints (|V| = 1 at PQ buses).
-- nr: Newton-Raphson to convergence from the same start and from a flat start; the iterations are reported.
+- nr: Newton-Raphson to convergence from the same start and from a flat start, with step halving when a full step
+  would increase the mismatch (2026-10-09; identical to the plain iteration whenever that converges); the iterations are reported.
 - dcv, dcvloss (step 1b): DC with each susceptance weighted by V_f V_t (V from the setpoints), without and with the
   loss compensation (losses g |V_f e^{j theta_f} - V_t e^{j theta_t}|^2 at those voltages).
 - picard: the P-theta fixed-point iteration theta <- theta + L^-1 (P_spec - P_ac(V, theta)), L the DC matrix, 12 steps
@@ -83,8 +84,17 @@ def network(data):
     return y, pg - x[:, PD_H], -x[:, QD_H], ref, pv, ~(ref | pv), vm0, x[:, VA_H]
 
 
-def newton(y, p_spec, q_spec, pv, pq, vm, va, max_it, tol=1e-9):
-    """Polar Newton-Raphson (MATPOWER's Jacobian); returns |V|, angles, iterations and final max mismatch."""
+def mismatch(y, p_spec, q_spec, pvpq, pqi, vm, va):
+    v = vm * np.exp(1j * va)
+    s = v * np.conj(y @ v)
+    return np.r_[s.real[pvpq] - p_spec[pvpq], s.imag[pqi] - q_spec[pqi]]
+
+
+def newton(y, p_spec, q_spec, pv, pq, vm, va, max_it, tol=1e-9, damped=False):
+    """Polar Newton-Raphson (MATPOWER's Jacobian); returns |V|, angles, iterations and final max mismatch.
+    damped=True halves the step (up to 10 times) until the max mismatch decreases: on case2000_goc the plain
+    iteration diverges from the DC and the flat start on 14 of 1024 scenarios (gate of 2026-10-09); a full step that
+    already decreases the mismatch is taken unchanged, so converging runs are identical to the undamped ones."""
     vm, va = vm.copy(), va.copy()
     pvpq, pqi = np.r_[np.flatnonzero(pv), np.flatnonzero(pq)], np.flatnonzero(pq)
     for it in range(max_it + 1):
@@ -102,8 +112,18 @@ def newton(y, p_spec, q_spec, pv, pq, vm, va, max_it, tol=1e-9):
             [dva.imag[pqi][:, pvpq], dvm.imag[pqi][:, pqi]],
         ], format="csc")
         dx = -spsolve(jac, f)
-        va[pvpq] += dx[: len(pvpq)]
-        vm[pqi] += dx[len(pvpq):]
+        step = 1.0
+        if damped:
+            f0 = np.abs(f).max()
+            for _ in range(10):
+                va_t, vm_t = va.copy(), vm.copy()
+                va_t[pvpq] += step * dx[: len(pvpq)]
+                vm_t[pqi] += step * dx[len(pvpq):]
+                if np.abs(mismatch(y, p_spec, q_spec, pvpq, pqi, vm_t, va_t)).max() < f0:
+                    break
+                step *= 0.5
+        va[pvpq] += step * dx[: len(pvpq)]
+        vm[pqi] += step * dx[len(pvpq):]
 
 
 def dc_with_losses(data, iters=3):
@@ -224,12 +244,12 @@ for case in sys.argv[1:]:
         states["fdpf"] = fdpf(y, p_spec, q_spec, pq, ref, vm0, th_dc, lap)
         for tag, v0 in (("oracle", vm_oracle), ("inputs", vm0)):
             states[f"nr1 {tag}"] = newton(y, p_spec, q_spec, pv, pq, v0, th_dc, 1)[:2]
-            vm_c, va_c, it_dc, _ = newton(y, p_spec, q_spec, pv, pq, v0, th_dc, 30)
+            vm_c, va_c, it_dc, _ = newton(y, p_spec, q_spec, pv, pq, v0, th_dc, 30, damped=True)
             states[f"nr {tag}"] = (vm_c, va_c)
             if tag == "oracle":
                 iters["dc start"].append(it_dc)
                 flat = np.where(ref, va_in, va_in[ref][0])
-                iters["flat start"].append(newton(y, p_spec, q_spec, pv, pq, v0, flat, 30)[2])
+                iters["flat start"].append(newton(y, p_spec, q_spec, pv, pq, v0, flat, 30, damped=True)[2])
         for k, (vm, va) in states.items():
             e = np.remainder(va - target[:, VA_OUT] + math.pi, 2 * math.pi)[m] - math.pi
             add(s, f"{k} VA", (e**2).sum(), m.sum())

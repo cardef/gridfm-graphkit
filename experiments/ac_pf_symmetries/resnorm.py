@@ -10,7 +10,7 @@ difference from M3 the local inputs.
 import torch
 from torch import nn
 
-from .symmetries import Canonicalize
+from .symmetries import Canonicalize, gns_of
 
 
 class _ScaledResiduals(nn.Module):
@@ -30,7 +30,8 @@ class BusResidualScale(nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = model
-        model.node_residuals_layer = _ScaledResiduals(model.node_residuals_layer)
+        base = gns_of(model)
+        base.node_residuals_layer = _ScaledResiduals(base.node_residuals_layer)
         self.register_buffer("d_ref", torch.ones(()))
 
     @property
@@ -44,7 +45,7 @@ class BusResidualScale(nn.Module):
         return self
 
     def forward(self, data, return_embeddings=False):
-        layer = self.model.node_residuals_layer
+        layer = gns_of(self.model).node_residuals_layer
         layer.scale = Canonicalize.node_scale(data) / self.d_ref
         try:
             return self.model(data, return_embeddings=return_embeddings)

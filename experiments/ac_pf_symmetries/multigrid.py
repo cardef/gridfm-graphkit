@@ -47,10 +47,23 @@ ARMS = {
     "canonvref": None,
     "dcinjvref": DCInjectionLayers,
     "dcinj1hop": DCInjectionLayers,
+    "plain": None,  # Piano K G0: the backbone as released, no canonicalization
+    "gp": None,  # Piano K GP: +vref +canon +resnorm +dc (COMPOSED)
 }
 LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inputs) instead of per graph
-VREF = {"canonvref", "dcinjvref"}  # the task with the REF voltage given (UnmaskRefVoltage)
+VREF = {"canonvref", "dcinjvref", "gp"}  # the task with the REF voltage given (UnmaskRefVoltage)
 LAYERS = {"dcinj1hop": 1}  # GNS depth overrides: one layer = one hop and no physics feedback
+PLAIN = {"plain"}  # no Canonicalize wrapper
+COMPOSED = {"gp": (BusResidualScale, DCPriorLayers)}  # wrappers applied inner to outer
+
+
+def chain(model):
+    """The wrappers around a model, outermost first, ending with the GNS itself (each wrapper keeps `.model`)."""
+    while True:
+        yield model
+        if not hasattr(model, "model"):
+            return
+        model = model.model
 
 
 class UnmaskRefVoltage(BaseTransform):
@@ -73,9 +86,10 @@ def result_name(a):
     return "result_eval.json" if a.eval_only else "result.json"
 
 
-def grid_splits(case, args, seed, n, normalizer=None, vref=False):
+def grid_splits(case, args, seed, n, normalizer=None, vref=False, split=None):
     """n scenarios of `case` (a fixed random subset, seed 0), split 80/10/10 by the run seed; the normalizer is
-    fitted on the train part unless one is given."""
+    fitted on the train part unless one is given. With `split` ({train, val, test} scenario ids, e.g. the official
+    split of a released run) those ids are used instead and "all" is its test set (Piano K)."""
     root = ROOT / "data" / case
     fit = normalizer is None
     if fit:
@@ -84,11 +98,15 @@ def grid_splits(case, args, seed, n, normalizer=None, vref=False):
     if vref:
         transform = Compose([transform, UnmaskRefVoltage()])
     ds = HeteroGridDatasetDisk(str(root), normalizer, transform=transform)
-    ids = [int(i) for i in np.random.default_rng(0).permutation(len(ds))[:n]]
-    keep = list(ids)
-    random.Random(seed).shuffle(ids)
-    k = len(ids) // 10
-    test, val, train = ids[:k], ids[k : 2 * k], ids[2 * k :]
+    if split is not None:
+        train, val, test = ([int(i) for i in split[k]] for k in ("train", "val", "test"))
+        keep = list(test)
+    else:
+        ids = [int(i) for i in np.random.default_rng(0).permutation(len(ds))[:n]]
+        keep = list(ids)
+        random.Random(seed).shuffle(ids)
+        k = len(ids) // 10
+        test, val, train = ids[:k], ids[k : 2 * k], ids[2 * k :]
     if fit:
         normalizer.fit(str(root / "raw"), train)
     return {
@@ -107,7 +125,8 @@ def run_one(arm, seed, a, device):
         args.model.num_layers = LAYERS[arm]
     args.data.networks = list(a.train)  # one normalizer per training grid (the task saves their stats by name)
     vref = arm in VREF
-    grids = {c: grid_splits(c, args, seed, a.n_per_grid, vref=vref) for c in a.train}
+    splits = {c: json.loads(Path(p).read_text()) for c, p in (s.split("=", 1) for s in a.split)}
+    grids = {c: grid_splits(c, args, seed, a.n_per_grid, vref=vref, split=splits.get(c)) for c in a.train}
     train_loader = DataLoader(
         ConcatDataset([g["train"] for g in grids.values()]),
         batch_size=a.batch_size,
@@ -115,10 +134,13 @@ def run_one(arm, seed, a, device):
     )
     val_loader = eval_loader(ConcatDataset([g["val"] for g in grids.values()]), a.batch_size)
     task = get_task(args, [g["normalizer"] for g in grids.values()])
-    inner = ARMS[arm](task.model) if ARMS[arm] else task.model
-    if isinstance(inner, BusResidualScale):
-        inner.fit_d_ref(train_loader)
-    task.model = Canonicalize(inner, local=arm in LOCAL).fit_scale_ref(train_loader)
+    inner = task.model
+    for cls in COMPOSED.get(arm, (ARMS[arm],) if ARMS[arm] else ()):
+        inner = cls(inner)
+    for m in chain(inner):
+        if isinstance(m, BusResidualScale):
+            m.fit_d_ref(train_loader)
+    task.model = inner if arm in PLAIN else Canonicalize(inner, local=arm in LOCAL).fit_scale_ref(train_loader)
 
     run_dir = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -164,7 +186,7 @@ def evaluate(model, arm, seed, a, args, grids, run_dir, epochs_run, train_time, 
         "n_per_grid": a.n_per_grid,
         "epochs_run": epochs_run,
         "train_time_s": train_time,
-        "scale_ref": float(model.scale_ref),
+        "scale_ref": float(getattr(model, "scale_ref", float("nan"))),  # nan for the plain arm
         "device_name": torch.cuda.get_device_name() if device == "cuda" else device,
         "baseMVA": {c: float(g["normalizer"].baseMVA) for c, g in grids.items()},
         "in_dist": {} if a.extrap else {c: accuracy(model, eval_loader(g["test"], a.batch_size), device) for c, g in grids.items()},
@@ -196,6 +218,9 @@ def main():
     p.add_argument("--hidden", type=int, default=48)
     p.add_argument("--device", default=default_device())
     p.add_argument("--eval-only", action="store_true", help="re-evaluate saved models with the current code")
+    p.add_argument("--split", nargs="*", default=[],
+                   help="CASE=path.json: train/val/test scenario ids of a training grid (e.g. the official split of "
+                        "a released run) instead of the fixed random subset; its test set is the in-distribution set")
     p.add_argument("--extrap", nargs="+", default=None,
                    help="with --eval-only: evaluate the saved models zero-shot on these grids instead of the held-out "
                         "one (size extrapolation, P47-P50); writes result_extrap_<grids>.json")

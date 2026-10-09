@@ -8,6 +8,9 @@ n_scenarios.txt, id_map.json (new id -> source id). Same procedure as Hierarchic
 
 random: N scenarios drawn uniformly (training data of the case14 campaign)
   python -m experiments.ac_pf_symmetries.subset_data random --src <raw> --out <dir> --n 2048 --seed 0
+ids: the train, val and first --n-test test scenarios of one split file (ids of the source), renumbered; writes
+splits/<name>.json in the new ids (Piano K: the official seed-0 split of case118 from the reduced copy)
+  python -m experiments.ac_pf_symmetries.subset_data ids --src <raw> --split <json> --n-test 2000 --name official_seed0 --out <dir>
 official: the scenarios of the released GENCO runs' splits (E1/E2/E5): every seed's full test split, the
 first --n-train / --n-val ids of its train / val list; writes splits/<size>_seed<s>.json in the new ids
   python -m experiments.ac_pf_symmetries.subset_data official --src <raw> --runs <mlflow/eval/case> --out <dir>
@@ -120,7 +123,7 @@ def official_splits(runs):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("mode", choices=["random", "official"])
+    p.add_argument("mode", choices=["random", "official", "ids"])
     p.add_argument("--src", required=True, type=Path, help="source raw folder")
     p.add_argument("--out", required=True, type=Path)
     p.add_argument("--n", type=int, help="random: number of scenarios")
@@ -128,7 +131,21 @@ def main():
     p.add_argument("--runs", type=Path, help="official: mlflow/eval/<case> of the release")
     p.add_argument("--n-train", type=int, default=5000)
     p.add_argument("--n-val", type=int, default=500)
+    p.add_argument("--split", type=Path, help="ids: a {train, val, test} json in the source's ids")
+    p.add_argument("--n-test", type=int, default=2000, help="ids: first n test ids kept (0 = all)")
+    p.add_argument("--name", default="split", help="ids: name of the split file written")
     a = p.parse_args()
+
+    if a.mode == "ids":
+        sp = json.loads(a.split.read_text())
+        test = sp["test"][: a.n_test] if a.n_test else sp["test"]
+        keep = {"train": list(sp["train"]), "val": list(sp["val"]), "test": list(test)}
+        new_of = write_subset(a.src, sorted(set(keep["train"]) | set(keep["val"]) | set(keep["test"])), a.out)
+        d = a.out / "splits"
+        d.mkdir()
+        (d / f"{a.name}.json").write_text(json.dumps({k: [new_of[i] for i in v] for k, v in keep.items()}))
+        print(f"ids: {len(new_of)} scenarios kept (train {len(keep['train'])}, val {len(keep['val'])}, test {len(keep['test'])})")
+        return
 
     if a.mode == "random":
         pool = source_ids(a.src)
