@@ -53,14 +53,14 @@ def baselines(path):
 
 
 def floors(path):
-    """{grid: {method: {'VA': .., 'VM': ..}}} from r2_classical.py output (nr inputs, fdpf, nr oracle, dc lines)."""
+    """{grid: {method: {'VA': .., 'VM': ..}}} from r2_classical.py output (nr inputs, fdpf, nr oracle, dc, dcloss, ph lines)."""
     out, g = defaultdict(dict), None
     for line in Path(path).read_text().splitlines():
         m = re.match(r"(case\S+) \| oracle Newton", line)
         if m:
             g = m.group(1)
             continue
-        m = re.match(r"\s+(nr inputs|fdpf|nr oracle|dc)\s+VA ([\d.e+-]+) .* VM ([\d.e+-]+)", line)
+        m = re.match(r"\s+(nr inputs|fdpf|nr oracle|dc|ph|dcloss)\s+VA ([\d.e+-]+) .* VM ([\d.e+-]+)", line)
         if m and g:
             out[g][m.group(1)] = {"VA": float(m.group(2)), "VM": float(m.group(3))}
     return out

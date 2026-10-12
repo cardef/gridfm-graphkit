@@ -325,3 +325,63 @@ zero-shot with a DC anchor, learned local corrections and exact symmetries) is c
 training grids of at most 118 buses, 1024 scenarios each, a 20M-parameter GNS); the one experiment that can revive it
 is T1w trained on the 100 public pretraining subgrids and evaluated zero-shot on 118/500/2000, pre-registered with the
 expectation "DC level". Failing that, the question becomes what a learned component adds to an AC iteration.
+
+## Piano K: topology transfer on case118 (K-P1-K-P5, 2026-10-10, scored 2026-10-13)
+
+One grid, the public N-1 set of case118 (`gridfm/pf_small_case118_ieee`): training on the official seed-0 split
+(5,000 train, 500 val, the first 2,000 official test ids as the in-distribution set; `data/case118_k`), zero-shot on
+six N-k sets we generated with gridfm-datakit from the public recipe with all outage mass on exactly k outages
+(`cluster/nk/case118_k<k>.yaml`, 2,048 scenarios each minus the few that did not converge: 2048/2048/2047/2047/2044/
+2021 for k = 1/2/3/5/10/20; islanded topologies are rejected by datakit; the fixed 1024 of each are evaluated).
+Arms: plain (the backbone with the public config, no canonicalization, our recipe), dccanon, dcinjcanon, gp (+vref
++canon +resnorm +dc), 3 seeds each, 100 epochs, 4-6 CPUs, 7-15.5 h per run (jobs 63095, eval 63096, code 393e669);
+the released checkpoints base/small/tiny seed 0 (trained on the full public N-1 set, ~175k scenarios) on the same
+sets (job 63140, `genco_released/`); references `BASELINES_nk.txt`, `CLASSICAL_nk.txt` (damped Newton), PH =
+linear regressor of the REF voltage on the PV setpoints and the total loads fitted on the 5,000 training scenarios
+(`vref_coef.json`, in-sample R^2 0.40, RMSE 0.0137 p.u.) + 12 fast-decoupled steps (`CLASSICAL_nk_ph.txt`).
+Tables: `results/pianok/REPORT_k.md` (`r2_k.py`). Gate first.
+
+| id | verdict | what the numbers say (zero-shot VA in deg) |
+|---|---|---|
+| K-P5 | PASS | damped Newton with the labelled REF voltage reproduces the labels at every k (VA 2-5e-6 deg, max 5-9 iterations); on our k = 1 set the released checkpoints err within 0.6-3.2% of their official-test error (base 0.482 vs 0.479, small 0.516 vs 0.533, tiny 0.635 vs 0.628): the generated sets are comparable |
+| K-P1 | FAIL | the degradation with k is not global: from k = 1 to k = 10 the offset grows x1.7-2.0 and the branch differences x1.6-1.8 for plain; x5.1 and x5.1 for GENCO base (small x4.3 / x4.3, tiny x4.3 / x3.9). Every component of the error grows alike. Registered reading: the learned local physics does not survive deep contingencies either |
+| K-P2 | FAIL | dccanon's VA doubles from k = 1 to k = 10 (x1.94-2.04) and its VA/DC ratio rises from 0.41-0.44 to 0.60-0.61 (x1.40-1.47): the anchored arm degrades faster than DC. plain's VA/DC rises too (x1.25-1.41): at this budget plain is above DC already at k = 1 (1.2-1.7 x). Registered reading: the anchor does not protect against deep contingencies; the learned correction degrades like the backbone |
+| K-P3 | PASS | dccanon / DC: 0.41-0.44 (k=1), 0.44-0.46 (2), 0.39-0.42 (3), 0.47-0.49 (5), 0.60-0.61 (10), 0.70 (20): a floor at every k, every seed, and well below DC |
+| K-P4 | FAIL | PH: VA 0.236 / 0.294 / 0.246 / 0.252 / 0.387 / 0.298 deg for k = 1/2/3/5/10/20 (above 0.3 at k = 10), VM on PQ buses 0.00046-0.00059 (ok); below every learned arm only for k >= 5 and k = 2: dcinjcanon is below PH at k = 1 ([0.197, 0.223]) and k = 3 ([0.180, 0.191]). PH's error is almost all offset (0.23 of 0.24): the REF-voltage regressor is weak on N-1 data (R^2 0.40 against 0.95-0.99 on the base-topology data of R2). Registered reading: the REF voltage depends on the topology more than the in-distribution R^2 suggested |
+
+Exploratory (not pre-registered), the findings that matter:
+
+| arm | in-dist (official test) | k = 1 | k = 5 | k = 10 | k = 20 | k=20 / k=1 | k=20 / DC |
+|---|---|---|---|---|---|---|---|
+| GENCO base, released (175k scenarios) | 0.479 | 0.482 | 1.87 | 2.50 | 4.68 | x9.7 | 1.10 |
+| plain (5,000 scenarios) | [2.44, 3.85] | [2.84, 4.10] | [4.02, 5.56] | [5.48, 7.13] | [8.24, 10.2] | x2.5 | 1.9-2.4 |
+| dccanon | [0.81, 0.90] | [0.97, 1.03] | [1.26, 1.31] | [1.97, 2.00] | [2.95, 2.99] | x3.0 | 0.70 |
+| gp | [0.69, 0.79] | [0.88, 0.96] | [1.17, 1.26] | [1.88, 1.98] | [2.83, 2.99] | x3.2 | 0.67-0.70 |
+| dcinjcanon | [0.155, 0.167] | [0.197, 0.223] | [0.345, 0.369] | [0.444, 0.514] | [0.616, 0.680] | x3.1 | 0.145-0.16 |
+| DC | — | 2.36 | 2.68 | 3.27 | 4.25 | x1.8 | 1 |
+| fast-decoupled from the inputs | — | 0.316 | 0.326 | 0.445 | 0.408 | x1.3 | 0.10 |
+| PH | — | 0.236 | 0.252 | 0.387 | 0.298 | x1.3 | 0.07 |
+
+- In distribution, dcinjcanon trained on 5,000 scenarios errs 0.155-0.167 deg on the official test against 0.479 for
+  the released GENCO base trained on ~175k: 3x lower with 35x less data; dccanon and gp (0.7-0.9) are within 2x of it,
+  plain (2.4-3.9) is 5-8x above it. The DC anchor is worth more than the data budget here.
+- Every learned arm degrades with k; the full-budget released models degrade fastest (x8-10 from k = 1 to 20, reaching
+  DC level at k = 20 in angles while their residual stays 0.1-0.7 MVA: the residual is blind to the shift), our
+  low-budget arms x2.5-3.2, the physics references x1.3-1.8.
+- dcinjcanon is the only learned arm that stays near the physics floor at every k: 0.62-0.68 deg at k = 20 against
+  0.41 for fast-decoupled from the inputs and 0.30 for PH, 7x below GENCO base and 6-7x below DC; its branch
+  differences are 5-13x below DC's at every k. The same arm collapses when the grid changes (Piano T, P48): it is a
+  same-grid method. Its k = 2 error (0.40-0.42) is above its k = 3 error (0.18-0.19) for every seed: a property of
+  that set's scenarios, not noise.
+- VM on PQ buses: gp lowest among the learned arms (0.0003 at k = 1, 0.0022 at k = 20; the REF voltage given), GENCO
+  base 0.00026 -> 0.0028, dccanon 0.0009 -> 0.0035; PH flat at 0.0005-0.0006.
+
+Reading: on the same grid, deep contingencies break the learned local physics as much as the learned global part
+(K-P1), and an exact per-topology solve inside the model does not make the learned part k-invariant (K-P2); what it
+does is bound the error by DC's (K-P3) and, read as an injection correction, keep it 6-7x below DC up to N-20 while
+cutting the in-distribution error 3x below the full-budget public model with 35x less data. That is the concrete
+improvement to GENCO this campaign has found, with its scope: one grid, its own N-k distribution, no transfer to other
+grids. The hybrid PH shows what a learned component competes against on topologies: a 0.3 deg floor that is entirely
+the REF-voltage guess, and that a 0.40-R^2 regressor already reaches; dcinjcanon is below it only at k <= 3. Next,
+not run: dcinjcanon with the REF voltage given (its VM is 2x gp's), its stability margin against k and against the
+training budget, and the released architecture retrained with the injection decoder at full budget.

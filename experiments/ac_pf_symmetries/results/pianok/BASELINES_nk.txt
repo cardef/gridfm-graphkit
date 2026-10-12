@@ -1,0 +1,6 @@
+case118_nk1 max|VA| 85.9 deg | VA flat 16.4 | VA DC 2.36 | VA DC offset 2.01 | VA DC rest 1.23 | dVA flat 3.85 | dVA DC 0.511 | VM flat 0.035
+case118_nk2 max|VA| 96.2 deg | VA flat 16.7 | VA DC 2.49 | VA DC offset 2.13 | VA DC rest 1.3 | dVA flat 3.9 | dVA DC 0.523 | VM flat 0.035
+case118_nk3 max|VA| 86.6 deg | VA flat 17 | VA DC 2.48 | VA DC offset 2.12 | VA DC rest 1.28 | dVA flat 3.93 | dVA DC 0.52 | VM flat 0.0348
+case118_nk5 max|VA| 94.5 deg | VA flat 18 | VA DC 2.68 | VA DC offset 2.3 | VA DC rest 1.37 | dVA flat 4.02 | dVA DC 0.543 | VM flat 0.035
+case118_nk10 max|VA| 102.8 deg | VA flat 19.3 | VA DC 3.27 | VA DC offset 2.8 | VA DC rest 1.69 | dVA flat 4.17 | dVA DC 0.599 | VM flat 0.0349
+case118_nk20 max|VA| 142.0 deg | VA flat 22.7 | VA DC 4.25 | VA DC offset 3.58 | VA DC rest 2.29 | dVA flat 4.5 | dVA DC 0.692 | VM flat 0.0348

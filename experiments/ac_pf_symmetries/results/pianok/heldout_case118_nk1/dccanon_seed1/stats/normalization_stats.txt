@@ -1,0 +1,3 @@
+Data Normalizer case118_k stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(138.4156), 'vn_kv_max': tensor(345.)}
+
