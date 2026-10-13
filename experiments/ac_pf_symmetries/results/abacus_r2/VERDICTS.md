@@ -498,3 +498,22 @@ extrapolates beyond the training sizes better than X3a-P4 expected: every seed i
 registered reading of that failure applies: once trained on many topologies, the open-loop injection correction is
 amplified less than the PoC suggested. Its weak point is the global offset on case500, where seeds land on either
 side of DC; that is the quantity the closed loop computes from the residual instead of predicting it.
+
+## Piano X, X4: GENCO with the plain closed P-theta loop (X4-P0-X4-P4, 2026-10-13), aborted
+
+GPU jobs 63412-63415 (H100 abacus-006/005/013, A40 abacus-002), code d079d98, X3's setting, arms dcloopcanon and
+dcloopvref, 3 seeds each; launched 20:08, cancelled 22:43 on Carmine's instruction, after 15-28 epochs per run.
+No zero-shot evaluation was run.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| X4-P0 | FAIL | validation loss at every epoch of every run 4.5e2-7.1e7 (healthy X3 runs: 0.07-0.18); the last epochs: dcloopcanon 1.6e4 (ep 26), 1.1e3 (ep 20), 1.0e3 (ep 26); dcloopvref 2.0e5 (ep 28), 2.3e3 (ep 15), 8.9e2 (ep 15). The angle MSE dominates; the physics loss stays at 2-35 |
+| X4-P1-X4-P4 | not evaluated | aborted before the end of training |
+
+Reading: the registered failure reading of X4-P0 applies, "wrong early voltages destabilize the loop". With the
+voltages of an untrained network the P-theta problem can have no solution (the loads ask for more power than the
+branches carry at those voltages), and the plain loop keeps adding mismatch to s: the angles run to thousands of
+radians while the residual, bounded through the sines, stays moderate. The loop check with the labelled voltages
+(convergence on every grid tried) is not contradicted: it is the coupling with the learned voltages during training
+that fails. The safeguard the X1 design already called for (damped-Newton step halving, per graph) is coded and tested
+at 8639ae7 (`dcloopgcanon`, `dcloopgvref`) and not run.
