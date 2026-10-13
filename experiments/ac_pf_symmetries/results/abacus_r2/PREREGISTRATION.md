@@ -425,3 +425,24 @@ error is worth about 0.6 deg on a grid with a 30 deg angle spread.
 | X4-P2 | closed against open loop where the open loop failed | dcloopcanon on case500_goc below all six open-loop dcinjcanon seeds of X3 and X3a (minimum 1.09 deg), every seed | closing the loop on the angles alone does not beat the best open-loop seed on case500: the voltage error, not the offset, is the limit |
 | X4-P3 | against physics | on case118_ieee, case500_goc and case2000_goc no closed-loop seed below fast-decoupled from the same inputs after 5 iterations (REF voltage from the inputs for dcloopcanon, given for dcloopvref) | a learned model beats physics from the same inputs on an unseen grid |
 | X4-P4 | exploratory | — | dcloopvref against dcloopcanon; angle error against VM error per grid; the small grids; case2000 against the open loop; time per epoch |
+
+## Piano X, X4b: GENCO with the guarded closed P-theta loop (X4b-P0-X4b-P4), fixed 2026-10-14 01:45 before any X4b run, after X4 was aborted
+
+X4's plain loop diverged in training (X4 block of VERDICTS.md): with an untrained network's voltages the P-theta
+problem can have no solution and the loop accumulates mismatch without bound. X4b adds the safeguard the X1 design
+called for, per graph: a step after which the norm of the active residual grew is undone and retried from the last
+accepted point with half the gain (`DCLoopLayers(guard=True)`, commit 8639ae7; arms dcloopgcanon and dcloopgvref).
+Everything else as X4: 3 seeds per arm, X3's data, recipe and zero-shot sets, dcloopgcanon on H100. The predictions
+are X4's, unchanged:
+
+| id | prediction | reading if it fails |
+|---|---|---|
+| X4b-P0 | no seed of either arm has a validation loss above 0.5 at any epoch after the fifth | the safeguard does not tame the coupling between learned voltages and the loop; the loop needs the voltages first (e.g. a Q-V step or a warm start) |
+| X4b-P1 | dcloopgcanon's zero-shot VA below DC on case118_ieee (1.95), case118_tr (2.30), case500_goc (2.51) and case2000_goc (9.75), every seed | as X4-P1: the learned voltages do not transfer well enough; the Q-V step is needed |
+| X4b-P2 | dcloopgcanon on case500_goc below all six open-loop dcinjcanon seeds of X3 and X3a (minimum 1.09 deg), every seed | as X4-P2: the voltage error, not the offset, is the limit |
+| X4b-P3 | on case118_ieee, case500_goc and case2000_goc no closed-loop seed below fast-decoupled from the same inputs after 5 iterations (inputs for dcloopgcanon, given for dcloopgvref) | a learned model beats physics from the same inputs |
+| X4b-P4 | exploratory | dcloopgvref against dcloopgcanon; angle error against VM error; how often the safeguard halves a step; time per epoch |
+
+Scored by `r2_pt.py --runs results/pianox_pt_loopg --out REPORT_pt_loopg.md`. Stopping rule, fixed now: if after
+epoch 2 every run still has a validation loss above 10 (X4 had 4.5e2-7e7), the runs are cancelled and X4b-P0 is
+recorded as failed.

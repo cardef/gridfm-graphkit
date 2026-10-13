@@ -10,6 +10,7 @@ checkpoints in results/pianox_pt/public/.
 python -m experiments.ac_pf_symmetries.r2_pt   # writes results/pianox_pt/REPORT_pt.md
 python -m experiments.ac_pf_symmetries.r2_pt --runs results/pianox_pt_a --out REPORT_pt_a.md   # X3a (gain 0.01)
 python -m experiments.ac_pf_symmetries.r2_pt --runs results/pianox_pt_loop --out REPORT_pt_loop.md   # X4 (closed loop)
+python -m experiments.ac_pf_symmetries.r2_pt --runs results/pianox_pt_loopg --out REPORT_pt_loopg.md   # X4b (guarded)
 
 Also a training-stability table from each run's metrics.csv (X3a-P0: a collapse is an epoch after the fifth with
 validation loss above 0.5; the collapsed state of X3 sat at 0.9-1.3, the healthy one at 0.13-0.19).
@@ -28,7 +29,7 @@ RES = Path(__file__).resolve().parent / "results"
 PT = RES / "pianox_pt"
 DEG = 180 / math.pi
 GRIDS = ("case118_ieee", "case118_tr", "case500_goc", "case2000_goc", "case57_ieee", "case30_ieee", "case14_ieee")
-ARMS = ("plain", "dcinjcanon", "dcinjvref", "dcloopcanon", "dcloopvref")
+ARMS = ("plain", "dcinjcanon", "dcinjvref", "dcloopcanon", "dcloopvref", "dcloopgcanon", "dcloopgvref")
 Q = ("VA", "VA_cm", "VA_diff", "dVA", "VM_PQ", "PBE")
 
 
@@ -84,34 +85,37 @@ def load_runs(root):
     return {k: np.array([v[s] for s in sorted(v)]) for k, v in runs.items()}
 
 
-def x4_verdicts(st, runs, ref, get, verdict):
-    """X4-P0-X4-P3 (PREREGISTRATION.md): the closed-loop arms; X4-P2 compares with the six open-loop dcinjcanon seeds
-    of X3 and X3a on case500_goc."""
+LOOP = {"pianox_pt_loop": ("X4", "dcloopcanon", "dcloopvref"), "pianox_pt_loopg": ("X4b", "dcloopgcanon", "dcloopgvref")}
+
+
+def x4_verdicts(st, runs, ref, get, verdict, pre, canon, vref):
+    """X4-P0-X4-P3 (PREREGISTRATION.md) for the plain (X4) or the guarded (X4b) closed loop; P2 compares with the six
+    open-loop dcinjcanon seeds of X3 and X3a on case500_goc."""
     md = []
-    loop = [k for k in st if k.startswith("dcloop")]
+    loop = [k for k in st if k.startswith((canon + "_", vref + "_"))]
     complete = len(loop) == 6 and all(st[k]["epochs"] > AFTER for k in loop)
-    md.append(f"**X4-P0 (no closed-loop seed above {COLLAPSE} in validation after epoch {AFTER}): "
+    md.append(f"**{pre}-P0 (no closed-loop seed above {COLLAPSE} in validation after epoch {AFTER}): "
               f"{verdict(complete and not any(st[k]['collapsed'] for k in loop), complete)}** "
               + "; ".join(f"{k} max {st[k]['max_late']:.3g}" for k in loop) + "\n")
     grids = ("case118_ieee", "case118_tr", "case500_goc", "case2000_goc")
-    cells = [(g, get("dcloopcanon", "source", g)) for g in grids]
+    cells = [(g, get(canon, "source", g)) for g in grids]
     complete = all(len(v) == 3 for _, v in cells) and all(g in ref for g in grids)
     ok = complete and all((v < ref[g]["DC"]).all() for g, v in cells)
-    md.append(f"**X4-P1 (dcloopcanon below DC on 118, 118_tr, 500 and 2000, every seed): {verdict(ok, complete)}** "
+    md.append(f"**{pre}-P1 ({canon} below DC on 118, 118_tr, 500 and 2000, every seed): {verdict(ok, complete)}** "
               + "; ".join(f"{g} {rng(v)} vs DC {ref.get(g, {}).get('DC', math.nan):.3g}" for g, v in cells) + "\n")
     open_loop = np.concatenate([load_runs(r).get(("dcinjcanon", "source", "case500_goc", "VA"), np.array([]))
                                 for r in (PT, RES / "pianox_pt_a")])
-    v = get("dcloopcanon", "source", "case500_goc")
+    v = get(canon, "source", "case500_goc")
     complete = len(v) == 3 and len(open_loop) == 6
     ok = complete and (v < open_loop.min()).all()
-    md.append(f"**X4-P2 (dcloopcanon on case500_goc below all six open-loop dcinjcanon seeds of X3 and X3a): "
+    md.append(f"**{pre}-P2 ({canon} on case500_goc below all six open-loop dcinjcanon seeds of X3 and X3a): "
               f"{verdict(ok, complete)}** {rng(v)} vs open-loop min {open_loop.min() if len(open_loop) else math.nan:.3g} "
               f"(open-loop seeds {', '.join(f'{x:.3g}' for x in sorted(open_loop))})\n")
-    cells = [(g, a, get(a, "source", g), ref.get(g, {}).get("fdpf given k=5" if a == "dcloopvref" else "fdpf inputs k=5", math.nan))
-             for g in ("case118_ieee", "case500_goc", "case2000_goc") for a in ("dcloopcanon", "dcloopvref")]
+    cells = [(g, a, get(a, "source", g), ref.get(g, {}).get("fdpf given k=5" if a == vref else "fdpf inputs k=5", math.nan))
+             for g in ("case118_ieee", "case500_goc", "case2000_goc") for a in (canon, vref)]
     complete = all(len(c[2]) == 3 for c in cells)
     ok = complete and all((v >= r).all() for *_, v, r in cells)
-    md.append(f"**X4-P3 (no closed-loop seed below fast-decoupled from the same inputs after 5 iterations on 118 / 500 / "
+    md.append(f"**{pre}-P3 (no closed-loop seed below fast-decoupled from the same inputs after 5 iterations on 118 / 500 / "
               f"2000): {verdict(ok, complete)}** " + "; ".join(
                   f"{g}/{a} min {np.nanmin(v) if len(v) else math.nan:.3g} vs {r:.3g}" for g, a, v, r in cells) + "\n")
     return md
@@ -164,8 +168,8 @@ def main():
         return ("PASS" if ok else "FAIL") if complete else "incomplete"
 
     md += ["## Verdicts", ""]
-    if root.name == "pianox_pt_loop":
-        md += x4_verdicts(st, runs, ref, get, verdict)
+    if root.name in LOOP:
+        md += x4_verdicts(st, runs, ref, get, verdict, *LOOP[root.name])
         (root / opts.out).write_text("\n".join(md))
         print("\n".join(md))
         return
