@@ -11,8 +11,8 @@
 # Piano X, X3 (GPU): train on the 31 public subgrids (cluster/pt_train_networks.txt, up to 1,200 scenarios each) and
 # evaluate zero-shot on the fixed 1024-scenario sets of case118_ieee (at the end of training), then case118_tr,
 # case500_goc, case2000_goc, case57_ieee, case30_ieee, case14_ieee (--eval-only --extrap), with the source and the
-# target-fitted normalizer. Raw data copied to the node-local /scratch and processed there once per node, shared by
-# the X3 jobs on that node under a lock (per-scenario caches do not fit on GPFS; removed by cleanup_pt.sh at the end).
+# target-fitted normalizer. Raw data copied to the job's private node-local /tmp (Slurm's per-job tmpfs on the local
+# disk, removed at the end of the job) and processed there: per-scenario caches do not fit on GPFS.
 # One run per GPU (the QoS allows 2 GPUs per job), RUNS="arm:seed ..." in the order of the allocated GPUs.
 # Needs prep_pt.sbatch to have finished.
 #   sbatch --nodelist=abacus-002 --export=ALL,RUNS="plain:0 dcinjcanon:0" train_pt.sbatch
@@ -27,7 +27,7 @@ LOGD=experiments/ac_pf_symmetries/cluster/logs
 OUT=$R/experiments/ac_pf_symmetries/results/pianox_pt
 TEST="case118_ieee case118_tr case500_goc case2000_goc case57_ieee case30_ieee case14_ieee"
 [ -s "$LIST" ] || { echo "no $LIST: run prep_pt.sbatch first"; exit 1; }
-L=/scratch/symfm_cache_x3
+L=$TMPDIR/symfm_cache_x3
 echo "HEAD $(git rev-parse HEAD) host=$(hostname) RUNS=$RUNS $(date -Is)"
 nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader
 bash experiments/ac_pf_symmetries/cluster/provenance.sh \
@@ -61,7 +61,7 @@ PY
 touch $L/READY
 echo "DATA_BUILT $(date -Is) $(du -sh $L | cut -f1)"
 fi
-) 9>/scratch/symfm_cache_x3.lock
+) 9>$TMPDIR/symfm_cache_x3.lock
 [ -f $L/READY ] || { echo "cache not ready"; exit 1; }
 export SYMFM_DATA_ROOT=$L
 echo "DATA_READY $(date -Is)"
