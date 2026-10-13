@@ -35,7 +35,7 @@ from .dcprior import DCInjectionLayers, DCPriorLayers
 from .hodge import BranchAngleLayers
 from .resnorm import BusResidualScale
 from .run import OUT, ROOT, accuracy, default_device, eval_loader, make_args
-from .symmetries import Canonicalize
+from .symmetries import Canonicalize, gns_of
 
 ARMS = {
     "canon": None,
@@ -144,6 +144,8 @@ def run_one(arm, seed, a, device):
     for m in chain(inner):
         if isinstance(m, BusResidualScale):
             m.fit_d_ref(train_loader)
+        if isinstance(m, DCInjectionLayers):
+            gns_of(m).mlp_bus.gain = a.inj_gain
     task.model = inner if arm in PLAIN else Canonicalize(inner, local=arm in LOCAL).fit_scale_ref(train_loader)
 
     run_dir = a.results_dir / f"heldout_{'_'.join(a.heldout)}" / f"{arm}_seed{seed}"
@@ -188,6 +190,7 @@ def evaluate(model, arm, seed, a, args, grids, run_dir, epochs_run, train_time, 
         "heldout": list(a.heldout),
         "extrap": list(a.extrap or []),
         "n_per_grid": a.n_per_grid,
+        "inj_gain": a.inj_gain,
         "epochs_run": epochs_run,
         "train_time_s": train_time,
         "scale_ref": float(getattr(model, "scale_ref", float("nan"))),  # nan for the plain arm
@@ -222,6 +225,8 @@ def main():
     p.add_argument("--n-heldout", type=int, default=None, help="size of the fixed zero-shot subsets (default --n-per-grid)")
     p.add_argument("--workers", type=int, default=0, help="DataLoader workers for training")
     p.add_argument("--zs-refit", action="store_true", help="also evaluate zero-shot with a normalizer fitted on the target")
+    p.add_argument("--inj-gain", type=float, default=1.0,
+                   help="injection arms: factor on the decoder's injection output before the solve (X3a: 0.01)")
     p.add_argument("--heldout", nargs="+", required=True)
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     p.add_argument("--n-per-grid", type=int, default=1024)

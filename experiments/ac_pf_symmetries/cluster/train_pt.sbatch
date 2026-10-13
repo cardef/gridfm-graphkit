@@ -14,8 +14,12 @@
 # target-fitted normalizer. Raw data copied to the job's private node-local /tmp (Slurm's per-job tmpfs on the local
 # disk, removed at the end of the job) and processed there: per-scenario caches do not fit on GPFS.
 # One run per GPU (the QoS allows 2 GPUs per job), RUNS="arm:seed ..." in the order of the allocated GPUs.
+# Optional: OUT (results root, default results/pianox_pt), EXTRA (more multigrid options, on training and eval) and
+# TAG (suffix of the per-run log names, e.g. _a).
 # Needs prep_pt.sbatch to have finished.
 #   sbatch --nodelist=abacus-002 --export=ALL,RUNS="plain:0 dcinjcanon:0" train_pt.sbatch
+#   X3a: sbatch --nodelist=abacus-006 --gres=gpu:h100:2 --export=ALL,RUNS="dcinjcanon:0 dcinjcanon:1",\
+#        OUT=$PWD/../results/pianox_pt_a,EXTRA="--inj-gain 0.01",TAG=_a train_pt.sbatch
 set -euo pipefail
 S=/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO
 R=$S/SymmetricalFM/gridfm-graphkit
@@ -24,11 +28,12 @@ cd $R
 export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
 LIST=experiments/ac_pf_symmetries/cluster/pt_train_networks.txt
 LOGD=experiments/ac_pf_symmetries/cluster/logs
-OUT=$R/experiments/ac_pf_symmetries/results/pianox_pt
+OUT=${OUT:-$R/experiments/ac_pf_symmetries/results/pianox_pt}
+EXTRA=${EXTRA:-}
 TEST="case118_ieee case118_tr case500_goc case2000_goc case57_ieee case30_ieee case14_ieee"
 [ -s "$LIST" ] || { echo "no $LIST: run prep_pt.sbatch first"; exit 1; }
 L=$TMPDIR/symfm_cache_x3
-echo "HEAD $(git rev-parse HEAD) host=$(hostname) RUNS=$RUNS $(date -Is)"
+echo "HEAD $(git rev-parse HEAD) host=$(hostname) RUNS=$RUNS OUT=$OUT EXTRA=$EXTRA $(date -Is)"
 nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader
 bash experiments/ac_pf_symmetries/cluster/provenance.sh \
     experiments/ac_pf_symmetries/{multigrid,hodge,run,symmetries,dcprior,resnorm}.py
@@ -66,17 +71,17 @@ fi
 export SYMFM_DATA_ROOT=$L
 echo "DATA_READY $(date -Is)"
 IFS=, read -ra GPUS <<< "$CUDA_VISIBLE_DEVICES"
-common="--train-file $LIST --heldout case118_ieee --n-per-grid 1200 --n-heldout 1024 --device cuda --zs-refit --results-dir $OUT"
+common="--train-file $LIST --heldout case118_ieee --n-per-grid 1200 --n-heldout 1024 --device cuda --zs-refit --results-dir $OUT $EXTRA"
 i=0
 for r in $RUNS; do
     arm=${r%:*}
     seed=${r#*:}
     dev=${GPUS[$i]}
     (CUDA_VISIBLE_DEVICES=$dev python -m experiments.ac_pf_symmetries.multigrid --arm $arm --seeds $seed --workers 4 $common \
-        > $LOGD/pt_${arm}_s${seed}.log 2>&1 \
+        > $LOGD/pt${TAG:-}_${arm}_s${seed}.log 2>&1 \
      && CUDA_VISIBLE_DEVICES=$dev python -m experiments.ac_pf_symmetries.multigrid --eval-only \
         --extrap case118_tr case500_goc case2000_goc case57_ieee case30_ieee case14_ieee --arm $arm --seeds $seed $common \
-        >> $LOGD/pt_${arm}_s${seed}.log 2>&1 \
+        >> $LOGD/pt${TAG:-}_${arm}_s${seed}.log 2>&1 \
      && echo "RUN_DONE $arm $seed $(date -Is)" || echo "RUN_FAILED $arm $seed $(date -Is)") &
     i=$((i + 1))
 done

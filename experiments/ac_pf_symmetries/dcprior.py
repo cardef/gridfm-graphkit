@@ -11,6 +11,12 @@ DC + correction.
 angles with the same anchored solve: theta = theta_DC + L^-1 c, so the learned part is local and its global effect
 (the common shift relative to REF included) comes out of the exact solve. Buses not connected to their graph's REF
 bus (an island after an outage) get no injection, so they stay at the REF angle instead of blowing up.
+
+`gain` multiplies the network's output before the solve (X3a). The angles move by L^-1 times a change of c, and on the
+public subgrids the smooth gain max|L^-1 1| reaches 6e4 deg per unit injection (median 6e3; 5e2 on case118), so one
+Adam step of the decoder's own weights, which moves c by up to about lr * |h|_1 whatever the gradient's scale, can move
+the angles by tens of degrees: gain = 0.01 makes those steps 100 times smaller. A plain attribute, not a buffer, so the
+X3 checkpoints (gain 1) load unchanged.
 """
 
 import torch
@@ -107,15 +113,16 @@ class DCPriorLayers(nn.Module):
 class _DCInjectionDecoder(nn.Module):
     """GNS's bus decoder whose angle column is a per-bus injection correction c: angles theta_DC + L^-1 c."""
 
-    def __init__(self, mlp_bus):
+    def __init__(self, mlp_bus, gain=1.0):
         super().__init__()
         self.mlp_bus = mlp_bus
+        self.gain = gain
         self.ctx = None  # bound per forward by DCInjectionLayers
 
     def forward(self, h):
         out = self.mlp_bus(h)
         c = self.ctx
-        shift = solve_anchored(out[:, VA_OUT] * c["conn"], theta_ref=c["zero"], **c["system"])
+        shift = solve_anchored(self.gain * out[:, VA_OUT] * c["conn"], theta_ref=c["zero"], **c["system"])
         va = c["theta_dc"] + shift
         return torch.cat([out[:, :VA_OUT], va[:, None], out[:, VA_OUT + 1 :]], dim=1)
 
@@ -123,13 +130,13 @@ class _DCInjectionDecoder(nn.Module):
 class DCInjectionLayers(nn.Module):
     """GNS whose every layer predicts the angles as theta_DC + L^-1 c, c a learned per-bus injection correction."""
 
-    def __init__(self, model, zero_init=True):
+    def __init__(self, model, zero_init=True, gain=1.0):
         super().__init__()
         self.model = model
         base = gns_of(model)
         if zero_init:
             _zero_angle_row(base.mlp_bus)
-        base.mlp_bus = _DCInjectionDecoder(base.mlp_bus)
+        base.mlp_bus = _DCInjectionDecoder(base.mlp_bus, gain)
 
     @property
     def layer_residuals(self):

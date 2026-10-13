@@ -363,3 +363,40 @@ and 1,000 samples (`results/pianox_pt/PUBLIC.txt`). Rule: 3 seeds; "every seed" 
 | X3-P4 | beyond the training size range | on case2000_goc, twice the largest training subgrid, at least one dcinjcanon seed above DC (9.75 deg) | once trained on many topologies, the injection correction extrapolates beyond the training sizes: the amplification argument is weaker than thought |
 | X3-P5 | against physics | on case118_ieee, case500_goc and case2000_goc no learned arm below fast-decoupled from the same inputs after 5 iterations, REF voltage from the inputs for dcinjcanon and plain, given for dcinjvref | a learned model beats physics from the same inputs on an unseen grid |
 | X3-P6 | exploratory | — | the public checkpoints against our arms; dcinjvref against dcinjcanon; the small grids below the training sizes; the offset / rest split; the in-distribution error on the training subgrids; time per epoch and per forward |
+
+## Piano X, X3 diagnosis and amendment X3a (the injection decoder with gain 0.01), fixed 2026-10-13 08:00 before any X3 zero-shot number
+
+Observation (X3 training curves, epochs 0-23, `metrics.csv`): all six injection runs collapse at least once. The
+validation loss goes from 0.12-0.15 (below plain's 0.17-0.18) to 0.9-12.8, with the per-layer physics residual flat at
+7-8 from layer 4 on, and dcinjcanon seed 2 has not left the collapsed state in 23 epochs. plain never collapses
+(at most 0.40 after epoch 5). The X3 runs continue unchanged and are scored as pre-registered.
+
+Diagnosis (`diag_x3.py`, output `results/pianox_pt/diag_x3.json`, on an H100 like the runs; one 8-scenario batch per grid, the saved
+checkpoints of plain seed 0 and dcinjcanon seeds 0 and 2):
+
+- not precision: theta_DC in float32 and float64 differ by at most 0.20 deg on the training subgrids, 0.018 deg on
+  case2000_goc, 5e-5 deg on case118_ieee;
+- amplification: the gradient norm of the healthy injection model (dcinjcanon seed 0, epoch 0) spans a factor 674
+  across the 31 subgrids and follows 1/lambda_min of the anchored Laplacian (Spearman 0.83; plain: a factor 32,
+  Spearman 0.12). One subgrid (subnet_case4837_goc_idx_35, 1/lambda_min = 1,060) carries 92.5% of the summed squared
+  norm. The smooth gain max|L^-1 1| is 6e3 deg per unit injection on the median subgrid, 6.4e4 on the worst, 544 on
+  case118_ieee. Adam moves each weight of the decoder's injection row by up to about lr per step whatever the
+  gradient's scale, so gradient clipping does not bound it. That moves c by up to about lr |h|_1 and the angles by
+  that times the gain: degrees to tens of degrees per step on the high-gain subgrids;
+- side finding: on CPU, `torch.linalg.solve` (MKL) on a batch of 500-bus float32 systems fails with an SLASWP
+  parameter error and hangs, on finite inputs. The runs and their evaluation are on GPU.
+
+Amendment X3a: X3's setting, arm dcinjcanon only, 3 seeds, H100 GPUs. The only change is `--inj-gain 0.01`: the
+decoder's injection output is multiplied by 0.01 before the solve, so a full Adam step of the injection row moves the
+angles 100 times less (about 0.2 deg on the median subgrid). The value 0.01 follows from the diagnosis, not from any
+result. Control: X3's plain runs (same data, recipe and epochs). Scored by
+`r2_pt.py --runs results/pianox_pt_a --out REPORT_pt_a.md`.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| X3a-P0 | is the head step the cause of the collapse? | no seed collapses: validation loss at most 0.5 at every epoch after the fifth | the decoder's own steps are not the (only) cause; the instability comes through the backbone's coupling to the solve, and an open-loop injection decoder is not trainable on these grids with this recipe |
+| X3a-P1 | the decisive one, with stable training | dcinjcanon's zero-shot VA below DC's on case118_ieee (1.95 deg) and case118_tr (2.30 deg), every seed | as X3-P1 |
+| X3a-P2 | inside the training sizes | below DC on case500_goc (2.51 deg), every seed | as X3-P2 |
+| X3a-P4 | beyond the training sizes | on case2000_goc at least one seed above DC (9.75 deg) | as X3-P4 |
+| X3a-P5 | against physics | on case118_ieee, case500_goc and case2000_goc no seed below fast-decoupled after 5 iterations, REF voltage from the inputs | as X3-P5 |
+| X3a-P6 | exploratory | — | validation loss against plain's; X3a against X3 seed by seed; time per epoch |
