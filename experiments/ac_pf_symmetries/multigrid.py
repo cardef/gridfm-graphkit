@@ -11,6 +11,7 @@ run seed; batches mix grids.
 
 import argparse
 import json
+import os
 import random
 import time
 from functools import partial
@@ -54,6 +55,7 @@ LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inp
 VREF = {"canonvref", "dcinjvref", "gp"}  # the task with the REF voltage given (UnmaskRefVoltage)
 LAYERS = {"dcinj1hop": 1}  # GNS depth overrides: one layer = one hop and no physics feedback
 PLAIN = {"plain"}  # no Canonicalize wrapper
+DATA_ROOT = Path(os.environ.get("SYMFM_DATA_ROOT", ROOT / "data"))  # node-local copy on the GPU runs (X3)
 COMPOSED = {"gp": (BusResidualScale, DCPriorLayers)}  # wrappers applied inner to outer
 
 
@@ -90,7 +92,7 @@ def grid_splits(case, args, seed, n, normalizer=None, vref=False, split=None):
     """n scenarios of `case` (a fixed random subset, seed 0), split 80/10/10 by the run seed; the normalizer is
     fitted on the train part unless one is given. With `split` ({train, val, test} scenario ids, e.g. the official
     split of a released run) those ids are used instead and "all" is its test set (Piano K)."""
-    root = ROOT / "data" / case
+    root = DATA_ROOT / case
     fit = normalizer is None
     if fit:
         normalizer = load_normalizer(args)
@@ -131,6 +133,8 @@ def run_one(arm, seed, a, device):
         ConcatDataset([g["train"] for g in grids.values()]),
         batch_size=a.batch_size,
         shuffle=True,
+        num_workers=a.workers,
+        persistent_workers=a.workers > 0,
     )
     val_loader = eval_loader(ConcatDataset([g["val"] for g in grids.values()]), a.batch_size)
     task = get_task(args, [g["normalizer"] for g in grids.values()])
@@ -192,12 +196,19 @@ def evaluate(model, arm, seed, a, args, grids, run_dir, epochs_run, train_time, 
         "in_dist": {} if a.extrap else {c: accuracy(model, eval_loader(g["test"], a.batch_size), device) for c, g in grids.items()},
         "zero_shot": {},
     }
+    n_zs = a.n_heldout or a.n_per_grid  # the fixed zero-shot subset (seed 0 permutation) does not depend on training
     for c in a.extrap or a.heldout:
-        h = grid_splits(c, args, seed, a.n_per_grid, normalizer=source, vref=vref)
+        h = grid_splits(c, args, seed, n_zs, normalizer=source, vref=vref)
         result["zero_shot"][c] = {
             "baseMVA": float(source.baseMVA),
             "acc": accuracy(model, eval_loader(h["all"], a.batch_size), device),
         }
+        if a.zs_refit:  # the framework's default: a normalizer fitted on the target (reads Qg and slack Pg, labels)
+            hr = grid_splits(c, args, seed, n_zs, vref=vref)
+            result.setdefault("zero_shot_refit", {})[c] = {
+                "baseMVA": float(hr["normalizer"].baseMVA),
+                "acc": accuracy(model, eval_loader(hr["all"], a.batch_size), device),
+            }
     (run_dir / result_name(a)).write_text(json.dumps(result, indent=2))
     print(json.dumps({k: result[k] for k in ("arm", "seed", "epochs_run", "zero_shot")}))
     return result
@@ -206,7 +217,11 @@ def evaluate(model, arm, seed, a, args, grids, run_dir, epochs_run, train_time, 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--arm", nargs="+", default=list(ARMS), choices=list(ARMS))
-    p.add_argument("--train", nargs="+", required=True)
+    p.add_argument("--train", nargs="+", default=[])
+    p.add_argument("--train-file", type=Path, default=None, help="one training grid per line (X3: the public subgrids)")
+    p.add_argument("--n-heldout", type=int, default=None, help="size of the fixed zero-shot subsets (default --n-per-grid)")
+    p.add_argument("--workers", type=int, default=0, help="DataLoader workers for training")
+    p.add_argument("--zs-refit", action="store_true", help="also evaluate zero-shot with a normalizer fitted on the target")
     p.add_argument("--heldout", nargs="+", required=True)
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     p.add_argument("--n-per-grid", type=int, default=1024)
@@ -225,6 +240,10 @@ def main():
                    help="with --eval-only: evaluate the saved models zero-shot on these grids instead of the held-out "
                         "one (size extrapolation, P47-P50); writes result_extrap_<grids>.json")
     a = p.parse_args()
+    if a.train_file:
+        a.train = [x.strip() for x in a.train_file.read_text().splitlines() if x.strip()]
+    if not a.train:
+        p.error("--train or --train-file is required")
     if a.extrap and not a.eval_only:
         p.error("--extrap requires --eval-only")
     for seed in a.seeds:

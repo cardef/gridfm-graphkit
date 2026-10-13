@@ -334,3 +334,32 @@ start; REF voltage given and from the inputs.
 | X0b-P1 | does classical acceleration take the offset mode? | with the REF voltage given, Anderson with memory 3 below 0.1 deg after 3 iterations on every grid, including case2000 (plain 0.148) and case57 (plain 0.213) | where it does not, a learned accelerator has room that classical acceleration leaves |
 | X0b-P2 | case57 | Anderson with memory 3 below 0.01 deg after 12 iterations on case57 (plain 0.061 and rising) | case57's problem is a map that does not contract, not a slow mode: it needs Newton or damping |
 | X0b-P3 | exploratory | — | memory 2 vs 3; per-iteration overhead of the least squares; the inputs-only runs |
+
+## Piano X, X3: GENCO with the injection decoder trained on the public subgrids (X3-P1-X3-P6), fixed 2026-10-13 before any X3 model exists
+
+Question: does the architecture change that beat DC zero-shot on unseen grids within the training sizes at PoC scale
+(the injection decoder: a learned per-bus injection correction whose global effect is computed by the exact solve on
+the actual topology) make GENCO beat DC zero-shot on the benchmark where the paper reports its failure, once trained
+on many topologies around that size? Setting: the 31 public pretraining subgrids of `gridfm/genco-pf-pretraining`
+(the dataset lists 100 training, 10 validation and 10 test subgrids; only these 31 training ones are uploaded), 126-987
+buses, 800-1,200 scenarios each from partitions 0, 8, 16, 24, 32, 40 (36,400 in all, 80/10/10 per grid by the run
+seed); the PF task with the framework's mask; the GENCO Base backbone (hidden 48, 12 layers, 8 heads), 100 epochs,
+batch 64, patience 40, the base config's optimizer; 3 seeds per arm; A40 GPUs. Arms: plain (GENCO as released, a
+normalizer per training grid, no canonicalization), dcinjcanon (injection decoder and canonicalization), dcinjvref
+(the same with the REF voltage given). Zero-shot sets, fixed 1024 scenarios (seed 0): case118_ieee, case118_tr (a
+2,048-scenario subset, seed 0, of the 9,952 evaluation scenarios of GENCO's transfer experiment), case500_goc,
+case2000_goc, case57_ieee, case30_ieee, case14_ieee. plain is evaluated with the source normalizer (the first training
+grid's) and with one fitted on the target, and its predictions below hold for either; the canonicalized arms are
+invariant to that choice by construction. References computed before any X3 model: DC and fast-decoupled from the same
+inputs (`frontier.py`, X0, and `results/pianox_pt/FRONTIER_case118_tr.txt`), GENCO's public pretrained checkpoint
+(100 subgrids, about 900,000 scenarios, masked pretraining, 300 epochs) and its case118 fine-tuned checkpoints at 100
+and 1,000 samples (`results/pianox_pt/PUBLIC.txt`). Rule: 3 seeds; "every seed" means all three.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| X3-P1 | the decisive one: does the injection decoder make GENCO beat DC where the paper fails? | dcinjcanon's zero-shot VA below DC's on case118_ieee (1.95 deg) and on case118_tr (DC from FRONTIER_case118_tr.txt), every seed | the injection correction does not transfer to an unseen grid even with 31 training topologies around its size: the PoC result on case30 and case57 was a small-grid effect |
+| X3-P2 | inside the training size range | dcinjcanon below DC on case500_goc (2.51 deg), every seed | as X3-P1, at a size the training grids cover |
+| X3-P3 | the control: data or architecture? | plain above DC on case118_ieee and case500_goc for every seed, with either normalizer | topology diversity alone makes GENCO transfer; the architecture change is not needed |
+| X3-P4 | beyond the training size range | on case2000_goc, twice the largest training subgrid, at least one dcinjcanon seed above DC (9.75 deg) | once trained on many topologies, the injection correction extrapolates beyond the training sizes: the amplification argument is weaker than thought |
+| X3-P5 | against physics | on case118_ieee, case500_goc and case2000_goc no learned arm below fast-decoupled from the same inputs after 5 iterations, REF voltage from the inputs for dcinjcanon and plain, given for dcinjvref | a learned model beats physics from the same inputs on an unseen grid |
+| X3-P6 | exploratory | — | the public checkpoints against our arms; dcinjvref against dcinjcanon; the small grids below the training sizes; the offset / rest split; the in-distribution error on the training subgrids; time per epoch and per forward |

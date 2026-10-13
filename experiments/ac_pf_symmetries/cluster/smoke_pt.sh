@@ -1,0 +1,7 @@
+#!/bin/bash
+# Smoke test of the X3 flags (--train-file, --n-heldout, --zs-refit, --workers, SYMFM_DATA_ROOT) on CPU: 2 IEEE grids
+# as the "training list", 64 scenarios each, 1 epoch, arms plain and dcinjvref, then --eval-only --extrap.
+S=/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO
+R=$S/SymmetricalFM/gridfm-graphkit
+srun --partition=vicomtech --account=di13 --qos=qos_di13 --cpus-per-task=4 --mem=16G --time=00:40:00 --job-name=symfm-ptsmoke \
+    bash -c "source $S/env/activate.sh $R && cd $R && export OMP_NUM_THREADS=4 && printf 'case14_ieee\ncase30_ieee\n' > /tmp/pt_smoke_list.txt && O=$S/SymmetricalFM/scratch/ptsmoke && rm -rf \$O && export SYMFM_DATA_ROOT=$R/data && python -m experiments.ac_pf_symmetries.multigrid --arm plain dcinjvref --seeds 0 --train-file /tmp/pt_smoke_list.txt --heldout case57_ieee --n-per-grid 64 --n-heldout 32 --epochs 1 --workers 2 --zs-refit --device cpu --results-dir \$O 2>&1 | grep -E '^\{|Error|Traceback' ; python -m experiments.ac_pf_symmetries.multigrid --eval-only --extrap case118_ieee --arm plain dcinjvref --seeds 0 --train-file /tmp/pt_smoke_list.txt --heldout case57_ieee --n-per-grid 64 --n-heldout 32 --zs-refit --device cpu --results-dir \$O 2>&1 | grep -E '^\{|Error|Traceback'; python -c \"import json,glob; [print(f.split('/')[-2], f.split('/')[-1], sorted(json.load(open(f)).keys())) for f in sorted(glob.glob('\$O/*/*/result*.json'))]\"; echo SMOKE_EXIT"
