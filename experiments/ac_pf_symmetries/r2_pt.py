@@ -27,7 +27,7 @@ RES = Path(__file__).resolve().parent / "results"
 PT = RES / "pianox_pt"
 DEG = 180 / math.pi
 GRIDS = ("case118_ieee", "case118_tr", "case500_goc", "case2000_goc", "case57_ieee", "case30_ieee", "case14_ieee")
-ARMS = ("plain", "dcinjcanon", "dcinjvref")
+ARMS = ("plain", "dcinjcanon", "dcinjvref", "dcloopcanon", "dcloopvref")
 Q = ("VA", "VA_cm", "VA_diff", "dVA", "VM_PQ", "PBE")
 
 

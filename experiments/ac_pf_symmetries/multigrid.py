@@ -31,7 +31,7 @@ from gridfm_graphkit.datasets.powergrid_hetero_dataset import HeteroGridDatasetD
 from gridfm_graphkit.io.param_handler import get_task, get_task_transforms, load_normalizer
 from gridfm_graphkit.training.callbacks import SaveBestModelStateDict
 
-from .dcprior import DCInjectionLayers, DCPriorLayers
+from .dcprior import DCInjectionLayers, DCLoopLayers, DCPriorLayers
 from .hodge import BranchAngleLayers
 from .resnorm import BusResidualScale
 from .run import OUT, ROOT, accuracy, default_device, eval_loader, make_args
@@ -50,9 +50,11 @@ ARMS = {
     "dcinj1hop": DCInjectionLayers,
     "plain": None,  # Piano K G0: the backbone as released, no canonicalization
     "gp": None,  # Piano K GP: +vref +canon +resnorm +dc (COMPOSED)
+    "dcloopcanon": DCLoopLayers,  # Piano X: the P-theta step of fast-decoupled in every layer, no learned angle
+    "dcloopvref": DCLoopLayers,
 }
 LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inputs) instead of per graph
-VREF = {"canonvref", "dcinjvref", "gp"}  # the task with the REF voltage given (UnmaskRefVoltage)
+VREF = {"canonvref", "dcinjvref", "gp", "dcloopvref"}  # the task with the REF voltage given (UnmaskRefVoltage)
 LAYERS = {"dcinj1hop": 1}  # GNS depth overrides: one layer = one hop and no physics feedback
 PLAIN = {"plain"}  # no Canonicalize wrapper
 DATA_ROOT = Path(os.environ.get("SYMFM_DATA_ROOT", ROOT / "data"))  # node-local copy on the GPU runs (X3)

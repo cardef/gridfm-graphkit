@@ -17,6 +17,12 @@ public subgrids the smooth gain max|L^-1 1| reaches 6e4 deg per unit injection (
 Adam step of the decoder's own weights, which moves c by up to about lr * |h|_1 whatever the gradient's scale, can move
 the angles by tens of degrees: gain = 0.01 makes those steps 100 times smaller. A plain attribute, not a buffer, so the
 X3 checkpoints (gain 1) load unchanged.
+
+`DCLoopLayers` closes the loop instead (Piano X): no learned angle. Every layer decodes theta_DC + L^-1 s, and after
+the layer GENCO's own active-power residual (specified minus computed injection, the fast-decoupled mismatch dP) is
+added to s: the P-theta half step of fast-decoupled with B' = L and V = 1, once per layer. The network's angle output
+is unused; its voltage and generator outputs pass through, so the angles converge to the AC solution for the voltages
+the network predicts, on any topology, and nothing learned is amplified by L^-1.
 """
 
 import torch
@@ -153,3 +159,53 @@ class DCInjectionLayers(nn.Module):
             return self.model(data, return_embeddings=return_embeddings)
         finally:
             dec.ctx = None
+
+
+class _DCLoopDecoder(nn.Module):
+    """GNS's bus decoder with the angle column replaced by theta_DC + L^-1 s, s the injection that the P-theta steps
+    have accumulated so far (bound per forward by DCLoopLayers); the network's own angle output is unused."""
+
+    def __init__(self, mlp_bus):
+        super().__init__()
+        self.mlp_bus = mlp_bus
+        self.ctx = None
+
+    def forward(self, h):
+        out = self.mlp_bus(h)
+        c = self.ctx
+        va = c["theta_dc"] + solve_anchored(c["s"], theta_ref=c["zero"], **c["system"])
+        return torch.cat([out[:, :VA_OUT], va[:, None], out[:, VA_OUT + 1 :]], dim=1)
+
+
+class DCLoopLayers(nn.Module):
+    """GNS with the P-theta step of fast-decoupled in every layer: s += GENCO's active residual, on the REF-connected
+    buses (module docstring)."""
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+        base = gns_of(model)
+        base.mlp_bus = _DCLoopDecoder(base.mlp_bus)
+
+    @property
+    def layer_residuals(self):
+        return self.model.layer_residuals
+
+    def forward(self, data, return_embeddings=False):
+        base = gns_of(self.model)
+        with torch.no_grad():
+            system, p, theta_ref, conn = dc_context(data)
+            theta_dc = solve_anchored(p * conn, theta_ref=theta_ref, **system)
+        ctx = {"system": system, "theta_dc": theta_dc, "conn": conn.to(p.dtype), "zero": theta_ref.new_zeros(theta_ref.shape),
+               "s": torch.zeros_like(p)}
+
+        def step(module, inputs, outputs):  # outputs = (residual_P, residual_Q) of the layer just decoded
+            ctx["s"] = ctx["s"] + outputs[0] * ctx["conn"]
+
+        base.mlp_bus.ctx = ctx
+        hook = base.node_residuals_layer.register_forward_hook(step)
+        try:
+            return self.model(data, return_embeddings=return_embeddings)
+        finally:
+            hook.remove()
+            base.mlp_bus.ctx = None

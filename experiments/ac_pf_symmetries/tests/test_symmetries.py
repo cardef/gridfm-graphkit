@@ -44,7 +44,7 @@ from gridfm_graphkit.tasks.pf_task import (
     _clamp_known_to_ground_truth,
 )
 
-from experiments.ac_pf_symmetries.dcprior import DCInjectionLayers, DCPriorLayers, dc_angles
+from experiments.ac_pf_symmetries.dcprior import DCInjectionLayers, DCLoopLayers, DCPriorLayers, dc_angles
 from experiments.ac_pf_symmetries.hodge import (
     BranchAngleHead,
     BranchAngleLayers,
@@ -361,6 +361,48 @@ def test_dc_injection_correction_goes_through_the_dc_solve(loader, args):
 def test_dc_injection_inside_canonicalize_is_exactly_equivariant(loader, args):
     torch.manual_seed(0)
     model = Canonicalize(DCInjectionLayers(load_model(args))).fit_scale_ref(loader).eval()
+    probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
+    for sym, param in probes:
+        ee = equivariance_error(model, loader, sym, param)
+        assert all(v["rel"] < 1e-4 for v in ee.values()), (sym, ee)
+
+
+class _LabelledVoltage(nn.Module):
+    """Decoder stand-in for the loop tests: the labelled VM on every bus, a zero angle column."""
+
+    def __init__(self, vm):
+        super().__init__()
+        self.vm = vm
+
+    def forward(self, h):
+        out = torch.zeros(self.vm.size(0), 2)
+        out[:, VM_OUT] = self.vm
+        return out
+
+
+def test_dc_loop_reaches_the_labelled_angles_given_the_labelled_voltages(loader, args):
+    """With the network's VM replaced by the labels, the per-layer P-theta steps (GENCO's own active residual through
+    the exact DC solve) converge to the labelled angles: the loop's sign, units and masks are right. Twelve layers
+    (the fixture config has two, i.e. a single step from the DC angles)."""
+    deep = copy.deepcopy(args)
+    deep.model.num_layers = 12
+    torch.manual_seed(0)
+    wrapped = DCLoopLayers(load_model(deep)).eval()
+    data = next(iter(loader))
+    target, _, _ = _build_bus_target(data, data["bus"].x.size(0))
+    wrapped.model.mlp_bus.mlp_bus = _LabelledVoltage(target[:, VM_OUT])
+    with torch.no_grad():
+        out = wrapped(data)
+    free = ~data.mask_dict["REF"]
+    err = (out["bus"][free, VA_OUT] - target[free, VA_OUT]).abs().max()
+    assert err < 1e-4, err
+    assert wrapped.model.mlp_bus.ctx is None
+    assert not wrapped.model.node_residuals_layer._forward_hooks
+
+
+def test_dc_loop_inside_canonicalize_is_exactly_equivariant(loader, args):
+    torch.manual_seed(0)
+    model = Canonicalize(DCLoopLayers(load_model(args))).fit_scale_ref(loader).eval()
     probes = (("phase", math.pi / 2), ("scale", 10.0), ("scale", 0.01), ("flip", 0.5), ("fliptrafo", 1.0))
     for sym, param in probes:
         ee = equivariance_error(model, loader, sym, param)
