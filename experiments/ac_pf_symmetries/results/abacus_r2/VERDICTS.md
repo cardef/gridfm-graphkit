@@ -426,3 +426,47 @@ perfect accelerator reaching it in 2 would save 1.26 ms, 13% of the cost of a ne
 factorizations take 6.9 ms; only when many scenarios share a topology and the factorizations are amortized could the
 saving approach 2x. It must cost less than 0.63 ms per iteration it replaces; the smallest GENCO backbone costs 74 ms per
 graph on this CPU.
+
+## Piano X, X3: GENCO with the injection decoder on the 31 public subgrids (X3-P1-X3-P6, 2026-10-13)
+
+GPU jobs 63215-63218 (A40, abacus-002/003, 2 runs per job) and 63219 (H100, abacus-005: dcinjvref seed 2), code
+17bab77; the end-of-training `--eval-only --extrap` steps of all runs but dcinjvref seed 2 ran with dd16233-e8af9ae,
+whose changes leave evaluation unchanged (`--inj-gain` defaults to 1). 31 subgrids, 1,200 scenarios each, up to 100
+epochs, patience 40. Scored with `r2_pt.py` (`results/pianox_pt/REPORT_pt.md`). Zero-shot VA in deg, source
+normalizer (the canonicalized arms are invariant to it; plain is scored with both).
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| X3-P1 | PASS | dcinjcanon below DC on both case118 sets, every seed: case118_ieee [1.57, 1.89] vs 1.95; case118_tr [1.87, 2.20] vs 2.30 (0.80-0.97x DC) |
+| X3-P2 | FAIL | case500_goc [1.60, 3.21] vs 2.52: seeds 1.60, 1.91, 3.21 |
+| X3-P3 | PASS | plain above DC on case118_ieee (11.0-20.4 source, 11.4-26.7 refit) and case500_goc (8.0-9.4, 7.8-9.7), every seed, either normalizer |
+| X3-P4 | PASS | case2000_goc [3.09, 15.8] vs 9.75: seeds 3.09, 3.68, 15.8 |
+| X3-P5 | PASS | no learned arm below fast-decoupled from the same inputs after 5 iterations: on 118 / 500 / 2000 the best learned arm is 1.49 / 1.19 / 2.25 against 0.235 / 0.071 / 0.329 (inputs) and 0.0005 / 0.0005 / 0.006 (REF voltage given) |
+| X3-P6 (exploratory) | — | below |
+
+Per seed (case118 / case118_tr / case500 / case2000; best validation loss and its epoch):
+
+| arm | seed 0 | seed 1 | seed 2 |
+|---|---|---|---|
+| plain | 14.1 / 16.2 / 9.4 / 16.5 (0.182, ep 11) | 20.4 / 22.0 / 9.0 / 15.9 (0.146, ep 96) | 11.0 / 13.5 / 8.0 / 15.1 (0.144, ep 97) |
+| dcinjcanon | 1.89 / 2.20 / 3.21 / 3.09 (0.150, ep 0) | 1.57 / 1.87 / 1.60 / 3.68 (0.115, ep 5) | 1.86 / 2.15 / 1.91 / 15.8 (0.094, ep 97) |
+| dcinjvref | 1.49 / 1.81 / 1.19 / 6.72 (0.095, ep 87) | 1.69 / 2.01 / 3.06 / 2.25 (0.119, ep 22) | 1.67 / 1.98 / 3.10 / 3.28 (0.126, ep 3) |
+| DC | 1.95 / 2.30 / 2.52 / 9.75 | | |
+| GENCO public pretrained | 11.3 / 13.3 / 6.3 / 13.4 | | |
+
+Exploratory (X3-P6): on case57, case30 and case14, below the training sizes, both injection arms sit at DC
+(0.98-1.01x); plain at 2.7-12x DC. dcinjvref against dcinjcanon: overlapping ranges on every grid. In distribution the
+injection arms reach validation losses of 0.094-0.15 against plain's 0.144-0.182. Training is unstable: every injection
+run has epochs above 0.5 after the fifth (X3a-P0's criterion; dcinjcanon peaks 3.3, 12.8, 1.4), plain none (at most
+0.40); diagnosis in the X3a block of PREREGISTRATION.md (`diag_x3.py`). Time per epoch: plain about 4.5 min, injection
+arms about 9 min on an A40, 5.4 min on the H100. Hardware split: eight runs on A40, dcinjvref seed 2 on H100.
+
+Reading: the decisive prediction holds. Trained on 31 topologies, the injection decoder brings GENCO below DC on the
+benchmark where the paper reports its failure, every seed, while GENCO trained on the same data stays 5.6-14x above DC on case118,
+as the public pretrained model does: topology diversity alone does not make GENCO transfer, the architecture does. The
+margin on case118 is modest (0.80-0.97x DC) and far from physics from the same inputs (0.24 deg). Beyond case118 the
+open-loop decoder is unreliable: on case500 and case2000 single seeds of the two injection arms range from 0.23x to 1.6x DC, and the worst
+case2000 seed (15.8, offset 14.9) is the best-trained one, which is the amplification of a slightly wrong smooth
+injection by L^-1 on a high-gain grid. The case2000 result also contradicts the PoC reading of P48 (collapse beyond the
+training size, 8-12x DC): with training grids of 126-987 buses, 5 of the 6 injection seeds are 1.5-4x below DC there. The closed loop
+(dcloop, coded at e8af9ae, not run) removes both the training collapse mechanism and the test-time amplification.

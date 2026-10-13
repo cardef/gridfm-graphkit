@@ -130,30 +130,36 @@ def main():
         return ("PASS" if ok else "FAIL") if complete else "incomplete"
 
     md += ["## Verdicts", ""]
+    pre = "X3a" if root.name == "pianox_pt_a" else "X3"  # the same predictions, scored on X3 or on X3a's runs
     inj = [k for k in st if k.startswith("dcinjcanon_")]
     complete = len(inj) == 3 and all(st[k]["epochs"] > AFTER for k in inj)
-    md.append(f"**X3a-P0 (no dcinjcanon seed collapses: validation loss at most {COLLAPSE} after epoch {AFTER}): "
-              f"{verdict(complete and not any(st[k]['collapsed'] for k in inj), complete)}** "
-              + "; ".join(f"{k} max {st[k]['max_late']:.3g}" for k in inj) + "\n")
+    if pre == "X3a":
+        md.append(f"**X3a-P0 (no dcinjcanon seed collapses: validation loss at most {COLLAPSE} after epoch {AFTER}): "
+                  f"{verdict(complete and not any(st[k]['collapsed'] for k in inj), complete)}** "
+                  + "; ".join(f"{k} max {st[k]['max_late']:.3g}" for k in inj) + "\n")
+    else:
+        md.append(f"Stability (descriptive, X3 registered no stability prediction; X3a-P0's criterion): "
+                  f"{sum(st[k]['collapsed'] for k in inj)} of {len(inj)} dcinjcanon seeds collapse; "
+                  + "; ".join(f"{k} max {st[k]['max_late']:.3g}" for k in inj) + "\n")
     cells = [(g, get("dcinjcanon", "source", g)) for g in ("case118_ieee", "case118_tr")]
     complete = all(len(v) == 3 for _, v in cells) and all(g in ref for g, _ in cells)
     ok = complete and all((v < ref[g]["DC"]).all() for g, v in cells)
-    md.append(f"**X3-P1 (dcinjcanon below DC on both case118 sets, every seed): {verdict(ok, complete)}** " + "; ".join(
+    md.append(f"**{pre}-P1 (dcinjcanon below DC on both case118 sets, every seed): {verdict(ok, complete)}** " + "; ".join(
         f"{g} {rng(v)} vs DC {ref.get(g, {}).get('DC', math.nan):.3g}" for g, v in cells) + "\n")
     v = get("dcinjcanon", "source", "case500_goc")
     complete = len(v) == 3 and "case500_goc" in ref
-    md.append(f"**X3-P2 (dcinjcanon below DC on case500_goc, every seed): "
+    md.append(f"**{pre}-P2 (dcinjcanon below DC on case500_goc, every seed): "
               f"{verdict(complete and (v < ref['case500_goc']['DC']).all(), complete)}** {rng(v)} vs DC "
               f"{ref.get('case500_goc', {}).get('DC', math.nan):.3g}\n")
     if "plain" in present:
         cells = [(g, n, get("plain", n, g)) for g in ("case118_ieee", "case500_goc") for n in ("source", "refit")]
         complete = all(len(v) == 3 for *_, v in cells)
         ok = complete and all((v > ref[g]["DC"]).all() for g, _, v in cells)
-        md.append(f"**X3-P3 (plain above DC on case118_ieee and case500_goc, every seed, either normalizer): "
+        md.append(f"**{pre}-P3 (plain above DC on case118_ieee and case500_goc, every seed, either normalizer): "
                   f"{verdict(ok, complete)}** " + "; ".join(f"{g}/{n} {rng(v)}" for g, n, v in cells) + "\n")
     v = get("dcinjcanon", "source", "case2000_goc")
     complete = len(v) == 3 and "case2000_goc" in ref
-    md.append(f"**X3-P4 (on case2000_goc at least one dcinjcanon seed above DC): "
+    md.append(f"**{pre}-P4 (on case2000_goc at least one dcinjcanon seed above DC): "
               f"{verdict(complete and (v > ref['case2000_goc']['DC']).any(), complete)}** {rng(v)} vs DC "
               f"{ref.get('case2000_goc', {}).get('DC', math.nan):.3g}\n")
     cells = []
@@ -165,7 +171,7 @@ def main():
                 cells.append((g, a, n, v, ref.get(g, {}).get(key, math.nan)))
     complete = bool(cells) and all(len(c[3]) == 3 for c in cells)
     ok = complete and all((v >= r).all() for *_, v, r in cells)
-    md.append(f"**X3-P5 (no learned arm below fast-decoupled from the same inputs after 5 iterations on 118 / 500 / 2000): "
+    md.append(f"**{pre}-P5 (no learned arm below fast-decoupled from the same inputs after 5 iterations on 118 / 500 / 2000): "
               f"{verdict(ok, complete)}** " + "; ".join(f"{g}/{a}/{n} min {np.nanmin(v) if len(v) else math.nan:.3g} vs {r:.3g}"
                                                        for g, a, n, v, r in cells) + "\n")
     (root / opts.out).write_text("\n".join(md))

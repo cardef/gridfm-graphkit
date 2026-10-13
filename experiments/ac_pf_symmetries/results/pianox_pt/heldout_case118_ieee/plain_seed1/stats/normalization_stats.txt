@@ -1,0 +1,93 @@
+Data Normalizer subnet_case10480_goc_idx_26 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(105.1658), 'vn_kv_max': tensor(345.)}
+
+Data Normalizer subnet_case10480_goc_idx_39 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(76.2985), 'vn_kv_max': tensor(345.)}
+
+Data Normalizer subnet_case10480_goc_idx_40 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(91.1520), 'vn_kv_max': tensor(345.)}
+
+Data Normalizer subnet_case10480_goc_idx_44 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(120.5660), 'vn_kv_max': tensor(345.)}
+
+Data Normalizer subnet_case19402_goc_idx_29 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(86.3919), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case19402_goc_idx_36 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(110.6864), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case19402_goc_idx_37 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(92.8650), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case19402_goc_idx_46 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(111.9037), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case19402_goc_idx_47 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(66.2292), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case20758_epigrids_idx_49 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(114.6935), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case30000_goc_idx_37 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(72.4735), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case30000_goc_idx_40 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(104.0161), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case4619_goc_idx_12 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(108.5062), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case4619_goc_idx_36 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(61.1638), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case4837_goc_idx_28 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(113.1722), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case4837_goc_idx_35 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(128.7000), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case4837_goc_idx_37 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(87.), 'vn_kv_max': tensor(345.)}
+
+Data Normalizer subnet_case4837_goc_idx_40 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(101.7658), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case4837_goc_idx_7 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(76.), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case4917_goc_idx_15 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(101.5168), 'vn_kv_max': tensor(161.)}
+
+Data Normalizer subnet_case4917_goc_idx_24 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(241.8781), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case4917_goc_idx_33 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(141.4865), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case4917_goc_idx_50 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(193.3131), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case5658_epigrids_idx_29 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(55.5963), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case5658_epigrids_idx_30 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(140.2778), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case5658_epigrids_idx_8 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(113.7122), 'vn_kv_max': tensor(500.)}
+
+Data Normalizer subnet_case7336_epigrids_idx_47 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(90.), 'vn_kv_max': tensor(345.)}
+
+Data Normalizer subnet_case9591_goc_idx_11 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(48.7802), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case9591_goc_idx_12 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(57.4727), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case9591_goc_idx_43 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(77.2019), 'vn_kv_max': tensor(765.)}
+
+Data Normalizer subnet_case9591_goc_idx_45 stats:
+{'baseMVA_orig': tensor(100.), 'baseMVA': tensor(50.0755), 'vn_kv_max': tensor(345.)}
+
