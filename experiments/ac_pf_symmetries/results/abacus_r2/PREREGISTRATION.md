@@ -364,7 +364,7 @@ and 1,000 samples (`results/pianox_pt/PUBLIC.txt`). Rule: 3 seeds; "every seed" 
 | X3-P5 | against physics | on case118_ieee, case500_goc and case2000_goc no learned arm below fast-decoupled from the same inputs after 5 iterations, REF voltage from the inputs for dcinjcanon and plain, given for dcinjvref | a learned model beats physics from the same inputs on an unseen grid |
 | X3-P6 | exploratory | — | the public checkpoints against our arms; dcinjvref against dcinjcanon; the small grids below the training sizes; the offset / rest split; the in-distribution error on the training subgrids; time per epoch and per forward |
 
-## Piano X, X3 diagnosis and amendment X3a (the injection decoder with gain 0.01), fixed 2026-10-13 08:00 before any X3 zero-shot number
+## Piano X, X3 diagnosis and amendment X3a (the injection decoder with gain 0.01), fixed 2026-10-13 07:15 (commit dd16233) before any X3 zero-shot number and before the X3a runs started
 
 Observation (X3 training curves, epochs 0-23, `metrics.csv`): all six injection runs collapse at least once. The
 validation loss goes from 0.12-0.15 (below plain's 0.17-0.18) to 0.9-12.8, with the per-layer physics residual flat at
