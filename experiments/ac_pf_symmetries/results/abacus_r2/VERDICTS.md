@@ -406,3 +406,23 @@ third, and a learned accelerator pays off only if it costs less than one iterati
 the smallest backbone's forward costs more than the converged physics; GPU not measured (the paper's speed-ups are GPU
 against PowerModels' AC-PF). The slowest mode of the iteration is the common offset relative to the slack, the same
 global quantity the learned models fail to infer: before any learning, a classical acceleration is the baseline (X0b).
+
+## Piano X, X0b: Anderson-accelerated fast-decoupled (X0b-P1-X0b-P3, 2026-10-13)
+
+`frontier.py` at 7ff3319 (srun job 63194), same scenarios, starts and REF-voltage modes as X0;
+`results/pianox/FRONTIER_anderson.txt`, `frontier_anderson_<case>.json`. The plain fast-decoupled rerun in the same job
+reproduces X0 at every printed digit.
+
+| id | verdict | what the numbers say (VA in deg, case14 / 30 / 57 / 118 / 500 / 2000) |
+|---|---|---|
+| X0b-P1 | FAIL | Anderson with memory 3, REF voltage given, after 3 iterations: 0.0098 / 0.0101 / 0.057 / 0.074 / **0.123** / **0.241**, against plain 0.055 / 0.041 / 0.213 / 0.022 / 0.044 / 0.148: below 0.1 on the four IEEE grids, above it on case500 and case2000, where Anderson is worse than plain at iterations 2-4. Below 0.1 deg after 2 / 3 / 3 / 3 / 4 / 4 iterations, against plain's 3 / 3 / 5 / 3 / 3 / 4. Registered reading: on the large grids the early offset mode is not taken by classical acceleration; a learned accelerator would have room there |
+| X0b-P2 | PASS | case57 after 12 iterations 6.0e-6 deg, against plain 0.061 and rising: the slow mode is accelerated away |
+| X0b-P3 (exploratory) | — | memory 2 and 3 alike. Anderson reaches the exact solution on every grid within 7-10 iterations (VA at most 6e-6 deg; no scenario with mismatch above 1e-4 after 12, where plain leaves 981-1024 of 1024 above it on case14, case30, case57 and case2000). Its overhead in this Python code is 0.7-0.8x a plain iteration on case2000 (1.07-1.13 ms against 0.63). The inputs-only runs reach the same floors |
+
+Reading: on every new grid tested the physics iteration is itself the zero-shot solver: 0.1 deg in 2-5 iterations and
+the exact solution in 7-10 with Anderson, at 2.4-2.9x the DC cost. The margin left to a learned accelerator is bounded
+and small. On case2000 with the REF voltage given, reaching 0.1 deg takes 4 plain iterations, 9.8 ms or 2.5x DC; a
+perfect accelerator reaching it in 2 would save 1.26 ms, 13% of the cost of a new topology, because the two
+factorizations take 6.9 ms; only when many scenarios share a topology and the factorizations are amortized could the
+saving approach 2x. It must cost less than 0.63 ms per iteration it replaces; the smallest GENCO backbone costs 74 ms per
+graph on this CPU.
