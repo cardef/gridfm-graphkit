@@ -52,9 +52,11 @@ ARMS = {
     "gp": None,  # Piano K GP: +vref +canon +resnorm +dc (COMPOSED)
     "dcloopcanon": DCLoopLayers,  # Piano X: the P-theta step of fast-decoupled in every layer, no learned angle
     "dcloopvref": DCLoopLayers,
+    "dcloopgcanon": partial(DCLoopLayers, guard=True),  # X4b: the loop with the damped-Newton safeguard
+    "dcloopgvref": partial(DCLoopLayers, guard=True),
 }
 LOCAL = {"m3canon"}  # Piano A M3: the S3 frame per bus (local dimensionless inputs) instead of per graph
-VREF = {"canonvref", "dcinjvref", "gp", "dcloopvref"}  # the task with the REF voltage given (UnmaskRefVoltage)
+VREF = {"canonvref", "dcinjvref", "gp", "dcloopvref", "dcloopgvref"}  # the task with the REF voltage given (UnmaskRefVoltage)
 LAYERS = {"dcinj1hop": 1}  # GNS depth overrides: one layer = one hop and no physics feedback
 PLAIN = {"plain"}  # no Canonicalize wrapper
 DATA_ROOT = Path(os.environ.get("SYMFM_DATA_ROOT", ROOT / "data"))  # node-local copy on the GPU runs (X3)

@@ -400,6 +400,39 @@ def test_dc_loop_reaches_the_labelled_angles_given_the_labelled_voltages(loader,
     assert not wrapped.model.node_residuals_layer._forward_hooks
 
 
+def test_guarded_dc_loop_still_reaches_the_labelled_angles(loader, args):
+    """The safeguard accepts every step that reduces the mismatch, so with the labelled voltages it converges too."""
+    deep = copy.deepcopy(args)
+    deep.model.num_layers = 12
+    torch.manual_seed(0)
+    wrapped = DCLoopLayers(load_model(deep), guard=True).eval()
+    data = next(iter(loader))
+    target, _, _ = _build_bus_target(data, data["bus"].x.size(0))
+    wrapped.model.mlp_bus.mlp_bus = _LabelledVoltage(target[:, VM_OUT])
+    with torch.no_grad():
+        out = wrapped(data)
+    free = ~data.mask_dict["REF"]
+    assert (out["bus"][free, VA_OUT] - target[free, VA_OUT]).abs().max() < 1e-3
+
+
+def test_guarded_dc_loop_stays_bounded_where_the_plain_loop_runs_away(loader, args):
+    """With voltages at 0.3 pu the transfer the loads need is not reachable: the plain loop piles up mismatch, the
+    guarded one keeps the angles bounded."""
+    deep = copy.deepcopy(args)
+    deep.model.num_layers = 12
+    data = next(iter(loader))
+    low = torch.full((data["bus"].x.size(0),), 0.3)
+    spread = {}
+    for guard in (False, True):
+        torch.manual_seed(0)
+        wrapped = DCLoopLayers(load_model(deep), guard=guard).eval()
+        wrapped.model.mlp_bus.mlp_bus = _LabelledVoltage(low)
+        with torch.no_grad():
+            spread[guard] = wrapped(data)["bus"][:, VA_OUT].abs().max()
+    assert torch.isfinite(spread[True]) and spread[True] < spread[False]
+    assert spread[True] < 2 * math.pi
+
+
 def test_dc_loop_inside_canonicalize_is_exactly_equivariant(loader, args):
     torch.manual_seed(0)
     model = Canonicalize(DCLoopLayers(load_model(args))).fit_scale_ref(loader).eval()

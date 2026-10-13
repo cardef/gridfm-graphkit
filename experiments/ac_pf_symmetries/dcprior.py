@@ -179,11 +179,18 @@ class _DCLoopDecoder(nn.Module):
 
 class DCLoopLayers(nn.Module):
     """GNS with the P-theta step of fast-decoupled in every layer: s += GENCO's active residual, on the REF-connected
-    buses (module docstring)."""
+    buses (module docstring).
 
-    def __init__(self, model):
+    guard=True (X4b) adds the safeguard of damped Newton, per graph: a step after which the norm of the active residual
+    grows is undone and retried from the last accepted point with half the gain. With wrong voltages (early training)
+    the P-theta problem can have no solution and the plain loop then accumulates mismatch without bound (X4: angles of
+    thousands of radians); the guarded loop keeps s bounded and, where the steps keep reducing the mismatch, is the
+    plain loop."""
+
+    def __init__(self, model, guard=False):
         super().__init__()
         self.model = model
+        self.guard = guard
         base = gns_of(model)
         base.mlp_bus = _DCLoopDecoder(base.mlp_bus)
 
@@ -199,8 +206,25 @@ class DCLoopLayers(nn.Module):
         ctx = {"system": system, "theta_dc": theta_dc, "conn": conn.to(p.dtype), "zero": theta_ref.new_zeros(theta_ref.shape),
                "s": torch.zeros_like(p)}
 
+        batch, n_graphs = system["batch"], system["n_graphs"]
+        free = ctx["conn"] * (~system["ref"]).to(p.dtype)
+        guard = {"gamma": p.new_ones(n_graphs), "norm": None, "r": torch.zeros_like(p), "last": torch.zeros_like(p)}
+
         def step(module, inputs, outputs):  # outputs = (residual_P, residual_Q) of the layer just decoded
-            ctx["s"] = ctx["s"] + outputs[0] * ctx["conn"]
+            r = outputs[0] * ctx["conn"]
+            if not self.guard:
+                ctx["s"] = ctx["s"] + r
+                return
+            norm = p.new_zeros(n_graphs).index_add(0, batch, (r * free) ** 2)
+            accept = torch.ones_like(norm, dtype=torch.bool) if guard["norm"] is None else norm <= guard["norm"]
+            keep = accept[batch]
+            gamma = torch.where(accept, guard["gamma"], guard["gamma"] / 2)
+            base_r = torch.where(keep, r, guard["r"])  # step from the last accepted point
+            s = torch.where(keep, ctx["s"], ctx["s"] - guard["last"])  # undo a step that made things worse
+            new = gamma[batch] * base_r
+            ctx["s"] = s + new
+            guard.update(gamma=gamma, r=base_r, last=new,
+                         norm=norm if guard["norm"] is None else torch.where(accept, norm, guard["norm"]))
 
         base.mlp_bus.ctx = ctx
         hook = base.node_residuals_layer.register_forward_hook(step)
