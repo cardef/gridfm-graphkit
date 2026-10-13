@@ -1,0 +1,20 @@
+{
+ "grid": "case2000_goc",
+ "model": "pretrained",
+ "ckpt": "/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO/SymmetricalFM/gridfm-graphkit/data/genco_transfer/pretraining/best_model_state_dict.pt",
+ "baseMVA": 119.91600013279346,
+ "n": 1024,
+ "acc": {
+  "VM": 0.01955940398571927,
+  "VA": 0.2343485871838992,
+  "PG": 7.868620468787521,
+  "QG": 0.249409824623618,
+  "VA_cm": 0.18477106776711394,
+  "VA_diff": 0.1441489259245451,
+  "dVA": 0.018072223934000115,
+  "VM_PQ": 0.019564625815649533,
+  "VA_cm_signed": 0.1357393102054617,
+  "PBE": 0.6054203186035156
+ },
+ "unexpected_keys": []
+}

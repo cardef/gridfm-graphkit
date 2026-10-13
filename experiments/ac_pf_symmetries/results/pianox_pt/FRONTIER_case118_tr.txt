@@ -1,0 +1,11 @@
+Detected 11 Hive partitions — using streaming mode.
+Streaming 11 partitions...
+case118_tr | 1024 scenarios, 118 buses | median ms per scenario: DC 0.474 (factor 0.446, solve 0.0275), B'' factor 0.361, fdpf iteration 0.0625 | cost relative to DC: fdpf k=1 1.89, fdpf k=2 2.03, fdpf k=3 2.16, fdpf k=5 2.42
+  fdpf   given  VA by k: 0:2.3 1:0.639 2:0.277 3:0.0387 4:0.0177 5:0.00945 6:0.00514 7:0.00281 8:0.00154 9:0.000846 10:0.000464 11:0.000255 12:0.00014 | first k below 0.1 deg: 3, below 0.01: 5 | worst scenario at k=2: 1.82 | unconverged after 12: 4
+      k=1: VA 0.639 offset 0.414 rest 0.486 dVA 0.426 VM_PQ 0.00268
+      k=2: VA 0.277 offset 0.229 rest 0.156 dVA 0.0663 VM_PQ 0.000489
+      k=5: VA 0.00945 offset 0.00757 rest 0.00566 dVA 0.00186 VM_PQ 1.46e-05
+  fdpf   inputs VA by k: 0:2.3 1:0.759 2:0.477 3:0.298 4:0.303 5:0.301 6:0.301 7:0.301 8:0.301 9:0.301 10:0.301 11:0.301 12:0.301 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 1.99 | unconverged after 12: 4
+      k=1: VA 0.759 offset 0.584 rest 0.485 dVA 0.43 VM_PQ 0.00269
+      k=2: VA 0.477 offset 0.45 rest 0.16 dVA 0.0945 VM_PQ 0.000814
+      k=5: VA 0.301 offset 0.298 rest 0.0458 dVA 0.0608 VM_PQ 0.000621
