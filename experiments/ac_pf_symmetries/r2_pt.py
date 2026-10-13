@@ -87,8 +87,8 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--runs", type=Path, default=PT, help="results root of the runs (X3: results/pianox_pt)")
     p.add_argument("--out", default="REPORT_pt.md", help="report file name, written in --runs")
-    a = p.parse_args()
-    root = a.runs if a.runs.is_absolute() else Path(__file__).resolve().parent / a.runs
+    opts = p.parse_args()
+    root = opts.runs if opts.runs.is_absolute() else Path(__file__).resolve().parent / opts.runs
     ref, runs = references(), load_runs(root)
     present = [arm for arm in ARMS if any(k[0] == arm for k in runs)]
     pub = {}
@@ -168,7 +168,7 @@ def main():
     md.append(f"**X3-P5 (no learned arm below fast-decoupled from the same inputs after 5 iterations on 118 / 500 / 2000): "
               f"{verdict(ok, complete)}** " + "; ".join(f"{g}/{a}/{n} min {np.nanmin(v) if len(v) else math.nan:.3g} vs {r:.3g}"
                                                        for g, a, n, v, r in cells) + "\n")
-    (root / a.out).write_text("\n".join(md))
+    (root / opts.out).write_text("\n".join(md))
     print("\n".join(md))
 
 
