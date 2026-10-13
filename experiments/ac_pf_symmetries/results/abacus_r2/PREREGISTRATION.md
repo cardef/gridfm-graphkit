@@ -302,3 +302,20 @@ fixed. Full text: `SymmetricalFM/Piano K — Transfer zero-shot a nuove topologi
 | K-P3 | is +dc a floor? | +dc <= 1.1 x DC at every k, every seed | the anchor stops being a floor on stressed topologies |
 | K-P4 | the hybrid | PH below 0.3 deg VA and 0.003 p.u. VM on PQ buses at every k, below every learned arm | the REF voltage depends on the topology more than the in-distribution R^2 suggests |
 | K-P5 | gate | damped Newton with the labelled REF voltage reproduces the labels to 1e-5 deg on every scenario at every k; on our k = 1 set the released checkpoints err within 10% of their official-test error | our N-k sets are not comparable with the public set: regenerate |
+
+## Piano X, X0: the physics frontier on new grids (X0-P1-X0-P4), fixed 2026-10-13 before running
+
+Question: on grids no model was trained on, how accurate is physics from the same inputs at a learned surrogate's
+compute budget, and how many iterations are left for a learned component to save? Setting: `frontier.py` on the fixed
+1024 zero-shot scenarios of case14_ieee, case30_ieee, case57_ieee, case118_ieee, case500_goc, case2000_goc; DC start;
+fast-decoupled (12 iterations) and damped Newton (6) recorded after every iteration; REF voltage given and from the
+inputs; costs per scenario with the same sparse code (scipy SuperLU, one thread), factorizations included; the GENCO
+backbone's forward time on the same graphs (random weights, 4 threads, batch 1 and 32) for scale. Thresholds apply to
+the RMS over scenarios. Full text: `SymmetricalFM/Piano X — Estrapolazione zero-shot su topologie interamente nuove.md`.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| X0-P1 | does physics already transfer at a surrogate's budget? | with the REF voltage given, fast-decoupled from the DC start below 0.5 deg VA after 2 iterations on every grid, and below 0.05 deg after 5 | where it needs more iterations, a learned accelerator has room: those grids become X1's targets |
+| X0-P2 | cost | on case2000_goc, the DC start plus 2 fast-decoupled iterations cost at most 4x the DC solve (median per scenario, factorizations included) | fast-decoupled is too expensive at a surrogate's budget: a single-pass learned model keeps a cost niche |
+| X0-P3 | where the inputs-only floor comes from | with the REF voltage from the inputs, fast-decoupled after 5 iterations within 20% of its 12-iteration VA on every grid | the inputs-only error is not only the hidden setpoint: the iteration itself is slow there |
+| X0-P4 | exploratory | — | Newton per iteration and its divergences; worst scenarios; iterations to 0.1 and 0.01 deg; the backbone's forward time against fast-decoupled's |
