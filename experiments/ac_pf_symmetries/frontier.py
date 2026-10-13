@@ -11,6 +11,7 @@ Tiny / Small / Base, random weights: the cost does not depend on them) on the sa
 
 python -m experiments.ac_pf_symmetries.frontier case14_ieee case30_ieee case57_ieee case118_ieee case500_goc case2000_goc
     [--n 1024] [--out results/pianox]   # one json per grid in --out, a text summary on stdout
+X0b: --methods anderson2 anderson3 --tag anderson --no-backbone (Anderson acceleration of the fast-decoupled map)
 """
 
 import argparse
@@ -61,6 +62,57 @@ def fdpf_trace(y, p_spec, q_spec, pqi, free, vm0, th0, lu_p, lu_q, steps):
         vm[pqi] += lu_q.solve(((q_spec - (v * np.conj(y @ v)).imag) / vm)[pqi])
         times.append(time.perf_counter() - t0)
         states.append((vm.copy(), th.copy()))
+    return states, times
+
+
+def fdpf_map(y, p_spec, q_spec, pqi, free, vm, th, lu_p, lu_q):
+    """One full fast-decoupled iteration (P-theta half then Q-V half), as in fdpf_trace."""
+    vm, th = vm.copy(), th.copy()
+    v = vm * np.exp(1j * th)
+    th[free] += lu_p.solve(((p_spec - (v * np.conj(y @ v)).real) / vm)[free])
+    v = vm * np.exp(1j * th)
+    vm[pqi] += lu_q.solve(((q_spec - (v * np.conj(y @ v)).imag) / vm)[pqi])
+    return vm, th
+
+
+def anderson_trace(y, p_spec, q_spec, pqi, free, vm0, th0, lu_p, lu_q, steps, mem):
+    """Anderson acceleration (type II, memory `mem`, full mixing) of the fast-decoupled map: its fixed points are the
+    map's, i.e. the exact AC solution; each step costs one map evaluation plus a least squares of size `mem`. The
+    memory restarts when the fixed-point residual grows. State and wall-clock after every step."""
+    nf = len(free)
+
+    def pack(vm, th):
+        return np.r_[th[free], vm[pqi]]
+
+    def unpack(x):
+        vm, th = vm0.copy(), th0.copy()
+        th[free], vm[pqi] = x[:nf], x[nf:]
+        return vm, th
+
+    x = pack(vm0, th0)
+    gs, fs, prev = [], [], np.inf
+    states, times = [], []
+    for _ in range(steps):
+        t0 = time.perf_counter()
+        gx = pack(*fdpf_map(y, p_spec, q_spec, pqi, free, *unpack(x), lu_p, lu_q))
+        f = gx - x
+        nrm = np.linalg.norm(f)
+        if nrm > prev:
+            gs, fs = [], []
+        prev = nrm
+        gs.append(gx)
+        fs.append(f)
+        if len(fs) > mem + 1:
+            gs.pop(0)
+            fs.pop(0)
+        if len(fs) == 1:
+            x = gx
+        else:
+            d_f = np.stack([fs[i + 1] - fs[i] for i in range(len(fs) - 1)], axis=1)
+            d_g = np.stack([gs[i + 1] - gs[i] for i in range(len(gs) - 1)], axis=1)
+            x = gx - d_g @ np.linalg.lstsq(d_f, f, rcond=None)[0]
+        times.append(time.perf_counter() - t0)
+        states.append(unpack(x))
     return states, times
 
 
@@ -140,6 +192,8 @@ def main():
     p.add_argument("--newton-steps", type=int, default=6)
     p.add_argument("--out", type=Path, default=OUT)
     p.add_argument("--no-backbone", action="store_true")
+    p.add_argument("--methods", nargs="+", default=["fdpf", "newton"], help="fdpf, newton, anderson<m>")
+    p.add_argument("--tag", default="", help="suffix of the json files (frontier_<tag>_<case>.json)")
     a = p.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", "4")))
@@ -175,11 +229,14 @@ def main():
             th_dc = dc_angles(data).double().numpy()
             for vref, vm0 in (("given", vm_given), ("inputs", vm_in)):
                 errors(acc, ("dc", vref, 0), vm0, th_dc, target, m, vmask, pq, f, t)
-                for meth in ("fdpf", "newton"):
+                for meth in a.methods:
                     if meth == "fdpf":
                         states, times = fdpf_trace(y, p_spec, q_spec, pqi, free, vm0, th_dc, lu_p, lu_q, a.fdpf_steps)
-                    else:
+                    elif meth == "newton":
                         states, times = newton_trace(y, p_spec, q_spec, pv, pq, vm0, th_dc, a.newton_steps)
+                    else:
+                        states, times = anderson_trace(y, p_spec, q_spec, pqi, free, vm0, th_dc, lu_p, lu_q,
+                                                       a.fdpf_steps, int(meth.removeprefix("anderson")))
                     tim[f"{meth} iteration"] += times
                     for k, (vm, va) in enumerate(states, 1):
                         r = errors(acc, (meth, vref, k), vm, va, target, m, vmask, pq, f, t)
@@ -193,9 +250,11 @@ def main():
 
         med = {k: float(np.median(v)) * 1e3 for k, v in tim.items()}
         dc_ms, bpp_ms = med["dc factor"] + med["dc solve"], med["B'' factor"]
-        cost = {f"fdpf k={k}": (dc_ms + bpp_ms + k * med["fdpf iteration"]) / dc_ms for k in (1, 2, 3, 5)}
-        cost.update({f"newton k={k}": (dc_ms + k * med["newton iteration"]) / dc_ms for k in (1, 2, 3)})
-        steps = {"fdpf": a.fdpf_steps, "newton": a.newton_steps}
+        cost = {}
+        for meth in a.methods:
+            it = med[f"{meth} iteration"]
+            cost.update({f"{meth} k={k}": (dc_ms + (0 if meth == "newton" else bpp_ms) + k * it) / dc_ms for k in (1, 2, 3, 5)})
+        steps = {meth: a.newton_steps if meth == "newton" else a.fdpf_steps for meth in a.methods}
         res = {"case": case, "n": len(sub), "n_bus": n_bus, "ms_median": med, "cost_rel_dc": cost, "metrics": {},
                "worst_scenario_VA": {}, "unconverged_1e-4": {f"{k[0]} {k[1]}": v for k, v in unconv.items()}}
         for vref in ("given", "inputs"):
@@ -205,9 +264,9 @@ def main():
                     res["metrics"][f"{meth} {vref} k={k}"] = {q: val(meth, vref, k, q) for q in Q}
                     res["worst_scenario_VA"][f"{meth} {vref} k={k}"] = worst[meth, vref, k]
         print(f"{case} | {len(sub)} scenarios, {n_bus} buses | median ms per scenario: DC {dc_ms:.3g} (factor "
-              f"{med['dc factor']:.3g}, solve {med['dc solve']:.3g}), B'' factor {bpp_ms:.3g}, FDPF iteration "
-              f"{med['fdpf iteration']:.3g}, Newton iteration {med['newton iteration']:.3g} | cost relative to DC: "
-              + ", ".join(f"{k} {v:.2f}" for k, v in cost.items()), flush=True)
+              f"{med['dc factor']:.3g}, solve {med['dc solve']:.3g}), B'' factor {bpp_ms:.3g}, "
+              + ", ".join(f"{meth} iteration {med[meth + ' iteration']:.3g}" for meth in a.methods)
+              + " | cost relative to DC: " + ", ".join(f"{k} {v:.2f}" for k, v in cost.items()), flush=True)
         for meth, n_it in steps.items():
             for vref in ("given", "inputs"):
                 va = [val("dc", vref, 0, "VA")] + [val(meth, vref, k, "VA") for k in range(1, n_it + 1)]
@@ -223,7 +282,7 @@ def main():
             print("  backbone (12 layers, random weights): " + "; ".join(
                 f"hidden {b['hidden']} {b['params_M']:.2f} M params {b['ms_per_graph_batch1']:.3g} ms/graph batch 1, "
                 f"{b['ms_per_graph_batch32']:.3g} batch 32" for b in res["backbone"]), flush=True)
-        (a.out / f"frontier_{case}.json").write_text(json.dumps(res, indent=1))
+        (a.out / f"frontier_{a.tag + '_' if a.tag else ''}{case}.json").write_text(json.dumps(res, indent=1))
 
 
 if __name__ == "__main__":

@@ -385,3 +385,24 @@ grids. The hybrid PH shows what a learned component competes against on topologi
 the REF-voltage guess, and that a 0.40-R^2 regressor already reaches; dcinjcanon is below it only at k <= 3. Next,
 not run: dcinjcanon with the REF voltage given (its VM is 2x gp's), its stability margin against k and against the
 training budget, and the released architecture retrained with the injection decoder at full budget.
+
+## Piano X, X0: the physics frontier on new grids (X0-P1-X0-P4, 2026-10-13)
+
+`frontier.py` at ab78fab (srun job 63189), the fixed 1024 zero-shot scenarios of each grid, DC start, REF voltage given
+and from the inputs; `results/pianox/FRONTIER.txt` and `frontier_<case>.json`. Costs are medians per scenario with
+the same sparse code on one thread; the backbone's forward time uses 4 threads on the same CPU.
+
+| id | verdict | what the numbers say (VA in deg, case14 / 30 / 57 / 118 / 500 / 2000) |
+|---|---|---|
+| X0-P1 | FAIL | fast-decoupled with the REF voltage given, after 2 iterations: 0.155 / 0.104 / 0.439 / 0.305 / **0.529** / **1.61**: above 0.5 on the two GOC grids, where it is 94-97% common offset (0.50 of 0.53, 1.56 of 1.61); after 5: 0.0148 / 0.0087 / **0.069** / 0.00052 / 0.00054 / 0.0061: above 0.05 on case57, where the iteration converges slowly and does not settle (0.038 at 8 iterations, 0.061 at 12). Below 0.1 deg after 3 / 3 / 5 / 3 / 3 / 4 iterations. Registered reading: the room for acceleration is the offset mode at 2-3 iterations on the large grids, and case57 |
+| X0-P2 | PASS | case2000: DC 3.92 ms (factor 3.58, solve 0.34), B'' factor 3.34, one fast-decoupled iteration 0.63: DC plus 2 iterations 2.17 x DC, plus 5 iterations 2.66 x. On every grid, 5 iterations cost 2.4-2.7 x DC |
+| X0-P3 | FAIL on case57 only | REF voltage from the inputs, after 5 vs 12 iterations: 0.429 / 0.432, 0.565 / 0.562, **0.115 / 0.088**, 0.235 / 0.235, 0.0709 / 0.0704, 0.329 / 0.332: within 1% except case57 (+30%), where the iteration itself is slow; elsewhere the inputs-only error is the hidden setpoint |
+| X0-P4 (exploratory) | — | damped Newton from the DC start, REF voltage given: below 0.01 deg after 2 iterations on case14/30/57, 3 on case118, 4 on case500 after a first step that overshoots to 26.8 deg, not within 6 on case2000 (88, 35, 5.2, 0.43, 0.14, 0.15 deg; one scenario unconverged); one Newton iteration costs 2.2-12.8 ms against 0.04-0.63 for fast-decoupled. GENCO backbone forward (12 layers, random weights): case2000 hidden 12 / 24 / 48 = 115 / 194 / 490 ms per graph at batch 1, 74 / 163 / 417 at batch 32; case118 46 / 54 / 75 and 5.6 / 11.7 / 29.5. At 2000 buses one forward of the smallest backbone costs 7x the converged fast-decoupled (DC + B'' + 5 iterations = 10.4 ms) and 19x DC |
+
+Reading: on every grid, with the REF voltage given, 4-5 fast-decoupled iterations from the DC start reach 0.0005-0.07
+deg at 2.4-2.7x the DC cost, against 1-10 deg for every learned model evaluated zero-shot on new grids so far. The two
+factorizations are two thirds of that cost on case2000 (6.9 of 10.4 ms): saving iterations can save at most the other
+third, and a learned accelerator pays off only if it costs less than one iteration (0.63 ms there). On this CPU even
+the smallest backbone's forward costs more than the converged physics; GPU not measured (the paper's speed-ups are GPU
+against PowerModels' AC-PF). The slowest mode of the iteration is the common offset relative to the slack, the same
+global quantity the learned models fail to infer: before any learning, a classical acceleration is the baseline (X0b).

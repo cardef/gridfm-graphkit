@@ -319,3 +319,18 @@ the RMS over scenarios. Full text: `SymmetricalFM/Piano X — Estrapolazione zer
 | X0-P2 | cost | on case2000_goc, the DC start plus 2 fast-decoupled iterations cost at most 4x the DC solve (median per scenario, factorizations included) | fast-decoupled is too expensive at a surrogate's budget: a single-pass learned model keeps a cost niche |
 | X0-P3 | where the inputs-only floor comes from | with the REF voltage from the inputs, fast-decoupled after 5 iterations within 20% of its 12-iteration VA on every grid | the inputs-only error is not only the hidden setpoint: the iteration itself is slow there |
 | X0-P4 | exploratory | — | Newton per iteration and its divergences; worst scenarios; iterations to 0.1 and 0.01 deg; the backbone's forward time against fast-decoupled's |
+
+## Piano X, X0b: Anderson-accelerated fast-decoupled (X0b-P1-X0b-P3), fixed 2026-10-13 after X0, before running
+
+Question: does a classical, training-free acceleration remove the slow modes X0 found (the common offset on the large
+grids at 2-3 iterations, case57's slow convergence), leaving nothing for a learned accelerator? Setting:
+`frontier.py --methods anderson2 anderson3`: Anderson acceleration (type II, memory 2 and 3, full mixing, memory
+restart when the fixed-point residual grows) of one full fast-decoupled iteration, so its fixed points are the exact
+AC solutions and each step costs one iteration plus a least-squares problem of size m; same grids, scenarios and DC
+start; REF voltage given and from the inputs.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| X0b-P1 | does classical acceleration take the offset mode? | with the REF voltage given, Anderson with memory 3 below 0.1 deg after 3 iterations on every grid, including case2000 (plain 0.148) and case57 (plain 0.213) | where it does not, a learned accelerator has room that classical acceleration leaves |
+| X0b-P2 | case57 | Anderson with memory 3 below 0.01 deg after 12 iterations on case57 (plain 0.061 and rising) | case57's problem is a map that does not contract, not a slow mode: it needs Newton or damping |
+| X0b-P3 | exploratory | — | memory 2 vs 3; per-iteration overhead of the least squares; the inputs-only runs |

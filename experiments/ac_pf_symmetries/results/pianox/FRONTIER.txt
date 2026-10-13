@@ -1,0 +1,108 @@
+case14_ieee | 1024 scenarios, 14 buses | median ms per scenario: DC 0.27 (factor 0.258, solve 0.0116), B'' factor 0.282, FDPF iteration 0.0359, Newton iteration 2.16 | cost relative to DC: fdpf k=1 2.18, fdpf k=2 2.31, fdpf k=3 2.44, fdpf k=5 2.71, newton k=1 9.03, newton k=2 17.05, newton k=3 25.08
+  fdpf   given  VA by k: 0:1.51 1:0.429 2:0.155 3:0.0548 4:0.0253 5:0.0148 6:0.0098 7:0.0068 8:0.0048 9:0.0034 10:0.00242 11:0.00173 12:0.00123 | first k below 0.1 deg: 3, below 0.01: 6 | worst scenario at k=2: 0.169 | unconverged after 12: 1024
+      k=1: VA 0.429 offset 0.251 rest 0.347 dVA 0.512 VM_PQ 0.00549
+      k=2: VA 0.155 offset 0.0835 rest 0.131 dVA 0.151 VM_PQ 0.00184
+      k=5: VA 0.0148 offset 0.00283 rest 0.0145 dVA 0.0181 VM_PQ 0.000245
+  fdpf   inputs VA by k: 0:1.51 1:0.42 2:0.528 3:0.413 4:0.44 5:0.429 6:0.433 7:0.431 8:0.432 9:0.431 10:0.432 11:0.432 12:0.432 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 0.703 | unconverged after 12: 1024
+      k=1: VA 0.42 offset 0.236 rest 0.348 dVA 0.527 VM_PQ 0.00545
+      k=2: VA 0.528 offset 0.512 rest 0.131 dVA 0.205 VM_PQ 0.00254
+      k=5: VA 0.429 offset 0.429 rest 0.0219 dVA 0.138 VM_PQ 0.00162
+  newton given  VA by k: 0:1.51 1:0.196 2:0.000711 3:1.86e-06 4:1.86e-06 5:1.86e-06 6:1.86e-06 | first k below 0.1 deg: 2, below 0.01: 2 | worst scenario at k=2: 0.000991 | unconverged after 6: 0
+      k=1: VA 0.196 offset 0.18 rest 0.0777 dVA 0.0572 VM_PQ 0.0021
+      k=2: VA 0.000711 offset 0.000633 rest 0.000325 dVA 0.000227 VM_PQ 6.53e-06
+      k=5: VA 1.86e-06 offset 1.78e-06 rest 5.22e-07 dVA 8.63e-07 VM_PQ 5.19e-08
+  newton inputs VA by k: 0:1.51 1:0.277 2:0.431 3:0.432 4:0.432 5:0.432 6:0.432 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 0.626 | unconverged after 6: 0
+      k=1: VA 0.277 offset 0.264 rest 0.0821 dVA 0.127 VM_PQ 0.00189
+      k=2: VA 0.431 offset 0.431 rest 0.0165 dVA 0.137 VM_PQ 0.00158
+      k=5: VA 0.432 offset 0.431 rest 0.0164 dVA 0.137 VM_PQ 0.00159
+  backbone (12 layers, random weights): hidden 12 1.28 M params 37 ms/graph batch 1, 1.83 batch 32; hidden 24 5.05 M params 39.9 ms/graph batch 1, 2.36 batch 32; hidden 48 20.07 M params 49.1 ms/graph batch 1, 5.12 batch 32
+case30_ieee | 1024 scenarios, 30 buses | median ms per scenario: DC 0.3 (factor 0.286, solve 0.0138), B'' factor 0.314, FDPF iteration 0.0414, Newton iteration 2.25 | cost relative to DC: fdpf k=1 2.19, fdpf k=2 2.32, fdpf k=3 2.46, fdpf k=5 2.74, newton k=1 8.50, newton k=2 16.00, newton k=3 23.50
+  fdpf   given  VA by k: 0:1.56 1:0.512 2:0.104 3:0.0405 4:0.0173 5:0.00869 6:0.00504 7:0.00321 8:0.00216 9:0.00148 10:0.00103 11:0.000725 12:0.000509 | first k below 0.1 deg: 3, below 0.01: 5 | worst scenario at k=2: 0.128 | unconverged after 12: 1024
+      k=1: VA 0.512 offset 0.349 rest 0.375 dVA 0.283 VM_PQ 0.00493
+      k=2: VA 0.104 offset 0.0475 rest 0.0921 dVA 0.0782 VM_PQ 0.0013
+      k=5: VA 0.00869 offset 0.00281 rest 0.00822 dVA 0.00854 VM_PQ 0.000127
+  fdpf   inputs VA by k: 0:1.56 1:0.987 2:0.521 3:0.584 4:0.555 5:0.565 6:0.561 7:0.562 8:0.561 9:0.562 10:0.562 11:0.562 12:0.562 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 0.673 | unconverged after 12: 1024
+      k=1: VA 0.987 offset 0.913 rest 0.375 dVA 0.295 VM_PQ 0.00627
+      k=2: VA 0.521 offset 0.513 rest 0.088 dVA 0.139 VM_PQ 0.00223
+      k=5: VA 0.565 offset 0.564 rest 0.0306 dVA 0.114 VM_PQ 0.00239
+  newton given  VA by k: 0:1.56 1:0.13 2:0.000616 3:1.36e-06 4:1.37e-06 5:1.37e-06 6:1.37e-06 | first k below 0.1 deg: 2, below 0.01: 2 | worst scenario at k=2: 0.000736 | unconverged after 6: 0
+      k=1: VA 0.13 offset 0.122 rest 0.0461 dVA 0.0281 VM_PQ 0.0028
+      k=2: VA 0.000616 offset 0.000547 rest 0.000282 dVA 0.000166 VM_PQ 1.14e-05
+      k=5: VA 1.37e-06 offset 1.26e-06 rest 5.22e-07 dVA 6.57e-07 VM_PQ 6.01e-08
+  newton inputs VA by k: 0:1.56 1:0.46 2:0.561 3:0.562 4:0.562 5:0.562 6:0.562 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 0.739 | unconverged after 6: 0
+      k=1: VA 0.46 offset 0.458 rest 0.0432 dVA 0.11 VM_PQ 0.0022
+      k=2: VA 0.561 offset 0.561 rest 0.0284 dVA 0.113 VM_PQ 0.00236
+      k=5: VA 0.562 offset 0.561 rest 0.0285 dVA 0.113 VM_PQ 0.00236
+  backbone (12 layers, random weights): hidden 12 1.28 M params 38.7 ms/graph batch 1, 2.38 batch 32; hidden 24 5.05 M params 42.3 ms/graph batch 1, 4.33 batch 32; hidden 48 20.07 M params 54.3 ms/graph batch 1, 8.79 batch 32
+case57_ieee | 1024 scenarios, 57 buses | median ms per scenario: DC 0.341 (factor 0.324, solve 0.017), B'' factor 0.341, FDPF iteration 0.048, Newton iteration 2.41 | cost relative to DC: fdpf k=1 2.14, fdpf k=2 2.28, fdpf k=3 2.42, fdpf k=5 2.70, newton k=1 8.05, newton k=2 15.11, newton k=3 22.16
+  fdpf   given  VA by k: 0:1.08 1:1.48 2:0.439 3:0.213 4:0.115 5:0.0691 6:0.0472 7:0.0388 8:0.0378 9:0.0408 10:0.0459 11:0.0526 12:0.0607 | first k below 0.1 deg: 5, below 0.01: None | worst scenario at k=2: 0.527 | unconverged after 12: 1024
+      k=1: VA 1.48 offset 1.12 rest 0.963 dVA 0.438 VM_PQ 0.0169
+      k=2: VA 0.439 offset 0.286 rest 0.333 dVA 0.198 VM_PQ 0.00624
+      k=5: VA 0.0691 offset 0.0353 rest 0.0593 dVA 0.0411 VM_PQ 0.00117
+  fdpf   inputs VA by k: 0:1.08 1:1.52 2:0.408 3:0.252 4:0.106 5:0.115 6:0.0704 7:0.0878 8:0.073 9:0.0853 10:0.0791 11:0.091 12:0.0882 | first k below 0.1 deg: 6, below 0.01: None | worst scenario at k=2: 0.752 | unconverged after 12: 1024
+      k=1: VA 1.52 offset 1.17 rest 0.963 dVA 0.439 VM_PQ 0.0172
+      k=2: VA 0.408 offset 0.237 rest 0.332 dVA 0.199 VM_PQ 0.00601
+      k=5: VA 0.115 offset 0.0983 rest 0.0603 dVA 0.0432 VM_PQ 0.00146
+  newton given  VA by k: 0:1.08 1:0.218 2:0.00654 3:7.72e-06 4:6.04e-06 5:6.04e-06 6:6.04e-06 | first k below 0.1 deg: 2, below 0.01: 2 | worst scenario at k=2: 0.00947 | unconverged after 6: 0
+      k=1: VA 0.218 offset 0.196 rest 0.097 dVA 0.0716 VM_PQ 0.0122
+      k=2: VA 0.00654 offset 0.00557 rest 0.00341 dVA 0.00236 VM_PQ 0.0002
+      k=5: VA 6.04e-06 offset 2.36e-06 rest 5.56e-06 dVA 3.23e-06 VM_PQ 2.13e-07
+  newton inputs VA by k: 0:1.08 1:0.176 2:0.0656 3:0.0697 4:0.0698 5:0.0698 6:0.0698 | first k below 0.1 deg: 2, below 0.01: None | worst scenario at k=2: 0.346 | unconverged after 6: 0
+      k=1: VA 0.176 offset 0.148 rest 0.0949 dVA 0.0689 VM_PQ 0.0118
+      k=2: VA 0.0656 offset 0.0653 rest 0.00615 dVA 0.0142 VM_PQ 0.000556
+      k=5: VA 0.0698 offset 0.0695 rest 0.00601 dVA 0.0145 VM_PQ 0.000631
+  backbone (12 layers, random weights): hidden 12 1.28 M params 41.1 ms/graph batch 1, 3.14 batch 32; hidden 24 5.05 M params 46.2 ms/graph batch 1, 5.23 batch 32; hidden 48 20.07 M params 59.7 ms/graph batch 1, 14 batch 32
+case118_ieee | 1024 scenarios, 118 buses | median ms per scenario: DC 0.48 (factor 0.452, solve 0.0286), B'' factor 0.36, FDPF iteration 0.0627, Newton iteration 2.61 | cost relative to DC: fdpf k=1 1.88, fdpf k=2 2.01, fdpf k=3 2.14, fdpf k=5 2.40, newton k=1 6.43, newton k=2 11.87, newton k=3 17.30
+  fdpf   given  VA by k: 0:1.95 1:0.721 2:0.305 3:0.0215 4:0.0031 5:0.000521 6:0.000124 7:3.29e-05 8:9.29e-06 9:2.99e-06 10:1.86e-06 11:1.72e-06 12:1.72e-06 | first k below 0.1 deg: 3, below 0.01: 4 | worst scenario at k=2: 0.406 | unconverged after 12: 0
+      k=1: VA 0.721 offset 0.432 rest 0.578 dVA 0.448 VM_PQ 0.00265
+      k=2: VA 0.305 offset 0.254 rest 0.169 dVA 0.0672 VM_PQ 0.000431
+      k=5: VA 0.000521 offset 0.000258 rest 0.000453 dVA 0.00049 VM_PQ 5.13e-06
+  fdpf   inputs VA by k: 0:1.95 1:0.808 2:0.462 3:0.225 4:0.236 5:0.235 6:0.235 7:0.235 8:0.235 9:0.235 10:0.235 11:0.235 12:0.235 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 0.65 | unconverged after 12: 0
+      k=1: VA 0.808 offset 0.566 rest 0.577 dVA 0.45 VM_PQ 0.00262
+      k=2: VA 0.462 offset 0.429 rest 0.173 dVA 0.0867 VM_PQ 0.000668
+      k=5: VA 0.235 offset 0.233 rest 0.0222 dVA 0.046 VM_PQ 0.000463
+  newton given  VA by k: 0:1.95 1:2.53 2:0.0267 3:3.27e-06 4:1.71e-06 5:1.71e-06 6:1.71e-06 | first k below 0.1 deg: 2, below 0.01: 3 | worst scenario at k=2: 0.03 | unconverged after 6: 0
+      k=1: VA 2.53 offset 2.17 rest 1.29 dVA 0.332 VM_PQ 0.00203
+      k=2: VA 0.0267 offset 0.0227 rest 0.014 dVA 0.00365 VM_PQ 3.48e-05
+      k=5: VA 1.71e-06 offset 1.01e-06 rest 1.39e-06 dVA 1.08e-06 VM_PQ 8.2e-08
+  newton inputs VA by k: 0:1.95 1:2.41 2:0.221 3:0.235 4:0.235 5:0.235 6:0.235 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 0.323 | unconverged after 6: 0
+      k=1: VA 2.41 offset 2.03 rest 1.29 dVA 0.32 VM_PQ 0.00204
+      k=2: VA 0.221 offset 0.22 rest 0.0244 dVA 0.0448 VM_PQ 0.00046
+      k=5: VA 0.235 offset 0.234 rest 0.0222 dVA 0.046 VM_PQ 0.000463
+  backbone (12 layers, random weights): hidden 12 1.28 M params 46 ms/graph batch 1, 5.61 batch 32; hidden 24 5.05 M params 53.7 ms/graph batch 1, 11.7 batch 32; hidden 48 20.07 M params 75 ms/graph batch 1, 29.5 batch 32
+case500_goc | 1024 scenarios, 500 buses | median ms per scenario: DC 1.1 (factor 1.03, solve 0.0661), B'' factor 0.815, FDPF iteration 0.175, Newton iteration 4.62 | cost relative to DC: fdpf k=1 1.90, fdpf k=2 2.06, fdpf k=3 2.22, fdpf k=5 2.54, newton k=1 5.20, newton k=2 9.41, newton k=3 13.61
+  fdpf   given  VA by k: 0:2.52 1:1.1 2:0.529 3:0.0442 4:0.00504 5:0.000537 6:6.48e-05 7:9.98e-06 8:3.61e-06 9:3.45e-06 10:3.4e-06 11:3.41e-06 12:3.41e-06 | first k below 0.1 deg: 3, below 0.01: 4 | worst scenario at k=2: 0.869 | unconverged after 12: 0
+      k=1: VA 1.1 offset 0.914 rest 0.607 dVA 0.334 VM_PQ 0.00318
+      k=2: VA 0.529 offset 0.498 rest 0.178 dVA 0.0384 VM_PQ 0.000195
+      k=5: VA 0.000537 offset 0.000501 rest 0.000193 dVA 0.000118 VM_PQ 1.02e-06
+  fdpf   inputs VA by k: 0:2.52 1:1.07 2:0.463 3:0.113 4:0.0659 5:0.0709 6:0.0704 7:0.0704 8:0.0704 9:0.0704 10:0.0704 11:0.0704 12:0.0704 | first k below 0.1 deg: 4, below 0.01: None | worst scenario at k=2: 0.78 | unconverged after 12: 0
+      k=1: VA 1.07 offset 0.883 rest 0.607 dVA 0.334 VM_PQ 0.00302
+      k=2: VA 0.463 offset 0.427 rest 0.178 dVA 0.0382 VM_PQ 0.00058
+      k=5: VA 0.0709 offset 0.0708 rest 0.00313 dVA 0.00269 VM_PQ 0.000532
+  newton given  VA by k: 0:2.52 1:26.8 2:1.13 3:0.0114 4:4.65e-06 5:3.41e-06 6:3.41e-06 | first k below 0.1 deg: 3, below 0.01: 4 | worst scenario at k=2: 3 | unconverged after 6: 0
+      k=1: VA 26.8 offset 25.6 rest 7.9 dVA 1 VM_PQ 0.00771
+      k=2: VA 1.13 offset 1.1 rest 0.283 dVA 0.0386 VM_PQ 0.00257
+      k=5: VA 3.41e-06 offset 1.95e-06 rest 2.79e-06 dVA 1.23e-06 VM_PQ 3.43e-07
+  newton inputs VA by k: 0:2.52 1:26.7 2:1.2 3:0.0793 4:0.0704 5:0.0704 6:0.0704 | first k below 0.1 deg: 3, below 0.01: None | worst scenario at k=2: 3.18 | unconverged after 6: 0
+      k=1: VA 26.7 offset 25.5 rest 7.9 dVA 0.999 VM_PQ 0.00801
+      k=2: VA 1.2 offset 1.16 rest 0.284 dVA 0.0401 VM_PQ 0.0029
+      k=5: VA 0.0704 offset 0.0703 rest 0.00312 dVA 0.00268 VM_PQ 0.000532
+  backbone (12 layers, random weights): hidden 12 1.28 M params 64.8 ms/graph batch 1, 20.4 batch 32; hidden 24 5.05 M params 83.4 ms/graph batch 1, 43.5 batch 32; hidden 48 20.07 M params 152 ms/graph batch 1, 111 batch 32
+case2000_goc | 1024 scenarios, 2000 buses | median ms per scenario: DC 3.92 (factor 3.58, solve 0.338), B'' factor 3.34, FDPF iteration 0.631, Newton iteration 12.8 | cost relative to DC: fdpf k=1 2.01, fdpf k=2 2.17, fdpf k=3 2.34, fdpf k=5 2.66, newton k=1 4.26, newton k=2 7.53, newton k=3 10.79
+  fdpf   given  VA by k: 0:9.75 1:1.9 2:1.61 3:0.148 4:0.0265 5:0.00611 6:0.00268 7:0.00185 8:0.00149 9:0.00127 10:0.0011 11:0.000973 12:0.00087 | first k below 0.1 deg: 4, below 0.01: 5 | worst scenario at k=2: 3.21 | unconverged after 12: 981
+      k=1: VA 1.9 offset 1.38 rest 1.31 dVA 0.254 VM_PQ 0.00574
+      k=2: VA 1.61 offset 1.56 rest 0.427 dVA 0.048 VM_PQ 0.000474
+      k=5: VA 0.00611 offset 0.00488 rest 0.00366 dVA 0.00238 VM_PQ 4.42e-05
+  fdpf   inputs VA by k: 0:9.75 1:1.94 2:1.85 3:0.31 4:0.344 5:0.329 6:0.332 7:0.331 8:0.332 9:0.332 10:0.332 11:0.332 12:0.332 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 3.42 | unconverged after 12: 981
+      k=1: VA 1.94 offset 1.43 rest 1.31 dVA 0.254 VM_PQ 0.00625
+      k=2: VA 1.85 offset 1.8 rest 0.426 dVA 0.0491 VM_PQ 0.0014
+      k=5: VA 0.329 offset 0.328 rest 0.0239 dVA 0.00553 VM_PQ 0.00132
+  newton given  VA by k: 0:9.75 1:88.4 2:35 3:5.23 4:0.426 5:0.142 6:0.15 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 86.9 | unconverged after 6: 1
+      k=1: VA 88.4 offset 82.9 rest 30.7 dVA 1.81 VM_PQ 0.0146
+      k=2: VA 35 offset 33.5 rest 10.1 dVA 0.667 VM_PQ 0.0269
+      k=5: VA 0.142 offset 0.0873 rest 0.112 dVA 0.123 VM_PQ 0.00162
+  newton inputs VA by k: 0:9.75 1:88.8 2:35.3 3:5.15 4:0.488 5:0.385 6:0.386 | first k below 0.1 deg: None, below 0.01: None | worst scenario at k=2: 86.6 | unconverged after 6: 1
+      k=1: VA 88.8 offset 83.3 rest 30.7 dVA 1.81 VM_PQ 0.0147
+      k=2: VA 35.3 offset 33.8 rest 10.2 dVA 0.67 VM_PQ 0.0261
+      k=5: VA 0.385 offset 0.337 rest 0.186 dVA 0.125 VM_PQ 0.00205
+  backbone (12 layers, random weights): hidden 12 1.28 M params 115 ms/graph batch 1, 73.9 batch 32; hidden 24 5.05 M params 194 ms/graph batch 1, 163 batch 32; hidden 48 20.07 M params 490 ms/graph batch 1, 417 batch 32
