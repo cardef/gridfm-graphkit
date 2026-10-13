@@ -470,3 +470,31 @@ case2000 seed (15.8, offset 14.9) is the best-trained one, which is the amplific
 injection by L^-1 on a high-gain grid. The case2000 result also contradicts the PoC reading of P48 (collapse beyond the
 training size, 8-12x DC): with training grids of 126-987 buses, 5 of the 6 injection seeds are 1.5-4x below DC there. The closed loop
 (dcloop, coded at e8af9ae, not run) removes both the training collapse mechanism and the test-time amplification.
+
+## Piano X, X3a: the injection decoder with gain 0.01 (X3a-P0-X3a-P6, 2026-10-13)
+
+GPU jobs 63231 (H100 abacus-006: seeds 0, 1) and 63232 (H100 abacus-013: seed 2), code dd16233, `--inj-gain 0.01`,
+otherwise X3's setting; all three ran the full 100 epochs. Scored with `r2_pt.py --runs results/pianox_pt_a --out
+REPORT_pt_a.md`. Zero-shot VA in deg.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| X3a-P0 | FAIL | seed 1 stays in the initial stuck state up to epoch 9 (validation 1.0-1.7, peak 1.12 after epoch 5); seeds 0 and 2 never exceed 0.42 and 0.26 after epoch 5. No seed relapses once healthy, against relapses in every X3 injection run |
+| X3a-P1 | PASS | below DC on both case118 sets, every seed: case118_ieee [1.51, 1.88] vs 1.95; case118_tr [1.83, 2.22] vs 2.30 |
+| X3a-P2 | FAIL | case500_goc [1.09, 3.71] vs 2.52: seeds 2.84, 3.71, 1.09 |
+| X3a-P4 | FAIL | no seed above DC on case2000_goc: [3.18, 6.95] vs 9.75 (seeds 3.18, 6.95, 4.97) |
+| X3a-P5 | PASS | best seed 1.51 / 1.09 / 3.18 on 118 / 500 / 2000 against fast-decoupled from the inputs 0.235 / 0.071 / 0.329 |
+| X3a-P6 (exploratory) | — | below |
+
+Exploratory: best validation loss 0.086, 0.079, 0.073 (epochs 97, 94, 97), below every X3 run (injection 0.094-0.150,
+plain 0.144-0.182). Against X3's dcinjcanon, seed by seed: case118 alike (X3 1.57-1.89); case500 alike in spread (X3
+1.60-3.21); case2000 without the outlier (X3 3.09-15.8). VM on PQ buses on case118 0.0011-0.0024, the public pretrained
+model 0.0022. The error on case500 and case2000 is mostly offset (case500 seed 1: 3.50 of 3.71; case2000 seed 1: 6.69 of
+6.95). Below the training sizes (57, 30, 14) the arm sits at DC (0.98-1.01x).
+
+Reading: the gain removes the relapses, as the head-step diagnosis predicted, but not the initial stuck state, which
+has the separate voltage-collapse mechanism; X3a-P0 fails on that state alone. With stable training the decoder
+extrapolates beyond the training sizes better than X3a-P4 expected: every seed is 1.4-3x below DC on case2000. The
+registered reading of that failure applies: once trained on many topologies, the open-loop injection correction is
+amplified less than the PoC suggested. Its weak point is the global offset on case500, where seeds land on either
+side of DC; that is the quantity the closed loop computes from the residual instead of predicting it.
