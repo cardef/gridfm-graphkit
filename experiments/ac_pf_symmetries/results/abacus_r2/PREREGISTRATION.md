@@ -400,3 +400,28 @@ result. Control: X3's plain runs (same data, recipe and epochs). Scored by
 | X3a-P4 | beyond the training sizes | on case2000_goc at least one seed above DC (9.75 deg) | as X3-P4 |
 | X3a-P5 | against physics | on case118_ieee, case500_goc and case2000_goc no seed below fast-decoupled after 5 iterations, REF voltage from the inputs | as X3-P5 |
 | X3a-P6 | exploratory | — | validation loss against plain's; X3a against X3 seed by seed; time per epoch |
+
+## Piano X, X4: GENCO with the closed P-theta loop (X4-P0-X4-P4), fixed 2026-10-13 20:15 before any X4 run, after the X3 and X3a verdicts
+
+Question: if every GENCO layer applies the P-theta step of fast-decoupled with its own active residual, instead of
+predicting the angles (X3) or an open-loop injection correction (X3a), does training stop collapsing, and does the
+model beat DC zero-shot on every large unseen grid, including case500 where the open loop failed?
+
+Arms (`DCLoopLayers`, commit e8af9ae): every layer decodes theta_DC + L^-1 s, and after the layer s += its active
+residual (specified minus computed injection) on the REF-connected buses; the network's angle output is unused, its
+voltages and generator outputs pass through. dcloopcanon (canonicalized, REF voltage hidden as in GENCO's PF mask) and
+dcloopvref (REF voltage given), 3 seeds each. Setting otherwise as X3: the 31 public subgrids, 1,200 scenarios each, up
+to 100 epochs, batch 64, patience 40, the base config's optimizer; zero-shot on the fixed sets of case118_ieee,
+case118_tr, case500_goc, case2000_goc, case57_ieee, case30_ieee, case14_ieee. GPUs: dcloopcanon on H100, dcloopvref on
+H100 and A40 (recorded per run). Scored by `r2_pt.py --runs results/pianox_pt_loop --out REPORT_pt_loop.md`.
+Expectation from the mechanism: given the voltages, twelve layers reach the AC angles (loop check: 0.003-0.00002 deg on
+case14, case118 and two public subgrids), so the angle error is set by the learned voltages; a 1% systematic voltage
+error is worth about 0.6 deg on a grid with a 30 deg angle spread.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| X4-P0 | does the loop remove the initial stuck state? | no seed of either arm has a validation loss above 0.5 at any epoch after the fifth | the voltage collapse has a cause other than the active mismatch the loop removes, or wrong early voltages destabilize the loop |
+| X4-P1 | the decisive one | dcloopcanon's zero-shot VA below DC on case118_ieee (1.95), case118_tr (2.30), case500_goc (2.51) and case2000_goc (9.75), every seed | the learned voltages do not transfer well enough for the loop's angles to beat DC; the Q-V step is needed |
+| X4-P2 | closed against open loop where the open loop failed | dcloopcanon on case500_goc below all six open-loop dcinjcanon seeds of X3 and X3a (minimum 1.09 deg), every seed | closing the loop on the angles alone does not beat the best open-loop seed on case500: the voltage error, not the offset, is the limit |
+| X4-P3 | against physics | on case118_ieee, case500_goc and case2000_goc no closed-loop seed below fast-decoupled from the same inputs after 5 iterations (REF voltage from the inputs for dcloopcanon, given for dcloopvref) | a learned model beats physics from the same inputs on an unseen grid |
+| X4-P4 | exploratory | — | dcloopvref against dcloopcanon; angle error against VM error per grid; the small grids; case2000 against the open loop; time per epoch |
