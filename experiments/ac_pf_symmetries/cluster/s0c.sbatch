@@ -3,7 +3,7 @@
 #SBATCH --partition=vicomtech
 #SBATCH --account=di13
 #SBATCH --qos=qos_di13
-#SBATCH --cpus-per-task=60
+#SBATCH --cpus-per-task=56
 #SBATCH --mem=128G
 #SBATCH --time=08:00:00
 #SBATCH --output=/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO/SymmetricalFM/gridfm-graphkit/experiments/ac_pf_symmetries/cluster/logs/%x-%j.out
@@ -14,7 +14,7 @@ S=/gpfs/VICOMTECH/proiektuak/DI13/SYSTEMICO
 R=$S/SymmetricalFM/gridfm-graphkit
 source $S/env/activate.sh $R
 cd $R
-export OMP_NUM_THREADS=6 MKL_NUM_THREADS=6
+export OMP_NUM_THREADS=5 MKL_NUM_THREADS=5
 echo "HEAD $(git rev-parse HEAD) host=$(hostname) $(date -Is)"
 O=experiments/ac_pf_symmetries/results/pianos/s0c
 mkdir -p $O
