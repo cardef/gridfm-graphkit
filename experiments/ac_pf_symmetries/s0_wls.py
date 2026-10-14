@@ -105,7 +105,9 @@ def assemble(ms, z, sd, prior):
     return (np.where(zero, 0.0, p), np.where(zero, 0.0, q), np.where(zero, FLOOR, sp_), np.where(zero, FLOOR, sq_))
 
 
-def ac_wls(model, mv, ms, mf, z, sd, prior, theta_ref, max_it=30, tol=1e-8):
+def ac_wls(model, mv, ms, mf, z, sd, prior, theta_ref, max_it=30, tol=1e-8, start=None, lm=False):
+    """start: (va, vm) initial state (default flat); lm=True: Levenberg-Marquardt damping (lambda on the diagonal of
+    the gain, x0.1 after an accepted step, x10 and retry after a rejected one) instead of step halving."""
     ybus, yf, cf, _, _, ref = model
     n = ybus.shape[0]
     free = np.flatnonzero(~ref)
@@ -113,7 +115,8 @@ def ac_wls(model, mv, ms, mf, z, sd, prior, theta_ref, max_it=30, tol=1e-8):
     iv, ifl = np.flatnonzero(mv), np.flatnonzero(mf)
     zz = np.r_[z["vm"][iv], p, q, z["pf"][ifl], z["qf"][ifl]]
     w = 1.0 / np.r_[sd["vm"][iv], s_p, s_q, sd["pf"][ifl], sd["qf"][ifl]] ** 2
-    va, vm = np.full(n, theta_ref), np.ones(n)
+    va, vm = (np.full(n, theta_ref), np.ones(n)) if start is None else (start[0].copy(), start[1].copy())
+    lam = 1e-3
 
     def residual(va, vm):
         v = vm * np.exp(1j * va)
@@ -133,17 +136,32 @@ def ac_wls(model, mv, ms, mf, z, sd, prior, theta_ref, max_it=30, tol=1e-8):
             [f_va.imag[ifl][:, free], f_vm.imag[ifl]],
         ], format="csr")
         hw = h.T @ sp.diags(w)
-        dx = splu((hw @ h).tocsc()).solve(hw @ r)
+        gain, rhs = (hw @ h).tocsc(), hw @ r
         step = 1.0
-        for _ in range(12):  # step halving while the weighted residual grows
-            va_t, vm_t = va.copy(), vm.copy()
-            va_t[free] += step * dx[: len(free)]
-            vm_t += step * dx[len(free):]
-            r_t, v_t = residual(va_t, vm_t)
-            cost_t = float((w * r_t * r_t).sum())
-            if cost_t <= cost or step < 1e-3:
-                break
-            step *= 0.5
+        if lm:
+            dg = sp.diags(gain.diagonal())
+            for _ in range(12):
+                dx = splu((gain + lam * dg).tocsc()).solve(rhs)
+                va_t, vm_t = va.copy(), vm.copy()
+                va_t[free] += dx[: len(free)]
+                vm_t += dx[len(free):]
+                r_t, v_t = residual(va_t, vm_t)
+                cost_t = float((w * r_t * r_t).sum())
+                if cost_t <= cost:
+                    lam = max(lam * 0.1, 1e-12)
+                    break
+                lam *= 10
+        else:
+            dx = splu(gain).solve(rhs)
+            for _ in range(12):  # step halving while the weighted residual grows
+                va_t, vm_t = va.copy(), vm.copy()
+                va_t[free] += step * dx[: len(free)]
+                vm_t += step * dx[len(free):]
+                r_t, v_t = residual(va_t, vm_t)
+                cost_t = float((w * r_t * r_t).sum())
+                if cost_t <= cost or step < 1e-3:
+                    break
+                step *= 0.5
         va, vm, r, v, cost = va_t, vm_t, r_t, v_t, cost_t
         if np.abs(step * dx).max() < tol:
             return va, vm, it, True
@@ -191,6 +209,10 @@ def main():
     ap.add_argument("--coverage", nargs="+", type=float, default=[1.0, 0.8, 0.6, 0.4, 0.2])
     ap.add_argument("--noise", type=float, default=0.01)
     ap.add_argument("--prior-sd", type=float, default=0.3)
+    ap.add_argument("--start", choices=["flat", "dc"], default="flat", help="AC WLS start: flat, or the DC WLS angles "
+                    "with |V| = 1 and the measured magnitudes where measured")
+    ap.add_argument("--lm", action="store_true", help="Levenberg-Marquardt damping instead of step halving")
+    ap.add_argument("--max-it", type=int, default=30)
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     args = make_args(SimpleNamespace(epochs=1, batch_size=1, patience=1, layers=12, hidden=48))
@@ -211,6 +233,7 @@ def main():
         prior = {"p": nom.real, "q": nom.imag, "sp": a.prior_sd * np.abs(nom.real) + 0.01 * scale,
                  "sq": a.prior_sd * np.abs(nom.imag) + 0.01 * scale, "zero": np.abs(sh).max(0) < 1e-9}
         res = {"case": case, "n_eval": len(evals), "n_hist": len(hist), "noise": a.noise, "prior_sd": a.prior_sd,
+               "start": a.start, "lm": a.lm, "max_it": a.max_it,
                "zero_injection_buses": int(prior["zero"].sum()), "n_bus": int(sh.shape[1]), "gate": {}, "runs": {}}
         t0 = time.time()
         # S0-P1 gate: zero noise, full coverage
@@ -222,13 +245,15 @@ def main():
             ref = model[5]
             v = tg[:, VM_OUT] * np.exp(1j * tg[:, VA_OUT])
             mv, ms, mf, z, sd = measure(v, model[0], model[1], model[2], 1.0, 0.0, np.random.default_rng(k))
-            va, vm, _, _ = ac_wls(model, mv, ms, mf, z, sd, prior, tg[ref, VA_OUT][0])
+            th_ref = tg[ref, VA_OUT][0]
+            start = None if a.start == "flat" else (dc_wls(model, ms, mf, z, sd, prior, th_ref), np.where(mv, z["vm"], 1.0))
+            va, vm, _, _ = ac_wls(model, mv, ms, mf, z, sd, prior, th_ref, max_it=a.max_it, start=start, lm=a.lm)
             e = np.abs(np.remainder(va - tg[:, VA_OUT] + math.pi, 2 * math.pi) - math.pi)[~ref]
             gmax_va, gmax_vm = max(gmax_va, float(e.max()) * D), max(gmax_vm, float(np.abs(vm - tg[:, VM_OUT]).max()))
         res["gate"] = {"max_VA_deg": gmax_va, "max_VM": gmax_vm, "scenarios": min(32, len(evals))}
         for c in a.coverage:
             acc = {"ac": {}, "dc": {}}
-            its, fails = [], 0
+            its, fails, per = [], 0, []
             for k, d in enumerate(evals):
                 tg, _, _ = _build_bus_target(d, d["bus"].x.size(0))
                 tg = tg.double().numpy()
@@ -240,10 +265,14 @@ def main():
                 rng = np.random.default_rng([k, int(round(c * 1000))])
                 mv, ms, mf, z, sd = measure(v, model[0], model[1], model[2], c, a.noise, rng)
                 th_ref = tg[ref, VA_OUT][0]
-                va, vm, it, ok = ac_wls(model, mv, ms, mf, z, sd, prior, th_ref)
+                th_dc = dc_wls(model, ms, mf, z, sd, prior, th_ref)
+                start = None if a.start == "flat" else (th_dc, np.where(mv, z["vm"], 1.0))
+                va, vm, it, ok = ac_wls(model, mv, ms, mf, z, sd, prior, th_ref, max_it=a.max_it, start=start, lm=a.lm)
                 its.append(it)
                 fails += not ok
-                for name, (va_, vm_) in (("ac", (va, vm)), ("dc", (dc_wls(model, ms, mf, z, sd, prior, th_ref), None))):
+                e_s = np.remainder(va - tg[:, VA_OUT] + math.pi, 2 * math.pi)[~ref] - math.pi
+                per.append(float(np.sqrt((e_s**2).mean())) * D)
+                for name, (va_, vm_) in (("ac", (va, vm)), ("dc", (th_dc, None))):
                     for key, val in errors(va_, vm_, tg, ~ref, f, t).items():
                         acc[name][key] = acc[name].get(key, 0.0) + val
             row = {}
@@ -252,7 +281,9 @@ def main():
                              "rest": math.sqrt(s["rest"] / s["n"]) * D, "dVA": math.sqrt(s["dVA"] / s["n_d"]) * D}
                 if "VM" in s:
                     row[name]["VM"] = math.sqrt(s["VM"] / s["n_v"])
-            row["ac"].update(iterations_mean=float(np.mean(its)), iterations_max=int(max(its)), not_converged=fails)
+            row["ac"].update(iterations_mean=float(np.mean(its)), iterations_max=int(max(its)), not_converged=fails,
+                             VA_scenario_median=float(np.median(per)), VA_scenario_p95=float(np.percentile(per, 95)),
+                             VA_scenario_max=float(max(per)))
             res["runs"][f"{c:.2f}"] = row
             print(case, f"c={c:.2f}", json.dumps(row), flush=True)
         res["time_s"] = time.time() - t0

@@ -1,0 +1,149 @@
+{
+ "device": "NVIDIA H100 NVL",
+ "rows": [
+  {
+   "grid": "case118_ieee",
+   "arm": "plain",
+   "batch": 1,
+   "ms_forward": 44.20100413262844,
+   "ms_scenario": 44.20100413262844,
+   "peak_mem_gb": 0.119325696
+  },
+  {
+   "grid": "case118_ieee",
+   "arm": "plain",
+   "batch": 64,
+   "ms_forward": 43.187121488153934,
+   "ms_scenario": 0.6747987732524052,
+   "peak_mem_gb": 0.468035584
+  },
+  {
+   "grid": "case118_ieee",
+   "arm": "dcinjcanon",
+   "batch": 1,
+   "ms_forward": 82.40585718303919,
+   "ms_scenario": 82.40585718303919,
+   "peak_mem_gb": 0.119385088
+  },
+  {
+   "grid": "case118_ieee",
+   "arm": "dcinjcanon",
+   "batch": 64,
+   "ms_forward": 105.83805982023478,
+   "ms_scenario": 1.6537196846911684,
+   "peak_mem_gb": 0.471197184
+  },
+  {
+   "grid": "case118_ieee",
+   "arm": "dcloopgcanon",
+   "batch": 1,
+   "ms_forward": 85.21754741668701,
+   "ms_scenario": 85.21754741668701,
+   "peak_mem_gb": 0.11938816
+  },
+  {
+   "grid": "case118_ieee",
+   "arm": "dcloopgcanon",
+   "batch": 64,
+   "ms_forward": 108.94552618265152,
+   "ms_scenario": 1.70227384660393,
+   "peak_mem_gb": 0.47131904
+  },
+  {
+   "grid": "case500_goc",
+   "arm": "plain",
+   "batch": 1,
+   "ms_forward": 43.282884173095226,
+   "ms_scenario": 43.282884173095226,
+   "peak_mem_gb": 0.135419904
+  },
+  {
+   "grid": "case500_goc",
+   "arm": "plain",
+   "batch": 64,
+   "ms_forward": 68.78113802522421,
+   "ms_scenario": 1.0747052816441283,
+   "peak_mem_gb": 1.496311808
+  },
+  {
+   "grid": "case500_goc",
+   "arm": "dcinjcanon",
+   "batch": 1,
+   "ms_forward": 97.06630129367113,
+   "ms_scenario": 97.06630129367113,
+   "peak_mem_gb": 0.135624192
+  },
+  {
+   "grid": "case500_goc",
+   "arm": "dcinjcanon",
+   "batch": 64,
+   "ms_forward": 217.85234604030848,
+   "ms_scenario": 3.40394290687982,
+   "peak_mem_gb": 1.50684416
+  },
+  {
+   "grid": "case500_goc",
+   "arm": "dcloopgcanon",
+   "batch": 1,
+   "ms_forward": 99.96138364076614,
+   "ms_scenario": 99.96138364076614,
+   "peak_mem_gb": 0.135633408
+  },
+  {
+   "grid": "case500_goc",
+   "arm": "dcloopgcanon",
+   "batch": 64,
+   "ms_forward": 221.02665919810534,
+   "ms_scenario": 3.453541549970396,
+   "peak_mem_gb": 1.507357184
+  },
+  {
+   "grid": "case2000_goc",
+   "arm": "plain",
+   "batch": 1,
+   "ms_forward": 43.08610334992409,
+   "ms_scenario": 43.08610334992409,
+   "peak_mem_gb": 0.214336512
+  },
+  {
+   "grid": "case2000_goc",
+   "arm": "plain",
+   "batch": 64,
+   "ms_forward": 256.7150544375181,
+   "ms_scenario": 4.011172725586221,
+   "peak_mem_gb": 6.536064512
+  },
+  {
+   "grid": "case2000_goc",
+   "arm": "dcinjcanon",
+   "batch": 1,
+   "ms_forward": 162.1614508330822,
+   "ms_scenario": 162.1614508330822,
+   "peak_mem_gb": 0.215212032
+  },
+  {
+   "grid": "case2000_goc",
+   "arm": "dcinjcanon",
+   "batch": 64,
+   "ms_forward": 1312.6994650810957,
+   "ms_scenario": 20.51092914189212,
+   "peak_mem_gb": 6.58662656
+  },
+  {
+   "grid": "case2000_goc",
+   "arm": "dcloopgcanon",
+   "batch": 1,
+   "ms_forward": 119.65226903557777,
+   "ms_scenario": 119.65226903557777,
+   "peak_mem_gb": 0.215245824
+  },
+  {
+   "grid": "case2000_goc",
+   "arm": "dcloopgcanon",
+   "batch": 64,
+   "ms_forward": 1156.8694587796926,
+   "ms_scenario": 18.076085293432698,
+   "peak_mem_gb": 6.588675584
+  }
+ ]
+}
