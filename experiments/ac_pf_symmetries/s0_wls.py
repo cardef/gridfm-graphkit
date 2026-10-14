@@ -209,8 +209,8 @@ def main():
     ap.add_argument("--coverage", nargs="+", type=float, default=[1.0, 0.8, 0.6, 0.4, 0.2])
     ap.add_argument("--noise", type=float, default=0.01)
     ap.add_argument("--prior-sd", type=float, default=0.3)
-    ap.add_argument("--start", choices=["flat", "dc"], default="flat", help="AC WLS start: flat, or the DC WLS angles "
-                    "with |V| = 1 and the measured magnitudes where measured")
+    ap.add_argument("--start", choices=["flat", "dc", "truth"], default="flat", help="AC WLS start: flat, the DC WLS "
+                    "angles with |V| = 1 and the measured magnitudes where measured, or the labelled state (S0b oracle)")
     ap.add_argument("--lm", action="store_true", help="Levenberg-Marquardt damping instead of step halving")
     ap.add_argument("--max-it", type=int, default=30)
     a = ap.parse_args()
@@ -266,7 +266,8 @@ def main():
                 mv, ms, mf, z, sd = measure(v, model[0], model[1], model[2], c, a.noise, rng)
                 th_ref = tg[ref, VA_OUT][0]
                 th_dc = dc_wls(model, ms, mf, z, sd, prior, th_ref)
-                start = None if a.start == "flat" else (th_dc, np.where(mv, z["vm"], 1.0))
+                start = {"flat": None, "dc": (th_dc, np.where(mv, z["vm"], 1.0)),
+                         "truth": (tg[:, VA_OUT].copy(), tg[:, VM_OUT].copy())}[a.start]
                 va, vm, it, ok = ac_wls(model, mv, ms, mf, z, sd, prior, th_ref, max_it=a.max_it, start=start, lm=a.lm)
                 its.append(it)
                 fails += not ok

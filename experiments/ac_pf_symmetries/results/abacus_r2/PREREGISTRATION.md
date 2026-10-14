@@ -470,3 +470,17 @@ split, VM on all buses. Code `s0_wls.py`.
 | S0-P1 | gate: is the estimator right? | with zero noise and full coverage the AC WLS recovers the labelled state to 1e-6 deg and 1e-8 pu on every grid; with noise it converges on at least 99% of scenarios at every coverage | the estimator or the measurement model is wrong: fix before reading anything else |
 | S0-P2 | the decisive one: is there room for a learned prior? | on case118_ieee, case500_goc and case2000_goc, the AC WLS's VA error at coverage 0.2 is at least 3 times its error at coverage 1.0 | losing 80% of the measurements costs little when the nominal loads are known: on these data a learned prior can recover little, and Piano S stops at S0 |
 | S0-P3 | exploratory | — | the full coverage curve; DC against AC WLS; offset against rest; VM; iterations and failures; the error of the nominal prior alone (a power flow on the nominal injections) |
+
+## Piano S, S0b: is the low-coverage failure of S0 a start problem? (S0b-P1), fixed 2026-10-14 21:15 before any S0b run
+
+S0's AC WLS fails at low coverage on the GOC grids (S0-P1 failed: up to 226 of 256 scenarios not converged on
+case2000 at 20%; on IEEE grids rare scenarios converge to wrong states). A learned start (Piano S, option 2) can only
+help if the failures are a matter of the start. S0b runs the same estimator from the labelled state (an oracle start
+no method has) next to the flat and the DC start, with step halving and with Levenberg-Marquardt (`s0_wls.py --start
+{flat,dc,truth} [--lm]`, max 50 iterations), on case118_tr, case500_goc and case2000_goc, coverage 0.6, 0.4, 0.2, the
+first 64 of S0's scenarios and S0's measurements (same seeds).
+
+| id | prediction | reading if it fails |
+|---|---|---|
+| S0b-P1 | from the labelled state the estimator converges in at least 95% of scenarios at every (grid, coverage) with either step rule, and its scenario-median VA error is at most twice its error at the same coverage on the IEEE-like regime, i.e. at most 0.5 deg | even the exact start does not hold: the failures are in the formulation (weights, pseudo-measurements, conditioning), and a learned start cannot fix them; the formulation is fixed first |
+| S0b-P2 | exploratory | — flat and DC starts against the oracle start, per coverage: the share of scenarios where they reach the oracle's solution (VA within 0.1 deg of it) — the margin left to a learned start |
