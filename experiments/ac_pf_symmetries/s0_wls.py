@@ -209,8 +209,14 @@ def main():
     ap.add_argument("--coverage", nargs="+", type=float, default=[1.0, 0.8, 0.6, 0.4, 0.2])
     ap.add_argument("--noise", type=float, default=0.01)
     ap.add_argument("--prior-sd", type=float, default=0.3)
-    ap.add_argument("--start", choices=["flat", "dc", "truth"], default="flat", help="AC WLS start: flat, the DC WLS "
-                    "angles with |V| = 1 and the measured magnitudes where measured, or the labelled state (S0b oracle)")
+    ap.add_argument("--start", choices=["flat", "dc", "truth", "perturb", "dc_vtrue", "true_vflat"], default="flat",
+                    help="AC WLS start: flat; the DC WLS angles with |V| = 1 and the measured magnitudes where measured; "
+                    "the labelled state (S0b oracle); the labelled state perturbed (S0c, --perturb-*); the DC angles with "
+                    "the labelled magnitudes; the labelled angles with |V| = 1")
+    ap.add_argument("--perturb-kind", choices=["iid", "offset"], default="iid",
+                    help="S0c: iid normal angle errors per non-REF bus, or one common shift of all non-REF angles")
+    ap.add_argument("--perturb-deg", type=float, default=1.0, help="S0c: angle perturbation scale (deg)")
+    ap.add_argument("--perturb-vm", type=float, default=0.01, help="S0c: iid normal |V| perturbation (pu)")
     ap.add_argument("--lm", action="store_true", help="Levenberg-Marquardt damping instead of step halving")
     ap.add_argument("--max-it", type=int, default=30)
     a = ap.parse_args()
@@ -233,7 +239,7 @@ def main():
         prior = {"p": nom.real, "q": nom.imag, "sp": a.prior_sd * np.abs(nom.real) + 0.01 * scale,
                  "sq": a.prior_sd * np.abs(nom.imag) + 0.01 * scale, "zero": np.abs(sh).max(0) < 1e-9}
         res = {"case": case, "n_eval": len(evals), "n_hist": len(hist), "noise": a.noise, "prior_sd": a.prior_sd,
-               "start": a.start, "lm": a.lm, "max_it": a.max_it,
+               "start": a.start, "lm": a.lm, "max_it": a.max_it, "perturb": [a.perturb_kind, a.perturb_deg, a.perturb_vm],
                "zero_injection_buses": int(prior["zero"].sum()), "n_bus": int(sh.shape[1]), "gate": {}, "runs": {}}
         t0 = time.time()
         # S0-P1 gate: zero noise, full coverage
@@ -266,8 +272,17 @@ def main():
                 mv, ms, mf, z, sd = measure(v, model[0], model[1], model[2], c, a.noise, rng)
                 th_ref = tg[ref, VA_OUT][0]
                 th_dc = dc_wls(model, ms, mf, z, sd, prior, th_ref)
-                start = {"flat": None, "dc": (th_dc, np.where(mv, z["vm"], 1.0)),
-                         "truth": (tg[:, VA_OUT].copy(), tg[:, VM_OUT].copy())}[a.start]
+                if a.start == "perturb":
+                    prng = np.random.default_rng([k, int(round(c * 1000)), 7])
+                    nb = len(ref)
+                    dth = (prng.standard_normal(nb) if a.perturb_kind == "iid" else np.full(nb, prng.choice([-1.0, 1.0])))
+                    dth = np.where(ref, 0.0, dth * a.perturb_deg / D)
+                    start = (tg[:, VA_OUT] + dth, tg[:, VM_OUT] + a.perturb_vm * prng.standard_normal(nb))
+                else:
+                    start = {"flat": None, "dc": (th_dc, np.where(mv, z["vm"], 1.0)),
+                             "truth": (tg[:, VA_OUT].copy(), tg[:, VM_OUT].copy()),
+                             "dc_vtrue": (th_dc, tg[:, VM_OUT].copy()),
+                             "true_vflat": (tg[:, VA_OUT].copy(), np.ones(len(ref)))}[a.start]
                 va, vm, it, ok = ac_wls(model, mv, ms, mf, z, sd, prior, th_ref, max_it=a.max_it, start=start, lm=a.lm)
                 its.append(it)
                 fails += not ok

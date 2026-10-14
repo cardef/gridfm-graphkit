@@ -484,3 +484,20 @@ first 64 of S0's scenarios and S0's measurements (same seeds).
 |---|---|---|
 | S0b-P1 | from the labelled state the estimator converges in at least 95% of scenarios at every (grid, coverage) with either step rule, and its scenario-median VA error is at most twice its error at the same coverage on the IEEE-like regime, i.e. at most 0.5 deg | even the exact start does not hold: the failures are in the formulation (weights, pseudo-measurements, conditioning), and a learned start cannot fix them; the formulation is fixed first |
 | S0b-P2 | exploratory | — flat and DC starts against the oracle start, per coverage: the share of scenarios where they reach the oracle's solution (VA within 0.1 deg of it) — the margin left to a learned start |
+
+## Piano S, S0c: how close must a start be? (S0c-P1-S0c-P3), fixed 2026-10-14 22:45 before any S0c run
+
+S0b: from the labelled state the WLS solution is good, from the flat start it is reached in 36-66% (case500) and
+53-100% (case2000) of the scenarios at low coverage, and the DC start does worse than the flat one. S0c measures the
+basin: the same estimator (step halving, 50 iterations, S0's measurements and scenarios: case118_tr, case500_goc,
+case2000_goc, coverage 0.4 and 0.2, 64 scenarios) started from the labelled state plus a perturbation: iid normal angle
+errors per non-REF bus of 0.3, 1, 3, 10 deg with iid |V| errors of 0.003, 0.01, 0.03, 0.1 pu ("iid"), or a common shift
+of all non-REF angles of the same sizes with the same |V| errors ("offset"); and from two mixed starts that split the
+DC anomaly: DC angles with the labelled |V|, labelled angles with |V| = 1. Reach as in S0b (within 0.1 deg of the
+oracle-start solution).
+
+| id | prediction | reading if it fails |
+|---|---|---|
+| S0c-P1 | the basin is wide: with iid errors of 1 deg and 0.01 pu the reach is at least 90% on case500_goc and case2000_goc at both coverages | the solution is reached only from very close: a learned start with errors of degrees (GENCO's zero-shot level) would not help; Piano S stops at the physics |
+| S0c-P2 | a common angle shift is harmless: with an offset of 3 deg (and 0.03 pu) the reach is at least the reach with iid errors of 1 deg | the estimator is sensitive to the offset too, which is the part of GENCO's error that dominates (X3) |
+| S0c-P3 | exploratory | — the reach curve against the perturbation; which part of the DC start (angles or |V|) causes the anomaly |
