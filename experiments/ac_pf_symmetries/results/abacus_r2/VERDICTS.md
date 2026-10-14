@@ -585,3 +585,37 @@ the start, on the GOC grids. From the usual flat start the estimator finds that 
 scenarios and 53-100% of case2000's at low coverage. That gap is the room for a learned start. Two anomalies are left
 open: the DC start, closer to the truth than the flat one, does worse, and LM as implemented (lambda x0.1 / x10) does
 not get away from a far start. How close a start must be is measured next (S0c, truth plus noise of growing size).
+
+## Piano S, S0c: how close must a start be? (S0c-P1-S0c-P3, 2026-10-14)
+
+CPU job 63799 (abacus-004, 48 CPUs; the 56-CPU submission 63798 waited and was replaced), code c2c5935, results
+`results/pianos/s0c/`. Reach as in S0b (within 0.1 deg of the oracle-start solution), 64 scenarios, coverage 0.4 / 0.2.
+
+| start | case118_tr | case500_goc | case2000_goc |
+|---|---|---|---|
+| flat (S0b) | 1.00 / 0.98 | 0.61 / 0.36 | 0.88 / 0.53 |
+| labelled state, step halving (S0b) | 1.00 / 0.98 | 0.95 / 0.61 | 0.94 / 0.78 |
+| iid 0.3 deg, 0.003 pu | 1.00 / 0.98 | 0.91 / 0.55 | 0.81 / 0.38 |
+| iid 1 deg, 0.01 pu | 1.00 / 0.98 | 0.53 / 0.25 | 0.00 / 0.02 |
+| iid 3 deg, 0.03 pu | 0.98 / 0.97 | 0.02 / 0.00 | 0.00 / 0.00 |
+| iid 10 deg, 0.1 pu | 0.16 / 0.12 | 0 / 0 | 0 / 0 |
+| offset 0.3 deg, 0.003 pu | 1.00 / 0.98 | 0.92 / 0.59 | 0.94 / 0.66 |
+| offset 1 deg, 0.01 pu | 1.00 / 0.98 | 0.81 / 0.48 | 0.47 / 0.20 |
+| offset 3 deg, 0.03 pu | 1.00 / 0.98 | 0.17 / 0.16 | 0.00 / 0.00 |
+| offset 10 deg, 0.1 pu | 0.83 / 0.80 | 0 / 0 | 0 / 0 |
+| DC angles, labelled pu | 1.00 / 0.98 | 0.91 / 0.55 | 0.94 / 0.67 |
+| labelled angles, pu = 1 | 1.00 / 0.98 | 0.61 / 0.41 | 0.91 / 0.56 |
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| S0c-P1 | FAIL | iid errors of 1 deg and 0.01 pu reach 0.53 / 0.25 on case500 and 0.00 / 0.02 on case2000, against 90% predicted |
+| S0c-P2 | FAIL | an offset of 3 deg with 0.03 pu reaches 0.17 / 0.16 on case500 (iid 1 deg: 0.53 / 0.25) and nothing on case2000 |
+| S0c-P3 (exploratory) | — | the DC anomaly is the magnitude start: the DC angles with the labelled magnitudes do as well as the labelled state, the DC start of S0b (measured, noisy magnitudes where measured, 1 elsewhere) fails; the flat start beats every perturbed start from 1 deg and 0.01 pu on the GOC grids; case118_tr has a wide basin (3 deg and 0.03 pu still reach 97-100%) |
+
+Reading: the registered reading of S0c-P1 applies. On the GOC grids the Gauss-Newton WLS reaches the good solution only
+from within about 0.3 deg and 0.003 pu, a precision no learned model has shown zero-shot (GENCO's best arms err by
+degrees and 0.01-0.04 pu there); a learned start would not help this estimator, and Piano S's option 2 stops here. Two
+facts qualify it: the flat start, far from the truth, is a better start than a perturbed truth, and the sensitivity is
+mostly to the magnitudes. Both point at the estimator's globalization (a numerical-methods question: damping,
+continuation, the flat-start property of the gain matrix), not at missing information, which S0b showed the
+measurements and the nominal prior already contain.
