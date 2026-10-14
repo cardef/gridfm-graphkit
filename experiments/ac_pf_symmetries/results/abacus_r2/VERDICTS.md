@@ -517,3 +517,40 @@ radians while the residual, bounded through the sines, stays moderate. The loop 
 (convergence on every grid tried) is not contradicted: it is the coupling with the learned voltages during training
 that fails. The safeguard the X1 design already called for (damped-Newton step halving, per graph) is coded and tested
 at 8639ae7 (`dcloopgcanon`, `dcloopgvref`) and not run.
+
+## Piano X, X4b: GENCO with the guarded closed P-theta loop (X4b-P0-X4b-P4, 2026-10-14)
+
+GPU jobs 63453 (H100 abacus-006: dcloopgcanon seeds 0, 1), 63454 (H100 abacus-005: dcloopgcanon seed 2), 63455 (H100
+abacus-013: dcloopgvref seed 0), 63456 (A40 abacus-002: dcloopgvref seeds 1, 2); code e556656 (arms at 8639ae7),
+X3's setting. Training 9.3-11.7 h on H100, 15.3-15.4 h on A40; dcloopgvref seed 0 early-stopped at epoch 85. The
+stopping rule (every run above 10 after epoch 2) did not trigger: epoch-0 validation 0.81-4.4. Scored with
+`r2_pt.py --runs results/pianox_pt_loopg --out REPORT_pt_loopg.md`. Zero-shot VA in deg.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| X4b-P0 | FAIL | every run has validation spikes above 0.5 after epoch 5 (peaks 1.8-5.2), though no divergence; best validation losses 0.065-0.17, the lowest of the campaign |
+| X4b-P1 | PASS | dcloopgcanon below DC, every seed: case118_ieee [0.544, 1.75] vs 1.95; case118_tr [0.796, 2.16] vs 2.30; case500_goc [0.463, 0.798] vs 2.52; case2000_goc [2.87, 4.14] vs 9.75 |
+| X4b-P2 | PASS | case500_goc [0.463, 0.798] below all six open-loop dcinjcanon seeds of X3 and X3a (1.09-3.71) |
+| X4b-P3 | PASS | no seed below fast-decoupled from the same inputs after 5 iterations: best dcloopgcanon 0.544 / 0.463 / 2.87 against 0.235 / 0.071 / 0.329 (inputs); best dcloopgvref 0.055 / 0.596 / 2.92 against 0.0005 / 0.0005 / 0.006 (REF voltage given) |
+| X4b-P4 (exploratory) | — | below |
+
+Per seed (case118 / case118_tr / case500 / case2000 / case57 / case30 / case14):
+
+| arm | seed 0 | seed 1 | seed 2 |
+|---|---|---|---|
+| dcloopgcanon | 1.75 / 2.16 / 0.58 / 2.87 / 3.31 / 4.52 / 4.07 | 0.54 / 0.94 / 0.80 / 3.26 / 0.53 / 1.24 / 4.26 | 1.02 / 0.80 / 0.46 / 4.14 / 0.45 / 0.51 / 1.06 |
+| dcloopgvref | 0.059 / 0.137 / 0.69 / 3.02 / 0.51 / 1.24 / 0.54 | 0.055 / 0.135 / 0.87 / 3.73 / 0.33 / 1.09 / 0.093 | 0.115 / 0.108 / 0.60 / 2.92 / 0.52 / 0.38 / 0.146 |
+| DC | 1.95 / 2.30 / 2.52 / 9.75 / 1.08 / 1.56 / 1.51 | | |
+
+Exploratory: the error is now set by the learned voltages and, for dcloopgcanon, by the REF voltage it must estimate.
+With the REF voltage given the closed loop is at 0.055-0.115 deg on case118 (VM on PQ buses 0.0006-0.0011) and below
+DC on every grid and seed; with it hidden, the offset dominates (case118 0.54-1.74 deg of offset) and two seeds are
+2.7-4.2x above DC on the grids below the training sizes (case14 in seeds 0 and 1, case30 and case57 in seed 0). On
+case2000 both arms stay at 2.9-4.1 deg, nearly all offset, with VM errors of 0.029-0.037 pu: the voltage error, not the
+angle loop, is the limit there.
+
+Reading: the guarded closed loop is the first GENCO variant that beats DC zero-shot on every large unseen grid with
+every seed and beats the open loop where the open loop failed (case500, 1.4-8x). What it leaves to the network is the
+voltages, and on the largest grid and the smallest ones, with the REF voltage hidden, those are what fails. Training
+remains spiky. Physics from the same inputs stays 2-9x better (REF voltage from the inputs) and far better when the
+REF voltage is given. The Q-V step would remove the voltage error and make the model the fast-decoupled iteration.
