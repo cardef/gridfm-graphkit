@@ -8,10 +8,10 @@ srun --partition=vicomtech --account=di13 --qos=qos_di13 --nodelist=abacus-004 -
     --job-name=symfm-loopsmoke bash -c "source $S/env/activate.sh $R && cd $R && export OMP_NUM_THREADS=4 MKL_NUM_THREADS=1 \
     && printf 'case14_ieee\ncase30_ieee\n' > /tmp/loop_smoke_list.txt && O=$S/SymmetricalFM/scratch/loopsmoke && rm -rf \$O \
     && export SYMFM_DATA_ROOT=$R/data \
-    && python -m experiments.ac_pf_symmetries.multigrid --arm dcloopcanon --seeds 0 --train-file /tmp/loop_smoke_list.txt \
+    && python -m experiments.ac_pf_symmetries.multigrid --arm plain dcloopgvref --seeds 0 --train-file /tmp/loop_smoke_list.txt \
        --heldout case57_ieee --n-per-grid 64 --n-heldout 32 --epochs 2 --workers 2 --zs-refit --device cpu --results-dir \$O \
        2>&1 | grep -E '^\{|Error|Traceback' \
-    ; python -m experiments.ac_pf_symmetries.multigrid --eval-only --extrap case118_ieee --arm dcloopcanon --seeds 0 \
+    ; python -m experiments.ac_pf_symmetries.multigrid --eval-only --extrap case118_ieee --arm plain dcloopgvref --seeds 0 \
        --train-file /tmp/loop_smoke_list.txt --heldout case57_ieee --n-per-grid 64 --n-heldout 32 --zs-refit --device cpu \
        --results-dir \$O 2>&1 | grep -E '^\{|Error|Traceback' \
     ; python - \$O <<'PY'
