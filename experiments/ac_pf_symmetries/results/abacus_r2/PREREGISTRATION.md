@@ -446,3 +446,27 @@ are X4's, unchanged:
 Scored by `r2_pt.py --runs results/pianox_pt_loopg --out REPORT_pt_loopg.md`. Stopping rule, fixed now: if after
 epoch 2 every run still has a validation loss above 10 (X4 had 4.5e2-7e7), the runs are cancelled and X4b-P0 is
 recorded as failed.
+
+## Piano S, S0: the physics frontier of state estimation on unseen grids (S0-P1-S0-P3), fixed 2026-10-14 before any S0 run
+
+Question: on grids never seen in training, how much state error does the loss of measurement coverage cost a
+physics-only estimator that uses the nominal loads as pseudo-measurements? That gap is the most a learned prior can
+recover (Piano S). No learning in S0.
+
+Setting: case118_ieee, case118_tr, case500_goc, case2000_goc, case57_ieee, case30_ieee, case14_ieee; the first 256
+of X3's fixed zero-shot scenarios of each. Measurements from the labelled AC state, as graphkit's
+`SimulateMeasurements`: bus voltage magnitude, bus active and reactive net injection, active and reactive flow at the
+sending end of every directed branch row; each present with probability equal to the coverage c in {1.0, 0.8, 0.6,
+0.4, 0.2}, independently, with Gaussian noise of standard deviation 1% of the true value; no outliers. Pseudo-
+measurements for unmeasured injections: the bus's nominal injection, the mean over the scenarios of the grid outside
+the evaluated subset (a stand-in for the planning base case), standard deviation 30% of it with a floor; injections
+that are zero in every scenario enter as constraints. Estimators: AC WLS (polar state, Gauss-Newton on the sparse gain
+matrix, step halving when the weighted residual grows, flat start, at most 30 iterations, tolerance 1e-8 on the step)
+and DC WLS (linear, exploratory). Errors against the labels: VA on the non-REF buses with the offset / rest / branch
+split, VM on all buses. Code `s0_wls.py`.
+
+| id | question | prediction | reading if it fails |
+|---|---|---|---|
+| S0-P1 | gate: is the estimator right? | with zero noise and full coverage the AC WLS recovers the labelled state to 1e-6 deg and 1e-8 pu on every grid; with noise it converges on at least 99% of scenarios at every coverage | the estimator or the measurement model is wrong: fix before reading anything else |
+| S0-P2 | the decisive one: is there room for a learned prior? | on case118_ieee, case500_goc and case2000_goc, the AC WLS's VA error at coverage 0.2 is at least 3 times its error at coverage 1.0 | losing 80% of the measurements costs little when the nominal loads are known: on these data a learned prior can recover little, and Piano S stops at S0 |
+| S0-P3 | exploratory | — | the full coverage curve; DC against AC WLS; offset against rest; VM; iterations and failures; the error of the nominal prior alone (a power flow on the nominal injections) |
