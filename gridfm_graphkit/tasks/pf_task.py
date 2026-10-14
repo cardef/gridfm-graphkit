@@ -18,6 +18,7 @@ from gridfm_graphkit.datasets.globals import (
     QG_OUT,
 )
 
+from gridfm_graphkit.datasets.masking import RemovePFMask
 from gridfm_graphkit.tasks.reconstruction_tasks import ReconstructionTask
 from gridfm_graphkit.io.registries import TASK_REGISTRY
 from gridfm_graphkit.tasks.utils import (
@@ -26,6 +27,7 @@ from gridfm_graphkit.tasks.utils import (
     plot_correlation_by_node_type,
     plot_residuals_histograms,
     residual_stats_by_type,
+    compute_branch_predictions,
 )
 import torch
 import torch.distributed as dist
@@ -127,6 +129,7 @@ class PowerFlowTask(ReconstructionTask):
 
         self.data_normalizers[dataloader_idx].inverse_transform(batch)
         self.data_normalizers[dataloader_idx].inverse_output(output, batch)
+        RemovePFMask()(batch)
 
         branch_flow_layer = ComputeBranchFlow()
         node_injection_layer = ComputeNodeInjection()
@@ -436,6 +439,7 @@ class PowerFlowTask(ReconstructionTask):
             output,
             batch,
         )  # inverse transform the predicted output back to the original scale
+        RemovePFMask()(batch)
 
         branch_flow_layer = ComputeBranchFlow()  # layer to compute the branch flows
         node_injection_layer = (
@@ -495,7 +499,7 @@ class PowerFlowTask(ReconstructionTask):
         mask_PV = batch.mask_dict["PV"]
         mask_REF = batch.mask_dict["REF"]
 
-        prediction_table = {
+        bus_predictions = {
             "scenario": scenario_ids.cpu().numpy(),
             "bus": local_bus_idx.cpu().numpy(),
             "Pd": bus_x[:, PD_H].cpu().numpy(),
@@ -519,10 +523,23 @@ class PowerFlowTask(ReconstructionTask):
             "reactive res. (MVar)": residual_Q.detach().cpu().numpy(),
             "PBE": residual_mva.detach().cpu().numpy(),
         }
+
+        branch_predictions = compute_branch_predictions(
+            eval_bus,
+            target,
+            bus_edge_index,
+            bus_edge_attr,
+            scenario_ids,
+            local_bus_idx,
+        )
         if embeddings is None or "bus" not in embeddings:
-            return prediction_table
+            return {
+                "bus": bus_predictions,
+                "branch": branch_predictions,
+            }
         return {
-            "bus": prediction_table,
+            "bus": bus_predictions,
+            "branch": branch_predictions,
             "bus_embeddings": embedding_table_from_tensor(
                 embeddings["bus"],
                 id_columns={

@@ -88,10 +88,16 @@ class AddRandomHeteroMask(BaseTransform):
 
 
 class AddPFHeteroMask(BaseTransform):
-    """Creates masks for a heterogeneous power flow graph."""
+    """Creates masks for a heterogeneous power flow graph.
 
-    def __init__(self):
+    Args:
+        mask_ref_vm: Also mask VM at REF buses. The slack voltage is a PF input,
+            so this is only for checkpoints trained before it was unmasked.
+    """
+
+    def __init__(self, mask_ref_vm=False):
         super().__init__()
+        self.mask_ref_vm = mask_ref_vm
 
     def forward(self, data):
         bus_x = data.x_dict["bus"]
@@ -127,8 +133,9 @@ class AddPFHeteroMask(BaseTransform):
         mask_bus[mask_PV, QG_H] = True
 
         # --- REF buses ---
-        mask_bus[mask_REF, VM_H] = True
         mask_bus[mask_REF, QG_H] = True
+        if self.mask_ref_vm:
+            mask_bus[mask_REF, VM_H] = True
         # --- Generators connected to REF buses ---
         gen_bus_edges = data.edge_index_dict[("gen", "connected_to", "bus")]
         gen_indices, bus_indices = gen_bus_edges
@@ -207,6 +214,27 @@ class AddOPFHeteroMask(BaseTransform):
             "REF": mask_REF,
         }
 
+        return data
+
+
+class RemovePFMask(BaseTransform):
+    """Restore static limit columns that were zeroed by AddPFHeteroMask.
+
+    Call this after inverse_transform() and inverse_output() so that bus and
+    branch limit values (MIN_VM, MAX_VM, MIN_QG, MAX_QG, VN_KV, ANG_MIN,
+    ANG_MAX, RATE_A) are correct for post-inference constraint evaluation.
+    The values are sourced from the ``.static`` attribute saved at dataset
+    build time, before any masking or normalisation ran.
+    """
+
+    def forward(self, data):
+        data.x_dict["bus"][:, [MIN_VM_H, MAX_VM_H, MIN_QG_H, MAX_QG_H, VN_KV]] = data[
+            "bus"
+        ].static
+        data.edge_attr_dict[("bus", "connects", "bus")][
+            :,
+            [ANG_MIN, ANG_MAX, RATE_A],
+        ] = data[("bus", "connects", "bus")].static
         return data
 
 

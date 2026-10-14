@@ -91,6 +91,8 @@ def _prediction_output_filename(grid_name: str, table_name: str) -> str:
         return f"{grid_name}_bus_embeddings.parquet"
     if table_name == "gen_embeddings":
         return f"{grid_name}_gen_embeddings.parquet"
+    if table_name == "branch":
+        return f"{grid_name}_branch_predictions.parquet"
     return f"{grid_name}_{table_name}_predictions.parquet"
 
 
@@ -436,7 +438,10 @@ def main_cli(args):
         if args.command == "predict":
             output_dir = args.output_path
         else:
-            output_dir = os.path.join(artifacts_dir, "test")
+            output_dir = getattr(args, "output_path", None) or os.path.join(
+                artifacts_dir,
+                "test",
+            )
         os.makedirs(output_dir, exist_ok=True)
         first_prediction = predictions[0]
         if any(isinstance(value, dict) for value in first_prediction.values()):

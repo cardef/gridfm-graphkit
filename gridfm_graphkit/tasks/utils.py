@@ -1,9 +1,72 @@
 import torch
+import torch.nn.functional as F
 from torch_scatter import scatter_mean, scatter_max
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import os
+from gridfm_graphkit.models.utils import ComputeBranchFlow
+from gridfm_graphkit.datasets.globals import (
+    VA_OUT,
+    ANG_MIN,
+    ANG_MAX,
+    RATE_A,
+    YFF_TT_R,
+    YFF_TT_I,
+    YFT_TF_R,
+    YFT_TF_I,
+)
+
+
+def compute_angle_violation(
+    bus_edge_attr: torch.Tensor,
+    bus_angles: torch.Tensor,
+    bus_edge_index: torch.Tensor,
+    ang_min_col: int,
+    ang_max_col: int,
+) -> torch.Tensor:
+    """Compute the mean branch angle-difference violation.
+
+    Assumes ``bus_angles`` is in **radians**, while ``ang_min_col`` and ``ang_max_col`` are in **degrees**
+    This function converts the limits (``ang_min_col`` and ``ang_max_col``) to radians before comparison so that both
+    sides of the inequality are in the same unit.
+
+    The signed angle difference for each branch is wrapped to ``[-π, π]`` before
+    checking against the limits.  Any exceedance on either side is accumulated
+    with ``ReLU`` and the result is averaged across all branches.
+
+    Args:
+        bus_edge_attr: Edge-attribute tensor of shape ``(num_edges, num_edge_features)``.
+            Columns ``ang_min_col`` and ``ang_max_col`` hold the per-branch angle
+            limits in **degrees**.
+        bus_angles: Bus voltage-angle tensor of shape ``(num_buses,)`` in **radians**,
+            typically taken from ``output["bus"][:, VA_OUT]``.
+        bus_edge_index: COO edge-index tensor of shape ``(2, num_edges)`` where
+            ``bus_edge_index[0]`` are the from-bus indices and ``bus_edge_index[1]``
+            are the to-bus indices.
+        ang_min_col: Column index of the minimum angle limit in ``bus_edge_attr``.
+        ang_max_col: Column index of the maximum angle limit in ``bus_edge_attr``.
+
+    Returns:
+        Scalar tensor: mean angle-difference violation across all directed edges
+        (in radians). Note: each physical branch appears as two directed edges
+        (forward and reverse), so this averages over 2 × num_branches entries —
+        a different denominator from the per-direction thermal violation metrics
+        (``mean_thermal_violation_forward`` / ``mean_thermal_violation_reverse``)
+        which split forward and reverse separately.
+    """
+    angle_min = bus_edge_attr[:, ang_min_col] * torch.pi / 180.0  # degrees → radians
+    angle_max = bus_edge_attr[:, ang_max_col] * torch.pi / 180.0  # degrees → radians
+
+    from_bus = bus_edge_index[0]
+    to_bus = bus_edge_index[1]
+    angle_diff = bus_angles[from_bus] - bus_angles[to_bus]
+    angle_diff = (angle_diff + torch.pi) % (2 * torch.pi) - torch.pi  # wrap to [-π, π]
+
+    angle_excess_low = F.relu(angle_min - angle_diff)
+    angle_excess_high = F.relu(angle_diff - angle_max)
+
+    return torch.mean(angle_excess_low + angle_excess_high)
 
 
 def local_index_per_graph(batch_index: torch.Tensor) -> torch.Tensor:
@@ -218,3 +281,96 @@ def plot_correlation_by_node_type(
         filename = f"{prefix}_correlation_{node_type}.png"
         plt.savefig(os.path.join(plot_dir, filename), dpi=300)
         plt.close(fig)
+
+
+def compute_branch_predictions(
+    eval_bus,
+    target,
+    bus_edge_index,
+    bus_edge_attr,
+    scenario_ids,
+    local_bus_idx,
+):
+    """Compute branch-level predictions and ground-truth constraint violations.
+
+    Expects tensors after ``inverse_transform``: ``Va`` stays in radians, while
+    ``ANG_MIN`` / ``ANG_MAX`` are restored to degrees and converted here with
+    ``* pi / 180``. Do not call this on training-space (post-``transform``) graphs:
+    those limits are already in radians, so the extra conversion would be wrong.
+
+    Bidirectional edges reuse the same ``angmin`` / ``angmax``. That is correct
+    while limits are symmetric (e.g. ±30°). An asymmetric pair would be wrong
+    on the reverse copy.
+
+    Args:
+        eval_bus:       Clamped model predictions [num_bus, 4]. Branch flows
+                        and angle violations are computed from this.
+        target:         Ground truth bus tensor [num_bus, 4]. Target branch
+                        flows and angle violations are computed from this.
+        bus_edge_index: Edge index [2, num_edges] (batch-global bus indices).
+        bus_edge_attr:  Edge features [num_edges, num_edge_features].
+        scenario_ids:   Scenario ID per bus [num_bus] (batch-global).
+        local_bus_idx:  Per-graph local bus index [num_bus].
+
+    Returns:
+        dict of numpy arrays, one entry per directed edge.
+    """
+    branch_flow_layer = ComputeBranchFlow()
+
+    from_bus_idx = bus_edge_index[0]
+    to_bus_idx = bus_edge_index[1]
+
+    # Branch limits — ANG_MIN/ANG_MAX restored to degrees by inverse_transform;
+    # convert to radians to match VA_OUT which stays in radians.
+    angle_min = bus_edge_attr[:, ANG_MIN] * torch.pi / 180.0
+    angle_max = bus_edge_attr[:, ANG_MAX] * torch.pi / 180.0
+    branch_thermal_limits = bus_edge_attr[:, RATE_A]
+
+    def _branch_flows(bus_state):
+        Pft, Qft = branch_flow_layer(bus_state, bus_edge_index, bus_edge_attr)
+        Sft = torch.sqrt(Pft**2 + Qft**2)
+        thermal_excess = F.relu(Sft - branch_thermal_limits)
+        return Pft, Qft, thermal_excess
+
+    def _angle_violations(bus_state):
+        angles = bus_state[:, VA_OUT]
+        diff = angles[from_bus_idx] - angles[to_bus_idx]
+        diff = (diff + torch.pi) % (2 * torch.pi) - torch.pi  # wrap to [-pi, pi]
+        return diff, F.relu(angle_min - diff), F.relu(diff - angle_max)
+
+    # Predicted
+    Pft, Qft, thermal_excess = _branch_flows(eval_bus)
+    angle_diff, angle_excess_low, angle_excess_high = _angle_violations(eval_bus)
+
+    # Ground truth
+    Pft_target, Qft_target, thermal_excess_target = _branch_flows(target)
+    angle_diff_target, angle_excess_low_target, angle_excess_high_target = (
+        _angle_violations(target)
+    )
+
+    def _np(t):
+        return t.detach().cpu().numpy()
+
+    return {
+        "scenario": scenario_ids[from_bus_idx].cpu().numpy(),
+        "from_bus": local_bus_idx[from_bus_idx].cpu().numpy(),
+        "to_bus": local_bus_idx[to_bus_idx].cpu().numpy(),
+        "Pft": _np(Pft),
+        "Qft": _np(Qft),
+        "Pft_target": _np(Pft_target),
+        "Qft_target": _np(Qft_target),
+        "angle_diff": _np(angle_diff),
+        "angle_excess_low": _np(angle_excess_low),
+        "angle_excess_high": _np(angle_excess_high),
+        "angle_diff_target": _np(angle_diff_target),
+        "angle_excess_low_target": _np(angle_excess_low_target),
+        "angle_excess_high_target": _np(angle_excess_high_target),
+        "thermal_excess": _np(thermal_excess),
+        "thermal_excess_target": _np(thermal_excess_target),
+        # Fields needed for current-based loading computation
+        "rate_a": _np(branch_thermal_limits),
+        "Yff_r": _np(bus_edge_attr[:, YFF_TT_R]),
+        "Yff_i": _np(bus_edge_attr[:, YFF_TT_I]),
+        "Yft_r": _np(bus_edge_attr[:, YFT_TF_R]),
+        "Yft_i": _np(bus_edge_attr[:, YFT_TF_I]),
+    }
