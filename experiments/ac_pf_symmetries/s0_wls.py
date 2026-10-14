@@ -284,7 +284,7 @@ def main():
                     row[name]["VM"] = math.sqrt(s["VM"] / s["n_v"])
             row["ac"].update(iterations_mean=float(np.mean(its)), iterations_max=int(max(its)), not_converged=fails,
                              VA_scenario_median=float(np.median(per)), VA_scenario_p95=float(np.percentile(per, 95)),
-                             VA_scenario_max=float(max(per)))
+                             VA_scenario_max=float(max(per)), VA_per_scenario=per)
             res["runs"][f"{c:.2f}"] = row
             print(case, f"c={c:.2f}", json.dumps(row), flush=True)
         res["time_s"] = time.time() - t0
