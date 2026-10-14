@@ -554,3 +554,34 @@ every seed and beats the open loop where the open loop failed (case500, 1.4-8x).
 voltages, and on the largest grid and the smallest ones, with the REF voltage hidden, those are what fails. Training
 remains spiky. Physics from the same inputs stays 2-9x better (REF voltage from the inputs) and far better when the
 REF voltage is given. The Q-V step would remove the voltage error and make the model the fast-decoupled iteration.
+
+## Piano S, S0: the physics frontier of state estimation on unseen grids (S0-P1-S0-P3, 2026-10-14)
+
+CPU job 63580 (abacus-004), code 026ef8e, `s0_wls.py` as pre-registered (flat start, step halving, 30 iterations),
+results `results/pianos/s0/`. 256 scenarios per grid, coverage 1.0-0.2, 1% relative noise.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| S0-P1 | FAIL (convergence clause) | without noise and at full coverage the AC WLS recovers the labels on every grid (at most 1e-11 deg, 3e-14 pu); with noise it does not converge on 99% of scenarios at low coverage: case500 9 / 46 / 134 / 191 of 256 not converged at coverage 0.8 / 0.6 / 0.4 / 0.2, case2000 12 / 109 / 226 at 0.6 / 0.4 / 0.2, case118_tr 4 / 29 at 0.4 / 0.2, case14 4 at 0.2 |
+| S0-P2 | not read | the registered failure reading of S0-P1 applies: the estimator first |
+| S0-P3 (exploratory) | — | AC WLS at full coverage 0.007-0.032 deg, VM 0.00006-0.0008 pu; on the IEEE grids at 20% coverage 0.21-13.2 deg RMS (case57 0.26, case118 0.61), the RMS dominated by a few scenarios that end in a wrong state (case14 at 80%: median 0.012, max 12.7 deg); DC WLS 1.1-2.7 deg at every coverage, the DC model error |
+
+## Piano S, S0b: oracle start (S0b-P1-S0b-P2, 2026-10-14)
+
+CPU job 63796, code 8a5ee63, results `results/pianos/s0b/<start>_<rule>/`; 64 scenarios per grid, S0's measurements,
+coverage 0.6 / 0.4 / 0.2, at most 50 iterations. "Reach": share of scenarios whose VA error is within 0.1 deg of the
+oracle-start (labelled state, Levenberg-Marquardt) solution's.
+
+| id | verdict | what the numbers say |
+|---|---|---|
+| S0b-P1 | FAIL | from the labelled state the estimator stays close to it: scenario-median VA 0.017-0.29 deg on case500 and case2000, 0.029-0.52 on case118_tr, p95 at most 0.44 (case500, case2000) and 2.11 (case118_tr at 20%) with LM; but it meets the convergence test (largest step below 1e-8 within 50 iterations) in fewer than 95% of scenarios on the GOC grids (with LM 12-64 of 64 not converged, with halving 2-54), and the case118_tr median at 20% coverage is 0.52 deg, above the 0.5 threshold |
+| S0b-P2 (exploratory) | — | reach of the flat start with halving (S0's estimator): case118_tr 1.00 / 1.00 / 0.98, case500 0.66 / 0.61 / 0.36, case2000 1.00 / 0.88 / 0.53 at coverage 0.6 / 0.4 / 0.2. The DC start does worse than the flat one (case500 0.12-0.36, case2000 0-0.02), with either step rule; LM from the flat start reaches 0-0.25 |
+
+Reading: the failed clause is the convergence test, and the numbers behind it are not those of a failing formulation.
+From the labelled state the weighted least-squares solution next to the truth is informative even at 20% coverage
+(0.02-0.5 deg median); the iteration does not settle within 50 steps, by the step criterion, but does not leave that
+solution. The registered reading ("the failures are in the formulation") is therefore not what the data show: it is
+the start, on the GOC grids. From the usual flat start the estimator finds that solution in 36-66% of the case500
+scenarios and 53-100% of case2000's at low coverage. That gap is the room for a learned start. Two anomalies are left
+open: the DC start, closer to the truth than the flat one, does worse, and LM as implemented (lambda x0.1 / x10) does
+not get away from a far start. How close a start must be is measured next (S0c, truth plus noise of growing size).
