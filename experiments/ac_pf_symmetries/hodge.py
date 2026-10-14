@@ -15,15 +15,15 @@ from gridfm_graphkit.datasets.globals import VA_H, VM_OUT, YFT_TF_I, YFT_TF_R
 from .symmetries import E, line_pairs, node_batch, num_graphs
 
 
-def solve_anchored(rhs, f, t, w, ref, theta_ref, batch, n_graphs, eps=1e-6):
-    """Solve L_w theta = rhs on every graph of a batch with theta fixed at the REF angle (L_w: the Laplacian with
-    weight w[e] on branch f[e] -> t[e]; rhs per bus, its REF entry ignored).
+def anchored_factor(f, t, w, ref, batch, n_graphs, eps=1e-6):
+    """LU factorization of every graph's anchored Laplacian, for `anchored_solve`.
 
-    Per graph: L_w with the REF row and column replaced by the identity, solved against rhs (REF entry 0), plus
-    theta_ref. Graphs of a batch may differ in size (mixed grids): each is padded to the largest with identity
-    rows, which leaves the real entries unchanged. eps * mean(w) on the non-REF diagonal keeps a bus islanded by an
-    outage at the REF angle instead of making the solve singular; on a connected graph it moves theta by O(eps).
-    PyG batches keep each graph's nodes contiguous, which the local indexing assumes.
+    Per graph: L_w (weight w[e] on branch f[e] -> t[e]) with the REF row and column replaced by the identity. Graphs
+    of a batch may differ in size (mixed grids): each is padded to the largest with identity rows, which leaves the
+    real entries unchanged. eps * mean(w) on the non-REF diagonal keeps a bus islanded by an outage at the REF angle
+    instead of making the solve singular; on a connected graph it moves theta by O(eps). PyG batches keep each
+    graph's nodes contiguous, which the local indexing assumes. The matrix depends on the topology and admittances
+    only, so a forward that solves with it several times (one solve per layer) factors it once.
     """
     counts = torch.bincount(batch, minlength=n_graphs)
     local = torch.arange(batch.numel(), device=batch.device) - (torch.cumsum(counts, 0) - counts)[batch]
@@ -32,16 +32,29 @@ def solve_anchored(rhs, f, t, w, ref, theta_ref, batch, n_graphs, eps=1e-6):
     lap = w.new_zeros(n_graphs, n, n)
     for (i, j), s in (((fi, fi), 1.0), ((ti, ti), 1.0), ((fi, ti), -1.0), ((ti, fi), -1.0)):
         lap.index_put_((g, i, j), s * w, accumulate=True)
-    b = w.new_zeros(n_graphs, n)
-    b[batch, local] = rhs
     free = torch.zeros(n_graphs, n, dtype=torch.bool, device=batch.device)
     free[batch, local] = True  # real buses; padding stays fixed at 0
     free[batch[ref], local[ref]] = False
     lap = lap * (free[:, :, None] & free[:, None, :]) + torch.diag_embed(
         (~free).to(lap.dtype) + eps * w.mean() * free.to(lap.dtype),
     )
-    theta0 = torch.linalg.solve(lap, (b * free).unsqueeze(-1)).squeeze(-1)
-    return theta0[batch, local] + theta_ref[batch]
+    lu, piv = torch.linalg.lu_factor(lap)
+    return {"lu": lu, "piv": piv, "batch": batch, "local": local, "free": free, "n_graphs": n_graphs, "n": n}
+
+
+def anchored_solve(fac, rhs, theta_ref):
+    """Solve the factored anchored system against rhs (per bus, its REF entry ignored) and add theta_ref."""
+    b = rhs.new_zeros(fac["n_graphs"], fac["n"])
+    b[fac["batch"], fac["local"]] = rhs
+    theta0 = torch.linalg.lu_solve(fac["lu"], fac["piv"], (b * fac["free"]).unsqueeze(-1)).squeeze(-1)
+    return theta0[fac["batch"], fac["local"]] + theta_ref[fac["batch"]]
+
+
+def solve_anchored(rhs, f, t, w, ref, theta_ref, batch, n_graphs, eps=1e-6):
+    """Solve L_w theta = rhs on every graph of a batch with theta fixed at the REF angle (L_w: the Laplacian with
+    weight w[e] on branch f[e] -> t[e]; rhs per bus, its REF entry ignored): `anchored_factor` then `anchored_solve`.
+    """
+    return anchored_solve(anchored_factor(f, t, w, ref, batch, n_graphs, eps), rhs, theta_ref)
 
 
 def reconstruct_angles(delta, f, t, w, ref, theta_ref, batch, n_graphs, eps=1e-6):

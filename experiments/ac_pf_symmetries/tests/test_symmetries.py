@@ -456,6 +456,37 @@ def test_one_layer_dc_injection_starts_at_the_dc_angles(loader, args):
     assert torch.allclose(out["bus"][free, VA_OUT], dc_angles(data)[free], atol=1e-6)
 
 
+def test_factored_anchored_solve_matches_a_direct_solve_and_differentiates(loader):
+    """One factorization reused for several right-hand sides gives the dense direct solution, and gradients reach rhs."""
+    from experiments.ac_pf_symmetries.dcprior import dc_context
+    from experiments.ac_pf_symmetries.hodge import anchored_factor, anchored_solve
+
+    data = next(iter(loader))
+    system, p, theta_ref, conn = dc_context(data)
+    system = dict(system, w=system["w"].double())
+    fac = anchored_factor(**system)
+    zero = theta_ref.double().new_zeros(theta_ref.shape)
+    batch, ref = system["batch"], system["ref"]
+    for k in range(3):
+        rhs = torch.randn(p.numel(), dtype=torch.float64)
+        x = anchored_solve(fac, rhs, zero)
+        for g in range(system["n_graphs"]):
+            nodes = (batch == g).nonzero().squeeze(1)
+            sel = batch[system["f"]] == g
+            lo, n = int(nodes.min()), nodes.numel()
+            lap = torch.zeros(n, n, dtype=torch.float64)
+            fi, ti, wk = system["f"][sel] - lo, system["t"][sel] - lo, system["w"][sel]
+            for (i, j), sg in (((fi, fi), 1.0), ((ti, ti), 1.0), ((fi, ti), -1.0), ((ti, fi), -1.0)):
+                lap.index_put_((i, j), sg * wk, accumulate=True)
+            free = ~ref[nodes]
+            blk = lap[free][:, free] + 1e-6 * system["w"].mean() * torch.eye(int(free.sum()), dtype=torch.float64)
+            direct = torch.linalg.solve(blk, rhs[nodes][free])
+            assert torch.allclose(x[nodes][free], direct, rtol=1e-8, atol=1e-10)
+            assert x[nodes][~free].abs().max() == 0
+    rhs = torch.randn(p.numel(), dtype=torch.float64, requires_grad=True)
+    assert torch.autograd.gradcheck(lambda r: anchored_solve(fac, r, zero), (rhs,))
+
+
 def test_dc_angles_keep_an_islanded_bus_at_the_reference(loader):
     """Cut every branch of a load bus: the DC solve stays finite and the island stays at the REF angle."""
     data = next(iter(loader))

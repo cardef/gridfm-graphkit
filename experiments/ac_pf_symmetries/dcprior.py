@@ -30,7 +30,7 @@ from torch import nn
 
 from gridfm_graphkit.datasets.globals import PD_H, PG_H, VA_H, VA_OUT, YFT_TF_I
 
-from .hodge import solve_anchored
+from .hodge import anchored_factor, anchored_solve, solve_anchored
 from .symmetries import E, gns_of, line_pairs, node_batch, num_graphs
 
 
@@ -128,7 +128,7 @@ class _DCInjectionDecoder(nn.Module):
     def forward(self, h):
         out = self.mlp_bus(h)
         c = self.ctx
-        shift = solve_anchored(self.gain * out[:, VA_OUT] * c["conn"], theta_ref=c["zero"], **c["system"])
+        shift = anchored_solve(c["factor"], self.gain * out[:, VA_OUT] * c["conn"], c["zero"])
         va = c["theta_dc"] + shift
         return torch.cat([out[:, :VA_OUT], va[:, None], out[:, VA_OUT + 1 :]], dim=1)
 
@@ -152,9 +152,10 @@ class DCInjectionLayers(nn.Module):
         dec = gns_of(self.model).mlp_bus
         with torch.no_grad():
             system, p, theta_ref, conn = dc_context(data)
-            theta_dc = solve_anchored(p * conn, theta_ref=theta_ref, **system)
+            factor = anchored_factor(**system)  # one factorization for the DC solve and the twelve layers
+            theta_dc = anchored_solve(factor, p * conn, theta_ref)
         zero = theta_ref.new_zeros(theta_ref.shape)
-        dec.ctx = {"system": system, "theta_dc": theta_dc, "conn": conn.to(p.dtype), "zero": zero}
+        dec.ctx = {"system": system, "factor": factor, "theta_dc": theta_dc, "conn": conn.to(p.dtype), "zero": zero}
         try:
             return self.model(data, return_embeddings=return_embeddings)
         finally:
@@ -173,7 +174,7 @@ class _DCLoopDecoder(nn.Module):
     def forward(self, h):
         out = self.mlp_bus(h)
         c = self.ctx
-        va = c["theta_dc"] + solve_anchored(c["s"], theta_ref=c["zero"], **c["system"])
+        va = c["theta_dc"] + anchored_solve(c["factor"], c["s"], c["zero"])
         return torch.cat([out[:, :VA_OUT], va[:, None], out[:, VA_OUT + 1 :]], dim=1)
 
 
@@ -202,9 +203,10 @@ class DCLoopLayers(nn.Module):
         base = gns_of(self.model)
         with torch.no_grad():
             system, p, theta_ref, conn = dc_context(data)
-            theta_dc = solve_anchored(p * conn, theta_ref=theta_ref, **system)
-        ctx = {"system": system, "theta_dc": theta_dc, "conn": conn.to(p.dtype), "zero": theta_ref.new_zeros(theta_ref.shape),
-               "s": torch.zeros_like(p)}
+            factor = anchored_factor(**system)  # one factorization for the DC solve and the twelve layers
+            theta_dc = anchored_solve(factor, p * conn, theta_ref)
+        ctx = {"system": system, "factor": factor, "theta_dc": theta_dc, "conn": conn.to(p.dtype),
+               "zero": theta_ref.new_zeros(theta_ref.shape), "s": torch.zeros_like(p)}
 
         batch, n_graphs = system["batch"], system["n_graphs"]
         free = ctx["conn"] * (~system["ref"]).to(p.dtype)
